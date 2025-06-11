@@ -19,7 +19,7 @@ import { DataGrid } from "@mui/x-data-grid";
 export default function Professores() {
     const [professores, setProfessores] = useState([]);
     const [formData, setFormData] = useState({
-        id: "",
+        codigo: "",
         nome: "",
         email: "",
         sala: "",
@@ -29,7 +29,7 @@ export default function Professores() {
     const [openDialog, setOpenDialog] = React.useState(false);
     const [messageText, setMessageText] = React.useState("");
     const [messageSeverity, setMessageSeverity] = React.useState("success");
-    const [idDelete, setIdDelete] = React.useState(-1);
+    const [idDelete, setIdDelete] = React.useState('');
 
     useEffect(() => {
         getData();
@@ -37,9 +37,9 @@ export default function Professores() {
 
     async function getData() {
         try {
-            const res = await axios.get("/professores");
+            const res = await axios.get("/docentes");
             console.log(res.data);
-            setProfessores(res.data.professores);
+            setProfessores(res.data.docentes);
         } catch (error) {
             console.log(
                 "Não foi possível retornar a lista de professores: ",
@@ -50,12 +50,17 @@ export default function Professores() {
     }
 
     function handleEdit(data) {
-        setFormData(data);
+        setFormData({
+            codigo: data.codigo || "",
+            nome: data.nome || "",
+            email: data.email || "",
+            sala: data.sala !== null ? data.sala.toString() : "",
+        });
         setEdit(true);
     }
 
     function handleDelete(row) {
-        setIdDelete(row.id);
+        setIdDelete(row.codigo);
         setOpenDialog(true);
     }
 
@@ -65,24 +70,28 @@ export default function Professores() {
 
     async function handleAddOrUpdate() {
         try {
+            // Prepara os dados convertendo strings vazias para null onde apropriado
+            const dataToSend = {
+                codigo: formData.codigo,
+                nome: formData.nome,
+                email: formData.email,
+                sala: formData.sala === "" ? null : parseInt(formData.sala) || null,
+            };
+
             if (edit) {
-                await axios.put("/professores/", {
-                    formData: formData,
+                await axios.put("/docentes/", {
+                    formData: dataToSend,
                 });
                 setMessageText("Docente atualizado com sucesso!");
             } else {
-                await axios.post("/professores", {
-                    formData: {
-                        nome: formData.nome,
-                        email: formData.email,
-                        sala: formData.sala,
-                    },
+                await axios.post("/docentes", {
+                    formData: dataToSend,
                 });
 
                 setMessageText("Docente inserido com sucesso!");
             }
             setMessageSeverity("success");
-            setFormData({ id: "", nome: "", email: "", sala: "" });
+            setFormData({ codigo: "", nome: "", email: "", sala: "" });
             setEdit(false);
         } catch (error) {
             console.log("Nao foi possível inserir o docente no banco de dados");
@@ -96,7 +105,7 @@ export default function Professores() {
 
     function handleCancelClick() {
         setEdit(false);
-        setFormData({ id: "", nome: "", email: "", sala: "" });
+        setFormData({ codigo: "", nome: "", email: "", sala: "" });
     }
 
     function handleCloseMessage(_, reason) {
@@ -113,7 +122,7 @@ export default function Professores() {
     async function handleDeleteClick() {
         try {
             console.log(idDelete);
-            await axios.delete(`/professores/${idDelete}`);
+            await axios.delete(`/docentes/${idDelete}`);
             setMessageText("Docente removido com sucesso!");
             setMessageSeverity("success");
         } catch (error) {
@@ -121,7 +130,7 @@ export default function Professores() {
             setMessageText("Falha ao remover docente!");
             setMessageSeverity("error");
         } finally {
-            setFormData({ id: "", nome: "", email: "", sala: "" });
+            setFormData({ codigo: "", nome: "", email: "", sala: "" });
             setOpenDialog(false);
             setOpenMessage(true);
             await getData();
@@ -133,7 +142,8 @@ export default function Professores() {
     }
 
     const columns = [
-        { field: "nome", headerName: "Nome", width: 450 },
+        { field: "codigo", headerName: "Código", width: 150 },
+        { field: "nome", headerName: "Nome", width: 350 },
         { field: "email", headerName: "Email", width: 300 },
         { field: "sala", headerName: "Sala", width: 130 },
         {
@@ -165,12 +175,22 @@ export default function Professores() {
             <Stack spacing={2}>
                 <Stack spacing={2}>
                     <TextField
+                        name="codigo"
+                        label="Código"
+                        type="text"
+                        fullWidth
+                        size="small"
+                        value={formData.codigo || ""}
+                        onChange={handleInputChange}
+                        disabled={edit}
+                    />
+                    <TextField
                         name="nome"
                         label="Nome"
                         type="text"
                         fullWidth
                         size="small"
-                        value={formData.nome}
+                        value={formData.nome || ""}
                         onChange={handleInputChange}
                     />
                     <Stack spacing={2} direction="row">
@@ -180,16 +200,16 @@ export default function Professores() {
                             type="email"
                             fullWidth
                             size="small"
-                            value={formData.email}
+                            value={formData.email || ""}
                             onChange={handleInputChange}
                         />
 
                         <TextField
                             name="sala"
                             label="Sala"
-                            type="text"
+                            type="number"
                             size="small"
-                            value={formData.sala}
+                            value={formData.sala || ""}
                             onChange={handleInputChange}
                         />
                     </Stack>
@@ -252,6 +272,7 @@ export default function Professores() {
                         pageSize={5}
                         checkboxSelection={false}
                         disableSelectionOnClick
+                        getRowId={(row) => row.codigo}
                     />
                 </Box>
             </Stack>
