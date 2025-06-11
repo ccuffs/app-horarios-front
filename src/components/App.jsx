@@ -2,7 +2,7 @@
 
 import Grid from "@mui/material/Unstable_Grid2"; // Grid version 2
 
-import { Container, Stack, CssBaseline } from "@mui/material";
+import { Container, Stack } from "@mui/material";
 import { Route, Routes } from "react-router-dom";
 
 import Navbar from "./Navbar";
@@ -23,7 +23,6 @@ function App() {
         <CustomThemeProvider>
             <ThemeSwitch />
             <Container spacing={2}>
-                <CssBaseline />
                 <Stack spacing={2}>
                     <Grid md={12}>
                         <Navbar />

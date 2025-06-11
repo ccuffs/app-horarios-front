@@ -31,6 +31,7 @@ import {
 } from "@mui/material";
 import { Close as CloseIcon, Save as SaveIcon, Delete as DeleteIcon, Warning as WarningIcon, Schedule as ScheduleIcon } from "@mui/icons-material";
 import axios from "axios";
+import { customColors } from "./CustomThemeProvider";
 
 const timeSlotsVespertino = [
     "13:30",
@@ -170,14 +171,14 @@ const dbToEventFormat = (dbEvent, disciplinas) => {
     return event;
 };
 
-// Sistema de cores por dia da semana
+// Sistema de cores por dia da semana - usando cores do tema customizado
 const dayColors = {
-    monday: "#1976d2", // Azul ainda mais escuro - Segunda
-    tuesday: "#388e3c", // Verde ainda mais escuro - Terça
-    wednesday: "#f57c00", // Laranja ainda mais escuro - Quarta
-    thursday: "#7b1fa2", // Roxo ainda mais escuro - Quinta
-    friday: "#c62828", // Vermelho ainda mais escuro - Sexta
-    saturday: "#455a64", // Cinza ainda mais escuro - Sábado
+    monday: customColors.teal, // Teal - Segunda
+    tuesday: customColors.tiffanyBlue, // Mint - Terça
+    wednesday: customColors.orange, // Orange - Quarta
+    thursday: customColors.veronica, // Veronica (Roxo) - Quinta
+    friday: customColors.glaucous, // Glaucous (Azul) - Sexta
+    saturday: customColors.jet, // Jet (Cinza escuro) - Sábado
 };
 
 // Função para obter cor baseada no dia
