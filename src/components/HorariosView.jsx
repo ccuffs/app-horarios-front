@@ -259,7 +259,7 @@ const getEndTime = (startTime, duration, timeSlots) => {
 };
 
 // Componente para exibir evento (apenas visualização)
-const CalendarEventView = ({ event, timeSlots, professores, isMultiple, multipleIndex, multipleTotal }) => {
+const CalendarEventView = ({ event, timeSlots, professores, disciplinas, isMultiple, multipleIndex, multipleTotal }) => {
     // Buscar nomes dos professores
     const getProfessoresInfo = () => {
         if (event.professoresIds && Array.isArray(event.professoresIds)) {
@@ -280,7 +280,16 @@ const CalendarEventView = ({ event, timeSlots, professores, isMultiple, multiple
         return [];
     };
 
+    // Buscar informações da disciplina
+    const getDisciplinaInfo = () => {
+        if (event.disciplinaId) {
+            return disciplinas.find((d) => d.id === event.disciplinaId);
+        }
+        return null;
+    };
+
     const professoresInfo = getProfessoresInfo();
+    const disciplinaInfo = getDisciplinaInfo();
 
     const calculateMultipleEventStyles = () => {
         if (!isMultiple) {
@@ -433,6 +442,13 @@ const CalendarEventView = ({ event, timeSlots, professores, isMultiple, multiple
                 {event.title || "Horário incompleto"}
             </Typography>
 
+            {/* Mostrar código da disciplina se disponível */}
+            {disciplinaInfo && disciplinaInfo.codigo && (
+                <Typography variant="caption" display="block" sx={{ mb: 1 }}>
+                    <strong>Código:</strong> {disciplinaInfo.codigo}
+                </Typography>
+            )}
+
             {professoresInfo.length > 0 && (
                 <Box sx={{ mb: 1 }}>
                     <Typography variant="caption" display="block" sx={{ fontWeight: 'bold', mb: 0.5 }}>
@@ -459,6 +475,30 @@ const CalendarEventView = ({ event, timeSlots, professores, isMultiple, multiple
             <Typography variant="caption" display="block" sx={{ mb: 1 }}>
                 <strong>Duração:</strong> {event.duration * 30} minutos ({event.duration} períodos)
             </Typography>
+
+            {/* Mostrar ementa da disciplina se disponível */}
+            {disciplinaInfo && disciplinaInfo.ementa && disciplinaInfo.ementa.trim() !== "" && (
+                <Box sx={{ mt: 1, p: 1, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 1 }}>
+                    <Typography variant="caption" display="block" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                        Ementa:
+                    </Typography>
+                    <Typography
+                        variant="caption"
+                        display="block"
+                        sx={{
+                            lineHeight: 1.3,
+                            maxWidth: "300px",
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            display: "-webkit-box",
+                            WebkitLineClamp: 4,
+                            WebkitBoxOrient: "vertical",
+                        }}
+                    >
+                        {disciplinaInfo.ementa}
+                    </Typography>
+                </Box>
+            )}
 
             {/* Mostrar comentário no tooltip se existir */}
             {event.comentario && (
@@ -488,7 +528,7 @@ const CalendarEventView = ({ event, timeSlots, professores, isMultiple, multiple
 };
 
 // Componente para slot de tempo (apenas visualização)
-const TimeSlotView = ({ time, dayId, events, timeSlots, professores, sx }) => {
+const TimeSlotView = ({ time, dayId, events, timeSlots, professores, disciplinas, sx }) => {
     const eventKey = `${dayId}-${time}`;
     const eventData = events[eventKey];
     const eventsArray = eventData
@@ -515,6 +555,7 @@ const TimeSlotView = ({ time, dayId, events, timeSlots, professores, sx }) => {
                     event={event}
                     timeSlots={timeSlots}
                     professores={professores}
+                    disciplinas={disciplinas}
                     isMultiple={eventsArray.length > 1}
                     multipleIndex={index}
                     multipleTotal={eventsArray.length}
@@ -525,7 +566,7 @@ const TimeSlotView = ({ time, dayId, events, timeSlots, professores, sx }) => {
 };
 
 // Componente para grid de uma fase (apenas visualização)
-const PhaseGridView = ({ phaseNumber, events, professores, getTurnosOferta, hasMultiplosTurnos }) => {
+const PhaseGridView = ({ phaseNumber, events, professores, disciplinas, getTurnosOferta, hasMultiplosTurnos }) => {
     const temMultiplosTurnos = hasMultiplosTurnos(phaseNumber);
 
     let timeSlots;
@@ -728,6 +769,7 @@ const PhaseGridView = ({ phaseNumber, events, professores, getTurnosOferta, hasM
                                     events={events}
                                     timeSlots={timeSlots}
                                     professores={professores}
+                                    disciplinas={disciplinas}
                                     sx={(isFirstVespertino || isFirstNoturno) ? { borderTop: "2px dashed #bbb", backgroundColor: "#f5f5f5" } : {}}
                                 />
                             );
@@ -1214,6 +1256,7 @@ export default function HorariosView() {
                                 phaseNumber={phaseNumber}
                                 events={phaseEvents}
                                 professores={professores}
+                                disciplinas={disciplinas}
                                 getTurnosOferta={getTurnosOferta}
                                 hasMultiplosTurnos={hasMultiplosTurnos}
                             />
