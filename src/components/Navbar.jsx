@@ -5,11 +5,21 @@ import {
     IconButton,
     Typography,
     Button,
-    Menu,
-    MenuItem,
+    Drawer,
+    List,
+    ListItem,
+    ListItemButton,
+    ListItemText,
+    Box,
+    useTheme,
+    useMediaQuery,
+    Divider,
 } from "@mui/material";
 import MenuIcon from "@mui/icons-material/Menu";
 import { useNavigate } from "react-router-dom";
+import { DrawerContext } from "./App";
+
+const drawerWidth = 240;
 
 const linkStyle = {
     // margin: "1rem",
@@ -18,78 +28,146 @@ const linkStyle = {
 };
 
 function Navbar() {
-    const [anchorEl, setAnchorEl] = React.useState(null);
-    const open = Boolean(anchorEl);
+    const [mobileOpen, setMobileOpen] = React.useState(false);
+    const { desktopOpen, setDesktopOpen } = React.useContext(DrawerContext);
     const navigate = useNavigate();
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down('md'));
 
-    function handleMenu(event) {
-        setAnchorEl(event.currentTarget);
+    function handleDrawerToggle() {
+        setMobileOpen(!mobileOpen);
     }
 
-    function handleClose() {
-        setAnchorEl(null);
+    function handleDesktopDrawerToggle() {
+        setDesktopOpen(!desktopOpen);
     }
+
+    function handleClickHome() {
+        navigate("/");
+        if (isMobile) setMobileOpen(false);
+    }
+
     function handleClickCCRs() {
         navigate("/ccrs");
-        setAnchorEl(null);
+        if (isMobile) setMobileOpen(false);
     }
 
     function handleClickCursos() {
         navigate("/cursos");
-        setAnchorEl(null);
+        if (isMobile) setMobileOpen(false);
     }
 
     function handleClickProfessores() {
         navigate("/professores");
-        setAnchorEl(null);
+        if (isMobile) setMobileOpen(false);
     }
 
+    const drawerContent = (
+        <Box sx={{ overflow: 'auto' }}>
+            <Toolbar>
+                <Typography variant="h6" noWrap component="div">
+                    Menu
+                </Typography>
+            </Toolbar>
+            <Divider />
+            <List>
+                <ListItem disablePadding>
+                    <ListItemButton onClick={handleClickHome}>
+                        <ListItemText primary="Horários" />
+                    </ListItemButton>
+                </ListItem>
+                <ListItem disablePadding>
+                    <ListItemButton onClick={handleClickCCRs}>
+                        <ListItemText primary="CCRs" />
+                    </ListItemButton>
+                </ListItem>
+                <ListItem disablePadding>
+                    <ListItemButton onClick={handleClickCursos}>
+                        <ListItemText primary="Cursos" />
+                    </ListItemButton>
+                </ListItem>
+                <ListItem disablePadding>
+                    <ListItemButton onClick={handleClickProfessores}>
+                        <ListItemText primary="Professores" />
+                    </ListItemButton>
+                </ListItem>
+            </List>
+        </Box>
+    );
+
     return (
-        <div>
-            <AppBar position="static" style={{ width: "100%" }}>
+        <Box sx={{ display: 'flex' }}>
+            <AppBar
+                position="fixed"
+                sx={{
+                    width: { md: desktopOpen ? `calc(100% - ${drawerWidth}px)` : '100%' },
+                    ml: { md: desktopOpen ? `${drawerWidth}px` : 0 },
+                    zIndex: (theme) => theme.zIndex.drawer + 1,
+                    transition: theme.transitions.create(['width', 'margin'], {
+                        easing: theme.transitions.easing.sharp,
+                        duration: theme.transitions.duration.leavingScreen,
+                    }),
+                }}
+            >
                 <Toolbar>
                     <IconButton
-                        size="large"
-                        edge="start"
                         color="inherit"
-                        aria-label="menu"
+                        aria-label="open drawer"
+                        edge="start"
+                        onClick={isMobile ? handleDrawerToggle : handleDesktopDrawerToggle}
                         sx={{ mr: 2 }}
-                        onClick={handleMenu}
                     >
                         <MenuIcon />
                     </IconButton>
                     <Typography
                         variant="h6"
                         component="div"
-                        sx={{ flexGrow: 1 }}
+                        sx={{ flexGrow: 1, cursor: 'pointer' }}
+                        onClick={handleClickHome}
                     >
                         Construção de Horários
                     </Typography>
                     <Button color="inherit">Login</Button>
                 </Toolbar>
             </AppBar>
-            <Menu
-                id="menu-appbar"
-                anchorEl={anchorEl}
-                anchorOrigin={{
-                    vertical: "top",
-                    horizontal: "right",
+
+            {/* Mobile drawer */}
+            <Drawer
+                variant="temporary"
+                open={mobileOpen}
+                onClose={handleDrawerToggle}
+                ModalProps={{
+                    keepMounted: true, // Better open performance on mobile.
                 }}
-                keepMounted
-                transformOrigin={{
-                    vertical: "top",
-                    horizontal: "right",
+                sx={{
+                    display: { xs: 'block', md: 'none' },
+                    '& .MuiDrawer-paper': { boxSizing: 'border-box', width: drawerWidth },
                 }}
-                open={open}
-                onClose={handleClose}
             >
-                <MenuItem onClick={handleClickCCRs}>CCRs</MenuItem>
-                <MenuItem onClick={handleClickCursos}>Cursos</MenuItem>
-                <MenuItem onClick={handleClickProfessores}>
-                    Professores
-                </MenuItem>
-            </Menu>
-        </div>
+                {drawerContent}
+            </Drawer>
+
+            {/* Desktop drawer */}
+            <Drawer
+                variant="persistent"
+                open={desktopOpen}
+                sx={{
+                    display: { xs: 'none', md: 'block' },
+                    width: desktopOpen ? drawerWidth : 0,
+                    flexShrink: 0,
+                    '& .MuiDrawer-paper': {
+                        width: drawerWidth,
+                        boxSizing: 'border-box',
+                        transition: theme.transitions.create('width', {
+                            easing: theme.transitions.easing.sharp,
+                            duration: theme.transitions.duration.enteringScreen,
+                        }),
+                    },
+                }}
+            >
+                {drawerContent}
+            </Drawer>
+        </Box>
     );
 }
 

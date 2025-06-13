@@ -2,8 +2,9 @@
 
 import Grid from "@mui/material/Unstable_Grid2"; // Grid version 2
 
-import { Container, Stack } from "@mui/material";
+import { Container, Stack, Box, Toolbar } from "@mui/material";
 import { Route, Routes } from "react-router-dom";
+import React from "react";
 
 import Navbar from "./Navbar";
 
@@ -14,32 +15,50 @@ import Professores from "./Professores";
 import Horarios from "./Horarios";
 import CustomThemeProvider from "./CustomThemeProvider";
 import ThemeSwitch from "./ThemeSwitch";
+
 axios.defaults.baseURL = process.env.REACT_APP_API_URL;
 axios.defaults.headers.common["Content-Type"] =
     "application/json;charset=utf-8";
 
+// Contexto para gerenciar o estado do drawer
+export const DrawerContext = React.createContext();
+
 function App() {
+    const [desktopOpen, setDesktopOpen] = React.useState(false);
+
     return (
         <CustomThemeProvider>
-            <ThemeSwitch />
-            <Container spacing={2}>
-                <Stack spacing={2}>
-                    <Grid md={12}>
-                        <Navbar />
-                    </Grid>
-                    <Grid md={12}>
-                        <Routes>
-                            <Route path="/" element={<Horarios />} />
-                            <Route path="ccrs" element={<CCRs />} />
-                            <Route path="cursos" element={<Cursos />} />
-                            <Route
-                                path="professores"
-                                element={<Professores />}
-                            />
-                        </Routes>
-                    </Grid>
-                </Stack>
-            </Container>
+            <DrawerContext.Provider value={{ desktopOpen, setDesktopOpen }}>
+                <Box sx={{ display: 'flex' }}>
+                    <Navbar />
+                    <Box
+                        component="main"
+                        sx={{
+                            flexGrow: 1,
+                            p: 3,
+                            width: { md: desktopOpen ? `calc(100% - 240px)` : '100%' },
+                            transition: (theme) => theme.transitions.create(['width', 'margin'], {
+                                easing: theme.transitions.easing.sharp,
+                                duration: theme.transitions.duration.leavingScreen,
+                            }),
+                        }}
+                    >
+                        <Toolbar /> {/* Spacing for AppBar */}
+                        <ThemeSwitch />
+                        <Container maxWidth="xl" sx={{ mt: 2 }}>
+                            <Routes>
+                                <Route path="/" element={<Horarios />} />
+                                <Route path="ccrs" element={<CCRs />} />
+                                <Route path="cursos" element={<Cursos />} />
+                                <Route
+                                    path="professores"
+                                    element={<Professores />}
+                                />
+                            </Routes>
+                        </Container>
+                    </Box>
+                </Box>
+            </DrawerContext.Provider>
         </CustomThemeProvider>
     );
 }
