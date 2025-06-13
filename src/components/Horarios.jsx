@@ -187,12 +187,12 @@ const numberToDay = {
 };
 
 // Função para converter evento do formato UI para formato do banco
-const eventToDbFormat = (event, phaseNumber, selectedAnoSemestre) => {
+const eventToDbFormat = (event, phaseNumber, selectedAnoSemestre, selectedCurso) => {
     const ano = selectedAnoSemestre.ano;
     const semestre = selectedAnoSemestre.semestre;
 
     return {
-        id_curso: 1, // Fixo para o curso (pode ser configurável futuramente)
+        id_curso: selectedCurso?.id || 1, // Usar curso selecionado ou fallback para 1
         id_ccr: event.disciplinaId || event.id_ccr,
         codigo_docente: event.professorId || event.codigo_docente,
         dia_semana: dayToNumber[event.dayId] || event.dia_semana,
@@ -364,6 +364,7 @@ const EventModal = ({
     verificarConflitoProfessor,
     anosSemestres,
     selectedAnoSemestre,
+    selectedCurso,
     horariosSeOverlapam,
     dayToNumber,
     daysOfWeek,
@@ -408,7 +409,7 @@ const EventModal = ({
                         anosSemestres.map(async (anoSem) => {
                             try {
                                 const response = await axios.get("http://localhost:3010/api/horarios", {
-                                    params: { ano: anoSem.ano, semestre: anoSem.semestre, id_curso: 1 }
+                                    params: { ano: anoSem.ano, semestre: anoSem.semestre, id_curso: selectedCurso?.id || 1 }
                                 });
                                 return response.data.horarios || [];
                             } catch (error) {
@@ -2196,6 +2197,10 @@ export default function Horarios() {
         ano: new Date().getFullYear(),
         semestre: 1
     });
+    const [selectedCurso, setSelectedCurso] = useState(null); // Novo estado para curso selecionado
+    const [cursos, setCursos] = useState([]); // Novo estado para lista de cursos
+    const [loadingCursos, setLoadingCursos] = useState(true); // Loading para cursos
+    const [errorCursos, setErrorCursos] = useState(null); // Error para cursos
     const [events, setEvents] = useState(initialEvents);
     const [modalOpen, setModalOpen] = useState(false);
     const [selectedEvent, setSelectedEvent] = useState(null);
@@ -2227,6 +2232,42 @@ export default function Horarios() {
 
     // Helper para verificar se o semestre é par (para compatibilidade)
     const isEvenSemester = selectedAnoSemestre.semestre === 2;
+
+    // Função para obter o ID do usuário atual
+    // TODO: Substituir por sistema de autenticação real
+    const getCurrentUserId = () => {
+        return 'gian'; // Usuário de teste
+    };
+
+    // Função para buscar cursos da API (apenas cursos vinculados ao usuário)
+    const fetchCursos = async () => {
+        try {
+            setLoadingCursos(true);
+            setErrorCursos(null);
+
+            const userId = getCurrentUserId();
+
+            const response = await axios.get(`http://localhost:3010/api/usuarios/${userId}/cursos`);
+
+            const cursosData = response.data.cursos || [];
+            setCursos(cursosData);
+
+            // Se não há curso selecionado e há cursos disponíveis, selecionar o primeiro
+            if (!selectedCurso && cursosData.length > 0) {
+                setSelectedCurso(cursosData[0]);
+            }
+        } catch (error) {
+            console.error("Erro ao buscar cursos do usuário:", error);
+            if (error.response?.status === 404) {
+                setErrorCursos("Usuário não encontrado ou sem cursos vinculados.");
+            } else {
+                setErrorCursos("Erro ao carregar cursos disponíveis para o usuário.");
+            }
+            setCursos([]);
+        } finally {
+            setLoadingCursos(false);
+        }
+    };
 
     // Função para buscar anos/semestres da API
     const fetchAnosSemestres = async () => {
@@ -2320,12 +2361,15 @@ export default function Horarios() {
             setLoadingOfertas(true);
             setErrorOfertas(null);
 
-            // Fazer requisição com filtros se há ano/semestre selecionado
+            // Fazer requisição com filtros se há ano/semestre e curso selecionados
             const params = {};
-            if (selectedAnoSemestre.ano && selectedAnoSemestre.semestre) {
+            if (selectedAnoSemestre.ano && selectedAnoSemestre.semestre && selectedCurso?.id) {
                 params.ano = selectedAnoSemestre.ano;
                 params.semestre = selectedAnoSemestre.semestre;
-                params.id_curso = 1; // Assumindo curso fixo como 1
+                params.id_curso = selectedCurso.id;
+            } else if (selectedCurso?.id) {
+                // Se só tem curso selecionado, usar apenas ele
+                params.id_curso = selectedCurso.id;
             }
 
             const response = await axios.get("http://localhost:3010/api/ofertas", { params });
@@ -2733,7 +2777,7 @@ export default function Horarios() {
                                     params: {
                                         ano: anoSem.ano,
                                         semestre: anoSem.semestre,
-                                        id_curso: 1
+                                        id_curso: selectedCurso?.id || 1
                                     }
                                 });
                                 return response.data.horarios || [];
@@ -3019,7 +3063,8 @@ export default function Horarios() {
                                             const dbEvent = eventToDbFormat(
                                                 eventoCopy,
                                                 phaseNumber,
-                                                selectedAnoSemestre
+                                                selectedAnoSemestre,
+                                                selectedCurso
                                             );
                                             horariosAtuais.push(dbEvent);
                                         }
@@ -3030,7 +3075,8 @@ export default function Horarios() {
                                     const dbEvent = eventToDbFormat(
                                         event,
                                         phaseNumber,
-                                        selectedAnoSemestre
+                                        selectedAnoSemestre,
+                                        selectedCurso
                                     );
                                     horariosAtuais.push(dbEvent);
                                 }
@@ -3108,7 +3154,7 @@ export default function Horarios() {
                     params: {
                         ano: selectedAnoSemestre.ano,
                         semestre: selectedAnoSemestre.semestre,
-                        id_curso: 1,
+                        id_curso: selectedCurso?.id || 1,
                     },
                 }
             );
@@ -3285,7 +3331,7 @@ export default function Horarios() {
             o.ano === selectedAnoSemestre.ano &&
             o.semestre === selectedAnoSemestre.semestre &&
             o.fase === phaseNumber &&
-            o.id_curso === 1 // Assumindo curso fixo como 1
+            o.id_curso === (selectedCurso?.id || 1)
         );
 
         if (ofertasFase.length === 0) {
@@ -3368,7 +3414,7 @@ export default function Horarios() {
         const ofertasAtuais = ofertas.filter(o =>
             o.ano === selectedAnoSemestre.ano &&
             o.semestre === selectedAnoSemestre.semestre &&
-            o.id_curso === 1 // Assumindo curso fixo como 1
+            o.id_curso === (selectedCurso?.id || 1)
         );
 
         if (ofertasAtuais.length === 0) {
@@ -3385,28 +3431,28 @@ export default function Horarios() {
 
     // Buscar dados iniciais quando o componente for montado
     useEffect(() => {
+        fetchCursos();
         fetchProfessores();
         fetchDisciplinas();
         fetchAnosSemestres();
-        fetchOfertas();
     }, []);
 
-    // Carregar horários quando disciplinas estiverem carregadas e ano/semestre mudar
+    // Carregar horários quando disciplinas estiverem carregadas, curso selecionado e ano/semestre mudar
     useEffect(() => {
-        if (disciplinas.length > 0 && selectedAnoSemestre.ano && selectedAnoSemestre.semestre) {
+        if (disciplinas.length > 0 && selectedCurso && selectedAnoSemestre.ano && selectedAnoSemestre.semestre) {
             // Limpar eventos atuais antes de carregar novos
             setEvents({});
             setOriginalHorarios([]);
             loadHorariosFromDatabase();
         }
-    }, [disciplinas, selectedAnoSemestre]);
+    }, [disciplinas, selectedCurso, selectedAnoSemestre]);
 
-    // Recarregar ofertas quando ano/semestre mudar
+    // Recarregar ofertas quando ano/semestre ou curso mudar
     useEffect(() => {
-        if (selectedAnoSemestre.ano && selectedAnoSemestre.semestre) {
+        if (selectedCurso && selectedAnoSemestre.ano && selectedAnoSemestre.semestre) {
             fetchOfertas();
         }
-    }, [selectedAnoSemestre]);
+    }, [selectedCurso, selectedAnoSemestre]);
 
     // Limpar erro de carregamento quando trocar ano/semestre
     useEffect(() => {
@@ -3788,7 +3834,7 @@ export default function Horarios() {
                 dayId: dayId,
 
                 // Campos do banco de dados
-                id_curso: 1, // Fixo para o curso
+                id_curso: selectedCurso?.id || 1, // Usar curso selecionado
                 id_ccr: null,
                 codigo_docente: "",
                 dia_semana: dayToNumber[dayId],
@@ -3967,7 +4013,7 @@ export default function Horarios() {
                         duration: eventData.duration || 2,
 
                         // Sincronizar campos do banco
-                        id_curso: 1,
+                        id_curso: selectedCurso?.id || 1,
                         id_ccr: eventData.disciplinaId || eventData.id_ccr,
                         codigo_docente:
                             eventData.professoresIds?.[0] ||
@@ -4133,7 +4179,12 @@ export default function Horarios() {
                     mb: 4,
                 }}
             >
-                <Typography variant="h4">Grade de Horários</Typography>
+                <Box>
+                    <Typography variant="h4">Grade de Horários</Typography>
+                    <Typography variant="caption" color="textSecondary">
+                        Usuário: {getCurrentUserId()} • Mostrando apenas cursos vinculados
+                    </Typography>
+                </Box>
 
                 <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                     <Button
@@ -4182,6 +4233,36 @@ export default function Horarios() {
                             : "Nenhuma Mudança"}
                     </Button>
 
+                    <FormControl sx={{ minWidth: 180 }}>
+                        <InputLabel>Curso</InputLabel>
+                        <Select
+                            value={selectedCurso ? selectedCurso.id : ""}
+                            onChange={(e) => {
+                                const curso = cursos.find(c => c.id === e.target.value);
+                                setSelectedCurso(curso);
+                            }}
+                            label="Curso"
+                            disabled={loadingCursos || cursos.length === 0}
+                            startAdornment={loadingCursos && (
+                                <CircularProgress size={16} sx={{ mr: 1 }} />
+                            )}
+                        >
+                            {cursos.map((curso) => (
+                                <MenuItem
+                                    key={curso.id}
+                                    value={curso.id}
+                                >
+                                    {curso.nome} ({curso.codigo})
+                                </MenuItem>
+                            ))}
+                            {cursos.length === 0 && !loadingCursos && (
+                                <MenuItem disabled>
+                                    Nenhum curso vinculado ao usuário
+                                </MenuItem>
+                            )}
+                        </Select>
+                    </FormControl>
+
                     <FormControl sx={{ minWidth: 200 }}>
                         <InputLabel>Ano/Semestre</InputLabel>
                         <Select
@@ -4194,7 +4275,7 @@ export default function Horarios() {
                                 });
                             }}
                             label="Ano/Semestre"
-                            disabled={loadingAnosSemestres || anosSemestres.length === 0 || loadingHorarios}
+                            disabled={loadingAnosSemestres || anosSemestres.length === 0 || loadingHorarios || !selectedCurso}
                             startAdornment={loadingHorarios && (
                                 <CircularProgress size={16} sx={{ mr: 1 }} />
                             )}
@@ -4248,6 +4329,24 @@ export default function Horarios() {
                 </Alert>
             )}
 
+            {errorCursos && (
+                <Alert
+                    severity="error"
+                    sx={{ mb: 2 }}
+                    action={
+                        <Button
+                            color="inherit"
+                            size="small"
+                            onClick={fetchCursos}
+                        >
+                            Tentar novamente
+                        </Button>
+                    }
+                >
+                     {errorCursos}
+                </Alert>
+            )}
+
             {errorAnosSemestres && (
                 <Alert
                     severity="error"
@@ -4263,6 +4362,18 @@ export default function Horarios() {
                     }
                 >
                      {errorAnosSemestres}
+                </Alert>
+            )}
+
+            {!selectedCurso && !loadingCursos && cursos.length > 0 && (
+                <Alert severity="info" sx={{ mb: 2 }}>
+                     Selecione um curso para visualizar os horários disponíveis.
+                </Alert>
+            )}
+
+            {!loadingCursos && cursos.length === 0 && !errorCursos && (
+                <Alert severity="warning" sx={{ mb: 2 }}>
+                     Nenhum curso vinculado ao usuário '{getCurrentUserId()}'. Solicite acesso aos cursos necessários.
                 </Alert>
             )}
 
@@ -4302,7 +4413,7 @@ export default function Horarios() {
                 </Alert>
             )}
 
-            {loadingProfessores || loadingDisciplinas || loadingHorarios || loadingAnosSemestres || loadingOfertas ? (
+            {loadingCursos || loadingProfessores || loadingDisciplinas || loadingHorarios || loadingAnosSemestres || loadingOfertas ? (
                 <Box
                     sx={{
                         display: "flex",
@@ -4314,7 +4425,9 @@ export default function Horarios() {
                     <Box sx={{ textAlign: "center" }}>
                         <CircularProgress size={40} sx={{ mb: 2 }} />
                         <Typography variant="body1" color="textSecondary">
-                            {loadingProfessores
+                            {loadingCursos
+                                ? "Carregando cursos do usuário..."
+                                : loadingProfessores
                                 ? "Carregando dados dos professores..."
                                 : loadingDisciplinas
                                 ? "Carregando dados das disciplinas..."
@@ -4341,12 +4454,15 @@ export default function Horarios() {
                                 <Button
                                     color="inherit"
                                     size="small"
-                                    onClick={() => {
-                                        fetchProfessores();
-                                        fetchDisciplinas();
-                                        fetchAnosSemestres();
-                                        fetchOfertas();
-                                    }}
+                                                                onClick={() => {
+                                fetchCursos();
+                                fetchProfessores();
+                                fetchDisciplinas();
+                                fetchAnosSemestres();
+                                if (selectedCurso) {
+                                    fetchOfertas();
+                                }
+                            }}
                                 >
                                     Tentar novamente
                                 </Button>
@@ -4417,7 +4533,7 @@ export default function Horarios() {
                         return null;
                     })()}
 
-                    {getFasesDisponiveis().map((phaseNumber) => {
+                    {selectedCurso && getFasesDisponiveis().map((phaseNumber) => {
                         const phaseEvents = events[phaseNumber] || {};
                         const eventCount = Object.keys(phaseEvents).length;
 
@@ -4460,7 +4576,7 @@ export default function Horarios() {
                             color="primary"
                             fontWeight="bold"
                         >
-                             Status ({selectedAnoSemestre.ano}/{selectedAnoSemestre.semestre}º semestre): {getValidHorariosCount()} horários
+                             Status ({selectedCurso ? `${selectedCurso.nome} - ` : ''}{selectedAnoSemestre.ano}/{selectedAnoSemestre.semestre}º semestre): {getValidHorariosCount()} horários
                             completos {getValidHorariosCount() === 0 && hasPendingChanges()
                                 ? "• Mudanças pendentes para sincronizar"
                                 : "(com disciplina e professor obrigatórios) prontos para salvar"}
@@ -4499,6 +4615,7 @@ export default function Horarios() {
                 verificarConflitoProfessor={verificarConflitoProfessor}
                 anosSemestres={anosSemestres}
                 selectedAnoSemestre={selectedAnoSemestre}
+                selectedCurso={selectedCurso}
                 horariosSeOverlapam={horariosSeOverlapam}
                 dayToNumber={dayToNumber}
                 daysOfWeek={daysOfWeek}

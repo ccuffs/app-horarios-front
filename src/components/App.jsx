@@ -13,6 +13,7 @@ import Cursos from "./Cursos";
 import CCRs from "./CCRs";
 import Professores from "./Professores";
 import Horarios from "./Horarios";
+import HorariosView from "./HorariosView";
 import CustomThemeProvider from "./CustomThemeProvider";
 import ThemeSwitch from "./ThemeSwitch";
 
@@ -48,6 +49,7 @@ function App() {
                         <Container maxWidth="xl" sx={{ mt: 2 }}>
                             <Routes>
                                 <Route path="/" element={<Horarios />} />
+                                <Route path="visualizar-horarios" element={<HorariosView />} />
                                 <Route path="ccrs" element={<CCRs />} />
                                 <Route path="cursos" element={<Cursos />} />
                                 <Route
