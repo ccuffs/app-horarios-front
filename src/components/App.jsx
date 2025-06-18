@@ -12,6 +12,7 @@ import axios from "axios";
 import Cursos from "./Cursos";
 import CCRs from "./CCRs";
 import Professores from "./Professores";
+import Ofertas from "./Ofertas";
 import Horarios from "./Horarios";
 import HorariosView from "./HorariosView";
 import CustomThemeProvider from "./CustomThemeProvider";
@@ -55,6 +56,10 @@ function App() {
                                 <Route
                                     path="professores"
                                     element={<Professores />}
+                                />
+                                <Route
+                                    path="ofertas"
+                                    element={<Ofertas />}
                                 />
                             </Routes>
                         </Container>

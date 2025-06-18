@@ -38,7 +38,7 @@ export default function Professores() {
     async function getData() {
         try {
             const res = await axios.get("/docentes");
-            console.log(res.data);
+
             setProfessores(res.data.docentes);
         } catch (error) {
             console.log(

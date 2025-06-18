@@ -43,7 +43,6 @@ export default function Cursos() {
     async function getData() {
         try {
             const res = await axios.get("/cursos");
-            console.log(res.data);
             setCursos(res.data.cursos);
         } catch (error) {
             console.log("Não foi possível retornar a lista de cursos: ", error);

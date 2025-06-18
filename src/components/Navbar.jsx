@@ -62,6 +62,11 @@ function Navbar() {
         if (isMobile) setMobileOpen(false);
     }
 
+    function handleClickOfertas() {
+        navigate("/ofertas");
+        if (isMobile) setMobileOpen(false);
+    }
+
     function handleClickVisualizarHorarios() {
         navigate("/visualizar-horarios");
         if (isMobile) setMobileOpen(false);
@@ -99,6 +104,11 @@ function Navbar() {
                 <ListItem disablePadding>
                     <ListItemButton onClick={handleClickProfessores}>
                         <ListItemText primary="Professores" />
+                    </ListItemButton>
+                </ListItem>
+                <ListItem disablePadding>
+                    <ListItemButton onClick={handleClickOfertas}>
+                        <ListItemText primary="Ofertas" />
                     </ListItemButton>
                 </ListItem>
             </List>
