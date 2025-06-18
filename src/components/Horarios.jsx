@@ -30,7 +30,13 @@ import {
     Badge,
     Snackbar,
 } from "@mui/material";
-import { Close as CloseIcon, Save as SaveIcon, Delete as DeleteIcon, Warning as WarningIcon, Schedule as ScheduleIcon } from "@mui/icons-material";
+import {
+    Close as CloseIcon,
+    Save as SaveIcon,
+    Delete as DeleteIcon,
+    Warning as WarningIcon,
+    Schedule as ScheduleIcon,
+} from "@mui/icons-material";
 import axios from "axios";
 import { customColors } from "./CustomThemeProvider";
 
@@ -73,11 +79,11 @@ const timeSlotsNoturno = [
 
 // Função utilitária para converter HH:MM:SS para HH:MM para exibição
 const formatTimeForDisplay = (timeString) => {
-    if (!timeString || typeof timeString !== 'string') return '';
+    if (!timeString || typeof timeString !== "string") return "";
 
     // Se já está no formato HH:MM:SS, extrair apenas HH:MM
-    if (timeString.includes(':')) {
-        const parts = timeString.split(':');
+    if (timeString.includes(":")) {
+        const parts = timeString.split(":");
         if (parts.length >= 2) {
             return `${parts[0]}:${parts[1]}`;
         }
@@ -88,15 +94,15 @@ const formatTimeForDisplay = (timeString) => {
 
 // Função utilitária para converter HH:MM para HH:MM:SS para armazenamento
 const formatTimeForStorage = (timeString) => {
-    if (!timeString || typeof timeString !== 'string') return '';
+    if (!timeString || typeof timeString !== "string") return "";
 
     // Se já inclui segundos, retornar como está
-    if (timeString.split(':').length === 3) {
+    if (timeString.split(":").length === 3) {
         return timeString;
     }
 
     // Se é HH:MM, adicionar :00
-    if (timeString.split(':').length === 2) {
+    if (timeString.split(":").length === 2) {
         return `${timeString}:00`;
     }
 
@@ -105,18 +111,18 @@ const formatTimeForStorage = (timeString) => {
 
 // Função utilitária para normalizar horários vindos do banco
 const normalizeTimeFromDB = (timeFromDB) => {
-    if (!timeFromDB) return '';
+    if (!timeFromDB) return "";
 
     let timeString = timeFromDB;
 
     // Se é um objeto TIME do Sequelize, converter para string
-    if (typeof timeFromDB === 'object' && timeFromDB !== null) {
+    if (typeof timeFromDB === "object" && timeFromDB !== null) {
         timeString = timeFromDB.toString();
     }
 
     // Garantir formato HH:MM:SS
-    if (typeof timeString === 'string') {
-        const parts = timeString.split(':');
+    if (typeof timeString === "string") {
+        const parts = timeString.split(":");
         if (parts.length === 2) {
             return `${parts[0]}:${parts[1]}:00`;
         } else if (parts.length >= 3) {
@@ -187,7 +193,12 @@ const numberToDay = {
 };
 
 // Função para converter evento do formato UI para formato do banco
-const eventToDbFormat = (event, phaseNumber, selectedAnoSemestre, selectedCurso) => {
+const eventToDbFormat = (
+    event,
+    phaseNumber,
+    selectedAnoSemestre,
+    selectedCurso
+) => {
     const ano = selectedAnoSemestre.ano;
     const semestre = selectedAnoSemestre.semestre;
 
@@ -198,7 +209,7 @@ const eventToDbFormat = (event, phaseNumber, selectedAnoSemestre, selectedCurso)
         dia_semana: dayToNumber[event.dayId] || event.dia_semana,
         ano: ano,
         semestre: semestre,
-        fase: phaseNumber, // SEMPRE usar a fase do grid onde está posicionado
+        fase: parseInt(phaseNumber, 10), // SEMPRE usar a fase do grid onde está posicionado (forçar número)
         hora_inicio: event.startTime || event.hora_inicio,
         duracao: event.duration || event.duracao,
         comentario: event.comentario || "",
@@ -266,7 +277,13 @@ const getDisciplinaProfessoresFromOtherPeriod = (
     if (!disciplinaId || !events[phaseNumber]) return [];
 
     // Buscar a disciplina no período da manhã vespertina (13:30-15:30)
-    const morningSlots = ["13:30:00", "14:00:00", "14:30:00", "15:00:00", "15:30:00"];
+    const morningSlots = [
+        "13:30:00",
+        "14:00:00",
+        "14:30:00",
+        "15:00:00",
+        "15:30:00",
+    ];
 
     for (const [, eventArray] of Object.entries(events[phaseNumber])) {
         // eventArray agora é um array de eventos
@@ -295,7 +312,11 @@ const getDisciplinaProfessoresFromOtherPeriod = (
 };
 
 // Função para buscar professores de uma disciplina já cadastrada na mesma fase
-const getDisciplinaProfessoresFromSamePhase = (disciplinaId, phaseNumber, events) => {
+const getDisciplinaProfessoresFromSamePhase = (
+    disciplinaId,
+    phaseNumber,
+    events
+) => {
     if (!disciplinaId || !events || !events[phaseNumber]) return [];
 
     const phaseEvents = events[phaseNumber];
@@ -340,7 +361,11 @@ const getDisciplinaProfessorFromOtherPeriod = (
 };
 
 // Função para buscar professor de uma disciplina já cadastrada na mesma fase (compatibilidade)
-const getDisciplinaProfessorFromSamePhase = (disciplinaId, phaseNumber, events) => {
+const getDisciplinaProfessorFromSamePhase = (
+    disciplinaId,
+    phaseNumber,
+    events
+) => {
     const professoresIds = getDisciplinaProfessoresFromSamePhase(
         disciplinaId,
         phaseNumber,
@@ -377,10 +402,15 @@ const EventModal = ({
     const [conflitosTempoRealLocal, setConflitosTempoRealLocal] = useState([]);
     const [verificandoConflitos, setVerificandoConflitos] = useState(false);
     const [erroValidacao, setErroValidacao] = useState("");
+    const [inputValueProfessor, setInputValueProfessor] = useState("");
 
     // Função para verificar conflitos quando professores são selecionados
     const verificarConflitosTempoReal = async (professoresSelecionados) => {
-        if (!event || !professoresSelecionados || professoresSelecionados.length === 0) {
+        if (
+            !event ||
+            !professoresSelecionados ||
+            professoresSelecionados.length === 0
+        ) {
             setConflitosTempoRealLocal([]);
             return;
         }
@@ -395,7 +425,9 @@ const EventModal = ({
                 startTime: event.startTime,
                 duration: event.duration,
                 disciplinaId: disciplinaId,
-                title: getUniqueDisciplinas(disciplinas).find(d => d.id === disciplinaId)?.nome
+                title: getUniqueDisciplinas(disciplinas).find(
+                    (d) => d.id === disciplinaId
+                )?.nome,
             };
 
             const todosConflitos = [];
@@ -408,9 +440,16 @@ const EventModal = ({
                     const allHorariosResponse = await Promise.all(
                         anosSemestres.map(async (anoSem) => {
                             try {
-                                const response = await axios.get("http://localhost:3010/api/horarios", {
-                                    params: { ano: anoSem.ano, semestre: anoSem.semestre, id_curso: selectedCurso?.id || 1 }
-                                });
+                                const response = await axios.get(
+                                    "http://localhost:3010/api/horarios",
+                                    {
+                                        params: {
+                                            ano: anoSem.ano,
+                                            semestre: anoSem.semestre,
+                                            id_curso: selectedCurso?.id || 1,
+                                        },
+                                    }
+                                );
                                 return response.data.horarios || [];
                             } catch (error) {
                                 return [];
@@ -420,11 +459,13 @@ const EventModal = ({
 
                     const horariosSalvos = allHorariosResponse
                         .flat()
-                        .filter(h => h.codigo_docente === profId && h.id_ccr) // Filtrar apenas horários com disciplina
-                        .map(h => ({
-                            ...h, eventoId: h.id, tipo: 'salvo', uniqueKey: `salvo-${h.id}`
+                        .filter((h) => h.codigo_docente === profId && h.id_ccr) // Filtrar apenas horários com disciplina
+                        .map((h) => ({
+                            ...h,
+                            eventoId: h.id,
+                            tipo: "salvo",
+                            uniqueKey: `salvo-${h.id}`,
                         }));
-
 
                     // 2. COLETAR HORÁRIOS TEMPORÁRIOS (TELA)
                     const horariosTemporarios = [];
@@ -432,27 +473,42 @@ const EventModal = ({
                         const phaseEvents = events[phaseNumber];
                         if (phaseEvents) {
                             Object.values(phaseEvents).forEach((eventArray) => {
-                                const eventsInSlot = Array.isArray(eventArray) ? eventArray : [eventArray];
+                                const eventsInSlot = Array.isArray(eventArray)
+                                    ? eventArray
+                                    : [eventArray];
                                 eventsInSlot.forEach((existingEvent) => {
-                                    const professoresDoEvento = existingEvent.professoresIds && Array.isArray(existingEvent.professoresIds)
-                                        ? existingEvent.professoresIds
-                                        : (existingEvent.professorId ? [existingEvent.professorId] : []);
+                                    const professoresDoEvento =
+                                        existingEvent.professoresIds &&
+                                        Array.isArray(
+                                            existingEvent.professoresIds
+                                        )
+                                            ? existingEvent.professoresIds
+                                            : existingEvent.professorId
+                                            ? [existingEvent.professorId]
+                                            : [];
 
                                     if (professoresDoEvento.includes(profId)) {
                                         // Só adicionar se tem disciplina definida
                                         if (existingEvent.disciplinaId) {
                                             horariosTemporarios.push({
                                                 codigo_docente: profId,
-                                                dia_semana: dayToNumber[existingEvent.dayId],
-                                                hora_inicio: existingEvent.startTime,
-                                                duracao: existingEvent.duration || 2,
+                                                dia_semana:
+                                                    dayToNumber[
+                                                        existingEvent.dayId
+                                                    ],
+                                                hora_inicio:
+                                                    existingEvent.startTime,
+                                                duracao:
+                                                    existingEvent.duration || 2,
                                                 ano: selectedAnoSemestre.ano,
-                                                semestre: selectedAnoSemestre.semestre,
+                                                semestre:
+                                                    selectedAnoSemestre.semestre,
                                                 id_ccr: existingEvent.disciplinaId,
-                                                disciplinaNome: existingEvent.title,
-                                                tipo: 'temporario',
+                                                disciplinaNome:
+                                                    existingEvent.title,
+                                                tipo: "temporario",
                                                 eventoId: existingEvent.id,
-                                                uniqueKey: `temp-${existingEvent.id}`
+                                                uniqueKey: `temp-${existingEvent.id}`,
                                             });
                                         }
                                     }
@@ -464,17 +520,22 @@ const EventModal = ({
                     // 3. COMBINAR E REMOVER DUPLICATAS, MANTENDO O MAIS RECENTE
                     const eventosUnicos = new Map();
                     // Adicionar salvos primeiro
-                    horariosSalvos.forEach(h => eventosUnicos.set(h.eventoId, h));
+                    horariosSalvos.forEach((h) =>
+                        eventosUnicos.set(h.eventoId, h)
+                    );
                     // Sobrescrever com temporários (que são mais recentes)
-                    horariosTemporarios.forEach(h => eventosUnicos.set(h.eventoId, h));
+                    horariosTemporarios.forEach((h) =>
+                        eventosUnicos.set(h.eventoId, h)
+                    );
 
                     // REMOVER o evento ATUAL da lista de verificação
                     if (eventoSimulado.id) {
                         eventosUnicos.delete(eventoSimulado.id);
                     }
 
-                    const todosHorariosOutros = Array.from(eventosUnicos.values());
-
+                    const todosHorariosOutros = Array.from(
+                        eventosUnicos.values()
+                    );
 
                     // Criar horário do evento atual sendo editado
                     const horarioAtual = {
@@ -486,13 +547,13 @@ const EventModal = ({
                         semestre: selectedAnoSemestre.semestre,
                         id_ccr: eventoSimulado.disciplinaId,
                         disciplinaNome: eventoSimulado.title,
-                        tipo: 'novo',
+                        tipo: "novo",
                         eventoId: eventoSimulado.id,
-                        uniqueKey: `novo-${eventoSimulado.id}`
+                        uniqueKey: `novo-${eventoSimulado.id}`,
                     };
 
                     // Verificar conflitos do evento atual contra todos os outros
-                    todosHorariosOutros.forEach(outroHorario => {
+                    todosHorariosOutros.forEach((outroHorario) => {
                         // CRÍTICO: Nunca comparar o mesmo evento consigo mesmo
                         const evento1Id = horarioAtual.eventoId;
                         const evento2Id = outroHorario.eventoId;
@@ -502,18 +563,33 @@ const EventModal = ({
                         }
 
                         // Verificar se há sobreposição de dias
-                        if (horarioAtual.dia_semana !== outroHorario.dia_semana) {
+                        if (
+                            horarioAtual.dia_semana !== outroHorario.dia_semana
+                        ) {
                             return;
                         }
 
                         // IMPORTANTE: Só detectar conflitos entre horários do MESMO ano e semestre
-                        if (horarioAtual.ano !== outroHorario.ano || horarioAtual.semestre !== outroHorario.semestre) {
+                        if (
+                            horarioAtual.ano !== outroHorario.ano ||
+                            horarioAtual.semestre !== outroHorario.semestre
+                        ) {
                             return; // Horários de períodos diferentes não são conflitos
                         }
 
                         // Verificar se são exatamente o mesmo horário
-                        const hora1 = typeof horarioAtual.hora_inicio === 'object' ? horarioAtual.hora_inicio.toString().substring(0, 5) : horarioAtual.hora_inicio;
-                        const hora2 = typeof outroHorario.hora_inicio === 'object' ? outroHorario.hora_inicio.toString().substring(0, 5) : outroHorario.hora_inicio;
+                        const hora1 =
+                            typeof horarioAtual.hora_inicio === "object"
+                                ? horarioAtual.hora_inicio
+                                      .toString()
+                                      .substring(0, 5)
+                                : horarioAtual.hora_inicio;
+                        const hora2 =
+                            typeof outroHorario.hora_inicio === "object"
+                                ? outroHorario.hora_inicio
+                                      .toString()
+                                      .substring(0, 5)
+                                : outroHorario.hora_inicio;
 
                         // Considerar que é o MESMO compromisso (portanto não é conflito) se todos os
                         // atributos básicos coincidirem – ignoramos diferença de duração para permitir
@@ -523,19 +599,38 @@ const EventModal = ({
                             hora1 === hora2 &&
                             horarioAtual.ano === outroHorario.ano &&
                             horarioAtual.semestre === outroHorario.semestre &&
-                            horarioAtual.dia_semana === outroHorario.dia_semana &&
-                            horarioAtual.codigo_docente === outroHorario.codigo_docente
+                            horarioAtual.dia_semana ===
+                                outroHorario.dia_semana &&
+                            horarioAtual.codigo_docente ===
+                                outroHorario.codigo_docente
                         ) {
                             return; // É o mesmo compromisso (possível edição), não gera conflito
                         }
 
                         // Verificar se ambos os horários têm disciplinas e há sobreposição
-                        if (horarioAtual.id_ccr && outroHorario.id_ccr && horariosSeOverlapam(horarioAtual, outroHorario)) {
+                        if (
+                            horarioAtual.id_ccr &&
+                            outroHorario.id_ccr &&
+                            horariosSeOverlapam(horarioAtual, outroHorario)
+                        ) {
                             // Criar ID único para evitar duplicatas
-                            const conflict1 = `${horarioAtual.id_ccr || 'null'}-${horarioAtual.ano}-${horarioAtual.semestre}-${hora1}-${horarioAtual.duracao}`;
-                            const conflict2 = `${outroHorario.id_ccr || 'null'}-${outroHorario.ano}-${outroHorario.semestre}-${hora2}-${outroHorario.duracao}`;
-                            const sortedConflicts = [conflict1, conflict2].sort();
-                            const conflictId = `${profId}-${horarioAtual.dia_semana}-${sortedConflicts.join('---')}`;
+                            const conflict1 = `${
+                                horarioAtual.id_ccr || "null"
+                            }-${horarioAtual.ano}-${
+                                horarioAtual.semestre
+                            }-${hora1}-${horarioAtual.duracao}`;
+                            const conflict2 = `${
+                                outroHorario.id_ccr || "null"
+                            }-${outroHorario.ano}-${
+                                outroHorario.semestre
+                            }-${hora2}-${outroHorario.duracao}`;
+                            const sortedConflicts = [
+                                conflict1,
+                                conflict2,
+                            ].sort();
+                            const conflictId = `${profId}-${
+                                horarioAtual.dia_semana
+                            }-${sortedConflicts.join("---")}`;
 
                             // Verificar se já processamos este conflito
                             if (conflitosSet.has(conflictId)) {
@@ -543,35 +638,55 @@ const EventModal = ({
                             }
                             conflitosSet.add(conflictId);
 
-                            const disciplina1 = disciplinas.find(d => d.id === horarioAtual.id_ccr);
-                            const disciplina2 = disciplinas.find(d => d.id === outroHorario.id_ccr);
+                            const disciplina1 = disciplinas.find(
+                                (d) => d.id === horarioAtual.id_ccr
+                            );
+                            const disciplina2 = disciplinas.find(
+                                (d) => d.id === outroHorario.id_ccr
+                            );
 
                             todosConflitos.push({
                                 id: conflictId,
-                                professor: professores.find(p => p.codigo === profId)?.name || profId,
+                                professor:
+                                    professores.find((p) => p.codigo === profId)
+                                        ?.name || profId,
                                 codigoProfessor: profId,
                                 dia: horarioAtual.dia_semana,
-                                diaNome: daysOfWeek.find(d => dayToNumber[d.id] === parseInt(horarioAtual.dia_semana))?.title || `Dia ${horarioAtual.dia_semana}`,
+                                diaNome:
+                                    daysOfWeek.find(
+                                        (d) =>
+                                            dayToNumber[d.id] ===
+                                            parseInt(horarioAtual.dia_semana)
+                                    )?.title ||
+                                    `Dia ${horarioAtual.dia_semana}`,
                                 horario1: {
                                     ...horarioAtual,
-                                    disciplinaNome: horarioAtual.disciplinaNome || disciplina1?.nome || 'Disciplina não encontrada',
+                                    disciplinaNome:
+                                        horarioAtual.disciplinaNome ||
+                                        disciplina1?.nome ||
+                                        "Disciplina não encontrada",
                                     hora_inicio: hora1,
                                     ano_semestre: `${horarioAtual.ano}/${horarioAtual.semestre}`,
-                                    tipo: horarioAtual.tipo || 'novo'
+                                    tipo: horarioAtual.tipo || "novo",
                                 },
                                 horario2: {
                                     ...outroHorario,
-                                    disciplinaNome: outroHorario.disciplinaNome || disciplina2?.nome || 'Disciplina não encontrada',
+                                    disciplinaNome:
+                                        outroHorario.disciplinaNome ||
+                                        disciplina2?.nome ||
+                                        "Disciplina não encontrada",
                                     hora_inicio: hora2,
                                     ano_semestre: `${outroHorario.ano}/${outroHorario.semestre}`,
-                                    tipo: outroHorario.tipo || 'salvo'
-                                }
+                                    tipo: outroHorario.tipo || "salvo",
+                                },
                             });
                         }
                     });
-
                 } catch (error) {
-                    console.error(`Erro ao verificar conflitos para professor ${profId}:`, error);
+                    console.error(
+                        `Erro ao verificar conflitos para professor ${profId}:`,
+                        error
+                    );
                 }
             }
 
@@ -696,21 +811,21 @@ const EventModal = ({
                 }
             }
 
-                    setProfessoresIds(autoSelectedProfessoresIds);
-        setProfessorAutoSelected(
-            autoSelectedProfessoresIds.length > 0 &&
-                JSON.stringify(autoSelectedProfessoresIds) !==
-                    JSON.stringify(
-                        event.professoresIds ||
-                            [event.professorId].filter(Boolean)
-                    )
-        );
-                setComentario(event.comentario || "");
+            setProfessoresIds(autoSelectedProfessoresIds);
+            setProfessorAutoSelected(
+                autoSelectedProfessoresIds.length > 0 &&
+                    JSON.stringify(autoSelectedProfessoresIds) !==
+                        JSON.stringify(
+                            event.professoresIds ||
+                                [event.professorId].filter(Boolean)
+                        )
+            );
+            setComentario(event.comentario || "");
 
-        // Verificar conflitos iniciais se há professores
-        if (autoSelectedProfessoresIds.length > 0) {
-            verificarConflitosTempoReal(autoSelectedProfessoresIds);
-        }
+            // Verificar conflitos iniciais se há professores
+            if (autoSelectedProfessoresIds.length > 0) {
+                verificarConflitosTempoReal(autoSelectedProfessoresIds);
+            }
         } else if (!event) {
             // Se não há evento, limpar tudo
             setDisciplinaId("");
@@ -727,45 +842,69 @@ const EventModal = ({
         disciplinas,
     ]);
 
-        const handleSave = () => {
+    const handleSave = () => {
         // Limpar erros anteriores
         setErroValidacao("");
 
         if (!disciplinaId) {
-            setErroValidacao("Por favor, selecione uma disciplina antes de salvar.");
+            setErroValidacao(
+                "Por favor, selecione uma disciplina antes de salvar."
+            );
             return;
         }
 
         if (professoresIds.length === 0) {
-            setErroValidacao("Por favor, selecione pelo menos um professor antes de salvar.");
+            setErroValidacao(
+                "Por favor, selecione pelo menos um professor antes de salvar."
+            );
             return;
         }
 
         const uniqueDisciplinas = getUniqueDisciplinas(disciplinas);
-        const disciplina = uniqueDisciplinas.find(
-            (d) => d.id === disciplinaId
-        );
+        const disciplina = uniqueDisciplinas.find((d) => d.id === disciplinaId);
 
         if (!disciplina) {
-            setErroValidacao("Disciplina selecionada não é válida. Por favor, selecione uma disciplina válida.");
+            setErroValidacao(
+                "Disciplina selecionada não é válida. Por favor, selecione uma disciplina válida."
+            );
             console.error("Disciplina não encontrada:", disciplinaId);
             return;
         }
 
         const eventToSave = {
-            ...event,
+            ...event, // Preservar TODOS os campos do evento original
             title: disciplina.nome,
             disciplinaId: disciplinaId,
             professoresIds: professoresIds, // Agora é array
             professorId: professoresIds[0], // Manter compatibilidade
             comentario: comentario,
+
+            // Garantir que campos essenciais estejam presentes
+            id: event?.id, // Preservar ID para edição
+            startTime: event?.startTime, // Preservar horário de início
+            duration: event?.duration, // Preservar duração
+            dayId: event?.dayId, // Preservar dia da semana
+            color: event?.color, // Preservar cor
+
+            // Campos do banco de dados
+            id_ccr: disciplinaId,
+            codigo_docente: professoresIds[0],
+            dia_semana: event?.dia_semana || dayToNumber[event?.dayId],
+            hora_inicio: event?.hora_inicio || event?.startTime,
+            duracao: event?.duracao || event?.duration,
+            fase: event?.fase || selectedPhase,
+            ano: event?.ano || selectedAnoSemestre?.ano,
+            semestre: event?.semestre || selectedAnoSemestre?.semestre,
         };
 
+        // Primeiro salva os dados
         onSave(eventToSave);
-        handleClose();
+        // Fecha o modal indicando que houve salvamento
+        handleClose(true);
     };
 
-    const handleClose = () => {
+    // Fecha o modal. Se "saved" = true significa que o usuário clicou em Salvar; caso contrário, é cancelamento.
+    const handleClose = (saved = false) => {
         // Reset form completamente
         setDisciplinaId("");
         setProfessoresIds([]);
@@ -775,7 +914,11 @@ const EventModal = ({
         setConflitosTempoRealLocal([]);
         setVerificandoConflitos(false);
         setErroValidacao(""); // Limpar erros de validação
-        onClose();
+        setInputValueProfessor(""); // Limpar campo de busca de professor
+        // Propaga ao componente-pai se houve salvamento ou não
+        if (typeof onClose === "function") {
+            onClose(saved);
+        }
     };
 
     // Calcular horário de término baseado na duração
@@ -800,7 +943,7 @@ const EventModal = ({
     return (
         <Modal
             open={open}
-            onClose={handleClose}
+            onClose={() => handleClose(false)}
             sx={{
                 display: "flex",
                 alignItems: "center",
@@ -827,7 +970,7 @@ const EventModal = ({
                     <Typography variant="h6">
                         {event?.id ? "Editar Disciplina" : "Nova Disciplina"}
                     </Typography>
-                    <IconButton onClick={handleClose} size="small">
+                    <IconButton onClick={() => handleClose(false)} size="small">
                         <CloseIcon />
                     </IconButton>
                 </Box>
@@ -880,7 +1023,10 @@ const EventModal = ({
                                 }
 
                                 // Se ainda não encontrou professores, buscar em outros horários da mesma fase
-                                if (autoSelectedProfessoresIds.length === 0 && selectedPhase) {
+                                if (
+                                    autoSelectedProfessoresIds.length === 0 &&
+                                    selectedPhase
+                                ) {
                                     const existingProfessoresIds =
                                         getDisciplinaProfessoresFromSamePhase(
                                             newDisciplinaId,
@@ -964,50 +1110,162 @@ const EventModal = ({
                     />
 
                     <Box>
-                        <Typography variant="body2" sx={{ mb: 1, fontWeight: 'bold' }}>
+                        <Typography
+                            variant="body2"
+                            sx={{ mb: 1, fontWeight: "bold" }}
+                        >
                             Professores (máximo 2)
                         </Typography>
 
                         {/* Mostrar professores selecionados com botão de remoção */}
                         {professoresIds.length > 0 && (
                             <Box sx={{ mb: 2 }}>
-                                <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                                <Stack
+                                    direction="row"
+                                    spacing={1}
+                                    flexWrap="wrap"
+                                    useFlexGap
+                                >
                                     {professoresIds.map((profId) => {
-                                        const professor = professores.find(p => p.codigo === profId);
+                                        const professor = professores.find(
+                                            (p) => p.codigo === profId
+                                        );
+
+                                        // Verificar se este professor específico está em conflito
+                                        const professorEmConflito =
+                                            conflitosTempoRealLocal.some(
+                                                (conflito) =>
+                                                    conflito.professor.includes(
+                                                        professor?.name
+                                                    ) ||
+                                                    conflito.horario1
+                                                        .codigo_docente ===
+                                                        profId ||
+                                                    conflito.horario2
+                                                        .codigo_docente ===
+                                                        profId
+                                            );
+
                                         return (
-                                            <Chip
+                                            <Box
                                                 key={profId}
-                                                label={professor ? professor.name : profId}
-                                                onDelete={() => {
-                                                    // Não permitir remover se é o último professor
-                                                    if (professoresIds.length === 1) {
-                                                        setErroValidacao("Deve ter pelo menos um professor selecionado.");
-                                                        return;
-                                                    }
-
-                                                    const newProfessoresIds = professoresIds.filter(id => id !== profId);
-                                                    setProfessoresIds(newProfessoresIds);
-                                                    setProfessorAutoSelected(false);
-                                                    setErroValidacao(""); // Limpar erro se havia
-
-                                                    // Verificar conflitos em tempo real
-                                                    if (newProfessoresIds.length > 0) {
-                                                        verificarConflitosTempoReal(newProfessoresIds);
-                                                    } else {
-                                                        setConflitosTempoRealLocal([]);
-                                                    }
-                                                }}
-                                                color={professorAutoSelected ? "success" : "primary"}
-                                                variant="filled"
-                                                size="medium"
                                                 sx={{
-                                                    backgroundColor: professorAutoSelected ? "#4caf50" : undefined,
-                                                    "& .MuiChip-deleteIcon": {
-                                                        color: professoresIds.length === 1 ? "#ccc" : "inherit",
-                                                        cursor: professoresIds.length === 1 ? "not-allowed" : "pointer"
-                                                    }
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: 0.5,
                                                 }}
-                                            />
+                                            >
+                                                <Chip
+                                                    label={
+                                                        professor
+                                                            ? professor.name
+                                                            : profId
+                                                    }
+                                                    onDelete={() => {
+                                                        // Não permitir remover se é o último professor
+                                                        if (
+                                                            professoresIds.length ===
+                                                            1
+                                                        ) {
+                                                            setErroValidacao(
+                                                                "Deve ter pelo menos um professor selecionado."
+                                                            );
+                                                            return;
+                                                        }
+
+                                                        const newProfessoresIds =
+                                                            professoresIds.filter(
+                                                                (id) =>
+                                                                    id !==
+                                                                    profId
+                                                            );
+                                                        setProfessoresIds(
+                                                            newProfessoresIds
+                                                        );
+                                                        setProfessorAutoSelected(
+                                                            false
+                                                        );
+                                                        setErroValidacao(""); // Limpar erro se havia
+
+                                                        // Verificar conflitos em tempo real
+                                                        if (
+                                                            newProfessoresIds.length >
+                                                            0
+                                                        ) {
+                                                            verificarConflitosTempoReal(
+                                                                newProfessoresIds
+                                                            );
+                                                        } else {
+                                                            setConflitosTempoRealLocal(
+                                                                []
+                                                            );
+                                                        }
+                                                    }}
+                                                    color={
+                                                        professorAutoSelected
+                                                            ? "success"
+                                                            : "primary"
+                                                    }
+                                                    variant="filled"
+                                                    size="medium"
+                                                    sx={{
+                                                        backgroundColor:
+                                                            professorAutoSelected
+                                                                ? "#4caf50"
+                                                                : undefined,
+                                                        "& .MuiChip-deleteIcon":
+                                                            {
+                                                                color:
+                                                                    professoresIds.length ===
+                                                                    1
+                                                                        ? "#ccc"
+                                                                        : "inherit",
+                                                                cursor:
+                                                                    professoresIds.length ===
+                                                                    1
+                                                                        ? "not-allowed"
+                                                                        : "pointer",
+                                                            },
+                                                    }}
+                                                />
+
+                                                {/* Badge de conflito para o professor no modal */}
+                                                {professorEmConflito && (
+                                                    <Tooltip
+                                                        title="Professor com conflito de horário"
+                                                        placement="top"
+                                                        arrow
+                                                    >
+                                                        <Box
+                                                            sx={{
+                                                                width: "16px",
+                                                                height: "16px",
+                                                                backgroundColor:
+                                                                    "#ff5722",
+                                                                borderRadius:
+                                                                    "50%",
+                                                                display: "flex",
+                                                                alignItems:
+                                                                    "center",
+                                                                justifyContent:
+                                                                    "center",
+                                                                flexShrink: 0,
+                                                                boxShadow:
+                                                                    "0 1px 3px rgba(0,0,0,0.3)",
+                                                                ml: 0.5,
+                                                            }}
+                                                        >
+                                                            <WarningIcon
+                                                                sx={{
+                                                                    fontSize:
+                                                                        "12px",
+                                                                    color: "white",
+                                                                }}
+                                                            />
+                                                        </Box>
+                                                    </Tooltip>
+                                                )}
+                                            </Box>
                                         );
                                     })}
                                 </Stack>
@@ -1017,23 +1275,43 @@ const EventModal = ({
                         {/* Campo para adicionar novos professores */}
                         <Autocomplete
                             value={null} // Sempre null para não mostrar selecionados
+                            inputValue={inputValueProfessor} // Controlar o valor do input
                             onChange={(event, newValue) => {
-                                if (newValue && !professoresIds.includes(newValue.codigo)) {
+                                if (
+                                    newValue &&
+                                    !professoresIds.includes(newValue.codigo)
+                                ) {
                                     if (professoresIds.length >= 2) {
-                                        setErroValidacao("Máximo de 2 professores permitidos.");
+                                        setErroValidacao(
+                                            "Máximo de 2 professores permitidos."
+                                        );
                                         return;
                                     }
 
-                                    const newProfessoresIds = [...professoresIds, newValue.codigo];
+                                    const newProfessoresIds = [
+                                        ...professoresIds,
+                                        newValue.codigo,
+                                    ];
                                     setProfessoresIds(newProfessoresIds);
                                     setProfessorAutoSelected(false);
                                     setErroValidacao(""); // Limpar erro se havia
 
+                                    // Limpar o campo de input após seleção
+                                    setInputValueProfessor("");
+
                                     // Verificar conflitos em tempo real
-                                    verificarConflitosTempoReal(newProfessoresIds);
+                                    verificarConflitosTempoReal(
+                                        newProfessoresIds
+                                    );
                                 }
                             }}
-                            options={professores.filter(prof => !professoresIds.includes(prof.codigo))}
+                            onInputChange={(event, newInputValue) => {
+                                // Permitir digitação para busca
+                                setInputValueProfessor(newInputValue);
+                            }}
+                            options={professores.filter(
+                                (prof) => !professoresIds.includes(prof.codigo)
+                            )}
                             getOptionLabel={(prof) => prof.name}
                             isOptionEqualToValue={(option, value) =>
                                 option.codigo === value.codigo
@@ -1041,15 +1319,27 @@ const EventModal = ({
                             renderInput={(params) => (
                                 <TextField
                                     {...params}
-                                    label={professoresIds.length === 0 ? "Selecione professores" : "Adicionar outro professor"}
-                                    placeholder={professoresIds.length === 0 ? "Selecione pelo menos um professor..." : "Selecione outro professor (opcional)"}
+                                    label={
+                                        professoresIds.length === 0
+                                            ? "Selecione professores"
+                                            : "Adicionar outro professor"
+                                    }
+                                    placeholder={
+                                        professoresIds.length === 0
+                                            ? "Selecione pelo menos um professor..."
+                                            : "Selecione outro professor (opcional)"
+                                    }
                                     variant="outlined"
                                     fullWidth
                                     disabled={professoresIds.length >= 2}
                                 />
                             )}
                             renderOption={(props, prof) => (
-                                <Box component="li" {...props} key={prof.codigo}>
+                                <Box
+                                    component="li"
+                                    {...props}
+                                    key={prof.codigo}
+                                >
                                     <Typography variant="body2">
                                         {prof.name}
                                     </Typography>
@@ -1062,13 +1352,22 @@ const EventModal = ({
                                     </Typography>
                                 </Box>
                             )}
-                            noOptionsText={professoresIds.length >= 2 ? "Máximo de professores atingido" : "Nenhum professor encontrado"}
+                            noOptionsText={
+                                professoresIds.length >= 2
+                                    ? "Máximo de professores atingido"
+                                    : "Nenhum professor encontrado"
+                            }
                         />
                     </Box>
                     {professorAutoSelected && (
-                        <Alert severity="success" variant="outlined" sx={{ mt: 1 }}>
+                        <Alert
+                            severity="success"
+                            variant="outlined"
+                            sx={{ mt: 1 }}
+                        >
                             <Typography variant="caption">
-                                ✓ Professores preenchidos automaticamente com base em disciplina já cadastrada
+                                ✓ Professores preenchidos automaticamente com
+                                base em disciplina já cadastrada
                             </Typography>
                         </Alert>
                     )}
@@ -1076,28 +1375,51 @@ const EventModal = ({
                     {conflitosTempoRealLocal.length > 0 && (
                         <Alert severity="warning" sx={{ mt: 1 }}>
                             <Typography variant="subtitle2" sx={{ mb: 1 }}>
-                                 {conflitosTempoRealLocal.length} conflito(s) detectado(s):
+                                {conflitosTempoRealLocal.length} conflito(s)
+                                detectado(s):
                             </Typography>
-                            {conflitosTempoRealLocal.slice(0, 3).map((conflito, index) => (
-                                <Typography key={index} variant="caption" display="block" sx={{ mb: 0.5 }}>
-                                     {conflito.professor}: {conflito.diaNome} {conflito.horario1.hora_inicio}
-                                    ({conflito.horario1.tipo === 'temporario' ? 'não salvo' : conflito.horario1.ano_semestre})
-                                    vs ({conflito.horario2.tipo === 'temporario' ? 'não salvo' : conflito.horario2.ano_semestre})
-                                </Typography>
-                            ))}
+                            {conflitosTempoRealLocal
+                                .slice(0, 3)
+                                .map((conflito, index) => (
+                                    <Typography
+                                        key={index}
+                                        variant="caption"
+                                        display="block"
+                                        sx={{ mb: 0.5 }}
+                                    >
+                                        {conflito.professor}: {conflito.diaNome}{" "}
+                                        {conflito.horario1.hora_inicio}(
+                                        {conflito.horario1.tipo === "temporario"
+                                            ? "não salvo"
+                                            : conflito.horario1.ano_semestre}
+                                        ) vs (
+                                        {conflito.horario2.tipo === "temporario"
+                                            ? "não salvo"
+                                            : conflito.horario2.ano_semestre}
+                                        )
+                                    </Typography>
+                                ))}
                             {conflitosTempoRealLocal.length > 3 && (
-                                <Typography variant="caption" sx={{ fontStyle: 'italic' }}>
-                                    ... e mais {conflitosTempoRealLocal.length - 3} conflito(s)
+                                <Typography
+                                    variant="caption"
+                                    sx={{ fontStyle: "italic" }}
+                                >
+                                    ... e mais{" "}
+                                    {conflitosTempoRealLocal.length - 3}{" "}
+                                    conflito(s)
                                 </Typography>
                             )}
                         </Alert>
                     )}
 
-
-
-
                     {verificandoConflitos && (
-                        <Box sx={{ display: 'flex', alignItems: 'center', mt: 1 }}>
+                        <Box
+                            sx={{
+                                display: "flex",
+                                alignItems: "center",
+                                mt: 1,
+                            }}
+                        >
                             <CircularProgress size={16} sx={{ mr: 1 }} />
                             <Typography variant="caption" color="textSecondary">
                                 Verificando conflitos de horários...
@@ -1105,7 +1427,14 @@ const EventModal = ({
                         </Box>
                     )}
                     {professoresIds.length > 0 && (
-                        <Box sx={{ mt: 1, p: 1, backgroundColor: "#f5f5f5", borderRadius: 1 }}>
+                        <Box
+                            sx={{
+                                mt: 1,
+                                p: 1,
+                                backgroundColor: "#f5f5f5",
+                                borderRadius: 1,
+                            }}
+                        >
                             <Typography
                                 variant="caption"
                                 color="textSecondary"
@@ -1114,15 +1443,18 @@ const EventModal = ({
                                 {professoresIds.length === 1
                                     ? "1 professor selecionado"
                                     : `${professoresIds.length} professores selecionados`}
-                                {professoresIds.length === 2 && " (máximo atingido)"}
+                                {professoresIds.length === 2 &&
+                                    " (máximo atingido)"}
                             </Typography>
                             <Typography
                                 variant="caption"
                                 color="primary"
-                                sx={{ fontStyle: 'italic' }}
+                                sx={{ fontStyle: "italic" }}
                             >
-                                💡 Clique no "X" de qualquer professor para removê-lo
-                                {professoresIds.length === 1 && " (deve manter pelo menos 1)"}
+                                💡 Clique no "X" de qualquer professor para
+                                removê-lo
+                                {professoresIds.length === 1 &&
+                                    " (deve manter pelo menos 1)"}
                             </Typography>
                         </Box>
                     )}
@@ -1153,7 +1485,8 @@ const EventModal = ({
                             }}
                         >
                             <Typography variant="body2" color="textSecondary">
-                                <strong>Horário:</strong> {formatTimeForDisplay(event.startTime)} -{" "}
+                                <strong>Horário:</strong>{" "}
+                                {formatTimeForDisplay(event.startTime)} -{" "}
                                 {formatTimeForDisplay(getEndTime())}
                                 <br />
                                 <strong>
@@ -1164,7 +1497,9 @@ const EventModal = ({
                                 <strong>Período:</strong>{" "}
                                 {timeSlotsMatutino.includes(event.startTime)
                                     ? "Matutino"
-                                    : timeSlotsVespertino.includes(event.startTime)
+                                    : timeSlotsVespertino.includes(
+                                          event.startTime
+                                      )
                                     ? "Vespertino"
                                     : "Noturno"}
                             </Typography>
@@ -1178,18 +1513,24 @@ const EventModal = ({
                             justifyContent: "flex-end",
                         }}
                     >
-                        <Button onClick={handleClose} variant="outlined">
+                        <Button onClick={() => handleClose(false)} variant="outlined">
                             Cancelar
                         </Button>
                         <Button
                             onClick={handleSave}
                             variant="contained"
-                            color={conflitosTempoRealLocal.length > 0 ? "warning" : "primary"}
+                            color={
+                                conflitosTempoRealLocal.length > 0
+                                    ? "warning"
+                                    : "primary"
+                            }
                             disabled={
                                 !disciplinaId || professoresIds.length === 0
                             }
                         >
-                            {conflitosTempoRealLocal.length > 0 ? "Salvar (com conflitos)" : "Salvar"}
+                            {conflitosTempoRealLocal.length > 0
+                                ? "Salvar (com conflitos)"
+                                : "Salvar"}
                         </Button>
                     </Box>
                 </Stack>
@@ -1202,15 +1543,19 @@ const EventModal = ({
 const ConflitosModal = ({ open, onClose, conflitos, professores }) => {
     const formatarHorario = (inicio, duracao) => {
         // Normalizar o horário removendo segundos se existirem
-        const horarioNormalizado = inicio.split(':').slice(0, 2).join(':');
-        const [horas, minutos] = horarioNormalizado.split(':').map(Number);
+        const horarioNormalizado = inicio.split(":").slice(0, 2).join(":");
+        const [horas, minutos] = horarioNormalizado.split(":").map(Number);
 
         const inicioMinutos = horas * 60 + minutos;
-        const fimMinutos = inicioMinutos + (duracao * 30);
+        const fimMinutos = inicioMinutos + duracao * 30;
         const fimHoras = Math.floor(fimMinutos / 60);
         const fimMinutosRestantes = fimMinutos % 60;
 
-        return `${horarioNormalizado} - ${fimHoras.toString().padStart(2, '0')}:${fimMinutosRestantes.toString().padStart(2, '0')}`;
+        return `${horarioNormalizado} - ${fimHoras
+            .toString()
+            .padStart(2, "0")}:${fimMinutosRestantes
+            .toString()
+            .padStart(2, "0")}`;
     };
 
     const conflitosAgrupados = conflitos.reduce((acc, conflito) => {
@@ -1229,21 +1574,27 @@ const ConflitosModal = ({ open, onClose, conflitos, professores }) => {
             maxWidth="md"
             fullWidth
             PaperProps={{
-                sx: { maxHeight: '80vh' }
+                sx: { maxHeight: "80vh" },
             }}
         >
-            <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+            <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                 <WarningIcon color="warning" />
                 Conflitos de Horários Detectados
-                <Badge badgeContent={conflitos.length} color="error" sx={{ ml: 'auto' }} />
+                <Badge
+                    badgeContent={conflitos.length}
+                    color="error"
+                    sx={{ ml: "auto" }}
+                />
             </DialogTitle>
 
             <DialogContent dividers>
                 {conflitos.length === 0 ? (
-                    <Box sx={{ textAlign: 'center', py: 4 }}>
-                        <ScheduleIcon sx={{ fontSize: 48, color: 'success.main', mb: 2 }} />
+                    <Box sx={{ textAlign: "center", py: 4 }}>
+                        <ScheduleIcon
+                            sx={{ fontSize: 48, color: "success.main", mb: 2 }}
+                        />
                         <Typography variant="h6" color="success.main">
-                             Nenhum conflito de horários detectado!
+                            Nenhum conflito de horários detectado!
                         </Typography>
                         <Typography variant="body2" color="textSecondary">
                             Todos os professores têm horários compatíveis.
@@ -1252,61 +1603,185 @@ const ConflitosModal = ({ open, onClose, conflitos, professores }) => {
                 ) : (
                     <Box>
                         <Alert severity="warning" sx={{ mb: 2 }}>
-                            <strong>Atenção:</strong> Foram detectados {conflitos.length} conflito(s) de horários.
-                            Os professores abaixo têm aulas sobrepostas em diferentes semestres.
+                            <strong>Atenção:</strong> Foram detectados{" "}
+                            {conflitos.length} conflito(s) de horários. Os
+                            professores abaixo têm aulas sobrepostas em
+                            diferentes semestres.
                         </Alert>
 
-                        {Object.entries(conflitosAgrupados).map(([nomeProf, conflitosProf]) => (
-                            <Box key={nomeProf} sx={{ mb: 3 }}>
-                                <Typography variant="h6" color="error" sx={{ mb: 1 }}>
-                                     {nomeProf}
-                                </Typography>
+                        {Object.entries(conflitosAgrupados).map(
+                            ([nomeProf, conflitosProf]) => (
+                                <Box key={nomeProf} sx={{ mb: 3 }}>
+                                    <Typography
+                                        variant="h6"
+                                        color="error"
+                                        sx={{ mb: 1 }}
+                                    >
+                                        {nomeProf}
+                                    </Typography>
 
-                                <List dense>
-                                    {conflitosProf.map((conflito, index) => (
-                                        <ListItem key={conflito.id} sx={{ pl: 0 }}>
-                                            <ListItemText
-                                                primary={
-                                                    <Box>
-                                                        <Typography variant="subtitle2" color="error">
-                                                            {conflito.diaNome} - {formatarHorario(conflito.horario1.hora_inicio, conflito.horario1.duracao)}
-                                                        </Typography>
-                                                    </Box>
-                                                }
-                                                secondary={
-                                                    <Box sx={{ mt: 1 }}>
-                                                                                                <Typography variant="body2" sx={{ mb: 1 }}>
-                                            <strong>Conflito 1:</strong> {conflito.horario1.disciplinaNome}
-                                            <br />
-                                             {conflito.horario1.ano_semestre}º semestre
-                                            {conflito.horario1.tipo === 'temporario' && <Chip label="Não salvo" size="small" color="info" sx={{ ml: 1 }} />}
-                                            {conflito.horario1.tipo === 'novo' && <Chip label="Editando" size="small" color="warning" sx={{ ml: 1 }} />}
-                                            <br />
-                                            {formatarHorario(conflito.horario1.hora_inicio, conflito.horario1.duracao)}
-                                        </Typography>
+                                    <List dense>
+                                        {conflitosProf.map(
+                                            (conflito, index) => (
+                                                <ListItem
+                                                    key={conflito.id}
+                                                    sx={{ pl: 0 }}
+                                                >
+                                                    <ListItemText
+                                                        primary={
+                                                            <Box>
+                                                                <Typography
+                                                                    variant="subtitle2"
+                                                                    color="error"
+                                                                >
+                                                                    {
+                                                                        conflito.diaNome
+                                                                    }{" "}
+                                                                    -{" "}
+                                                                    {formatarHorario(
+                                                                        conflito
+                                                                            .horario1
+                                                                            .hora_inicio,
+                                                                        conflito
+                                                                            .horario1
+                                                                            .duracao
+                                                                    )}
+                                                                </Typography>
+                                                            </Box>
+                                                        }
+                                                        secondary={
+                                                            <Box sx={{ mt: 1 }}>
+                                                                <Typography
+                                                                    variant="body2"
+                                                                    sx={{
+                                                                        mb: 1,
+                                                                    }}
+                                                                >
+                                                                    <strong>
+                                                                        Conflito
+                                                                        1:
+                                                                    </strong>{" "}
+                                                                    {
+                                                                        conflito
+                                                                            .horario1
+                                                                            .disciplinaNome
+                                                                    }
+                                                                    <br />
+                                                                    {
+                                                                        conflito
+                                                                            .horario1
+                                                                            .ano_semestre
+                                                                    }
+                                                                    º semestre
+                                                                    {conflito
+                                                                        .horario1
+                                                                        .tipo ===
+                                                                        "temporario" && (
+                                                                        <Chip
+                                                                            label="Não salvo"
+                                                                            size="small"
+                                                                            color="info"
+                                                                            sx={{
+                                                                                ml: 1,
+                                                                            }}
+                                                                        />
+                                                                    )}
+                                                                    {conflito
+                                                                        .horario1
+                                                                        .tipo ===
+                                                                        "novo" && (
+                                                                        <Chip
+                                                                            label="Editando"
+                                                                            size="small"
+                                                                            color="warning"
+                                                                            sx={{
+                                                                                ml: 1,
+                                                                            }}
+                                                                        />
+                                                                    )}
+                                                                    <br />
+                                                                    {formatarHorario(
+                                                                        conflito
+                                                                            .horario1
+                                                                            .hora_inicio,
+                                                                        conflito
+                                                                            .horario1
+                                                                            .duracao
+                                                                    )}
+                                                                </Typography>
 
-                                        <Typography variant="body2">
-                                            <strong>Conflito 2:</strong> {conflito.horario2.disciplinaNome}
-                                            <br />
-                                             {conflito.horario2.ano_semestre}º semestre
-                                            {conflito.horario2.tipo === 'temporario' && <Chip label="Não salvo" size="small" color="info" sx={{ ml: 1 }} />}
-                                            {conflito.horario2.tipo === 'novo' && <Chip label="Editando" size="small" color="warning" sx={{ ml: 1 }} />}
-                                            <br />
-                                            {formatarHorario(conflito.horario2.hora_inicio, conflito.horario2.duracao)}
-                                        </Typography>
-                                                    </Box>
-                                                }
-                                            />
-                                        </ListItem>
-                                    ))}
-                                </List>
+                                                                <Typography variant="body2">
+                                                                    <strong>
+                                                                        Conflito
+                                                                        2:
+                                                                    </strong>{" "}
+                                                                    {
+                                                                        conflito
+                                                                            .horario2
+                                                                            .disciplinaNome
+                                                                    }
+                                                                    <br />
+                                                                    {
+                                                                        conflito
+                                                                            .horario2
+                                                                            .ano_semestre
+                                                                    }
+                                                                    º semestre
+                                                                    {conflito
+                                                                        .horario2
+                                                                        .tipo ===
+                                                                        "temporario" && (
+                                                                        <Chip
+                                                                            label="Não salvo"
+                                                                            size="small"
+                                                                            color="info"
+                                                                            sx={{
+                                                                                ml: 1,
+                                                                            }}
+                                                                        />
+                                                                    )}
+                                                                    {conflito
+                                                                        .horario2
+                                                                        .tipo ===
+                                                                        "novo" && (
+                                                                        <Chip
+                                                                            label="Editando"
+                                                                            size="small"
+                                                                            color="warning"
+                                                                            sx={{
+                                                                                ml: 1,
+                                                                            }}
+                                                                        />
+                                                                    )}
+                                                                    <br />
+                                                                    {formatarHorario(
+                                                                        conflito
+                                                                            .horario2
+                                                                            .hora_inicio,
+                                                                        conflito
+                                                                            .horario2
+                                                                            .duracao
+                                                                    )}
+                                                                </Typography>
+                                                            </Box>
+                                                        }
+                                                    />
+                                                </ListItem>
+                                            )
+                                        )}
+                                    </List>
 
-                                {Object.keys(conflitosAgrupados).length > 1 &&
-                                 Object.keys(conflitosAgrupados).indexOf(nomeProf) < Object.keys(conflitosAgrupados).length - 1 && (
-                                    <Divider sx={{ my: 2 }} />
-                                )}
-                            </Box>
-                        ))}
+                                    {Object.keys(conflitosAgrupados).length >
+                                        1 &&
+                                        Object.keys(conflitosAgrupados).indexOf(
+                                            nomeProf
+                                        ) <
+                                            Object.keys(conflitosAgrupados)
+                                                .length -
+                                                1 && <Divider sx={{ my: 2 }} />}
+                                </Box>
+                            )
+                        )}
                     </Box>
                 )}
             </DialogContent>
@@ -1449,8 +1924,12 @@ const CalendarEvent = ({
     const professoresInfo = getProfessoresInfo();
 
     // Verificar se o evento tem conflitos
-    const temConflito = verificarSeEventoTemConflito ? verificarSeEventoTemConflito(event) : false;
-    const conflitosDoEvento = obterConflitosDoEvento ? obterConflitosDoEvento(event) : [];
+    const temConflito = verificarSeEventoTemConflito
+        ? verificarSeEventoTemConflito(event)
+        : false;
+    const conflitosDoEvento = obterConflitosDoEvento
+        ? obterConflitosDoEvento(event)
+        : [];
 
     // Debug: log apenas quando há conflitos
     if (temConflito) {
@@ -1521,19 +2000,25 @@ const CalendarEvent = ({
                 <Tooltip
                     title={
                         <Box>
-                            <Typography variant="body2" fontWeight="bold" sx={{ mb: 1 }}>
-                                 {conflitosDoEvento.length} Conflito(s) Detectado(s)
+                            <Typography
+                                variant="body2"
+                                fontWeight="bold"
+                                sx={{ mb: 1 }}
+                            >
+                                {conflitosDoEvento.length} Conflito(s)
+                                Detectado(s)
                             </Typography>
-                            {conflitosDoEvento.slice(0, 2).map((conflito, index) => (
-                                <Typography key={index} variant="caption" display="block" sx={{ mb: 0.5 }}>
-                                    • Professor com aula sobreposta em {conflito.diaNome}
+                            {conflitosDoEvento.map((conflito, index) => (
+                                <Typography
+                                    key={index}
+                                    variant="caption"
+                                    display="block"
+                                    sx={{ mb: 0.5 }}
+                                >
+                                    • Professor com aula sobreposta em{" "}
+                                    {conflito.diaNome}
                                 </Typography>
                             ))}
-                            {conflitosDoEvento.length > 2 && (
-                                <Typography variant="caption" sx={{ fontStyle: 'italic' }}>
-                                    ... e mais {conflitosDoEvento.length - 2} conflito(s)
-                                </Typography>
-                            )}
                         </Box>
                     }
                     placement="top"
@@ -1623,31 +2108,88 @@ const CalendarEvent = ({
             >
                 {isMultiple
                     ? event.title
-                        ? (event.title.length > 12 ? event.title.substring(0, 12) + "..." : event.title)
+                        ? event.title.length > 12
+                            ? event.title.substring(0, 12) + "..."
+                            : event.title
                         : "Incompleto"
                     : event.title || "Horário incompleto"}
             </Typography>
 
-
-                        {professoresInfo.length > 0 && (
+            {professoresInfo.length > 0 && (
                 <Box sx={{ marginBottom: isMultiple ? 0.1 : 0.5 }}>
-                    {professoresInfo.slice(0, isMultiple ? 2 : professoresInfo.length).map((professor, index) => (
-                        <Typography
-                            key={professor.codigo}
-                            variant="caption"
-                            sx={{
-                                fontSize: isMultiple ? "0.55rem" : "0.65rem",
-                                opacity: 0.8,
-                                display: "block",
-                                lineHeight: isMultiple ? 1.1 : 1.2,
-                            }}
-                        >
-                            {isMultiple
-                                ? (professor.name.length > 10 ? professor.name.substring(0, 10) + "..." : professor.name)
-                                : professor.name
-                            }
-                        </Typography>
-                    ))}
+                    {professoresInfo
+                        .slice(0, isMultiple ? 2 : professoresInfo.length)
+                        .map((professor, index) => {
+                            // Verificar se este professor específico está em conflito
+                            const professorEmConflito = conflitosDoEvento.some(
+                                (conflito) =>
+                                    conflito.professorCodigo ===
+                                    professor.codigo
+                            );
+
+                            return (
+                                <Box
+                                    key={professor.codigo}
+                                    sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 0.5,
+                                        marginBottom: isMultiple ? 0.05 : 0.1,
+                                    }}
+                                >
+                                    <Typography
+                                        variant="caption"
+                                        sx={{
+                                            fontSize: isMultiple
+                                                ? "0.55rem"
+                                                : "0.65rem",
+                                            opacity: 0.8,
+                                            lineHeight: isMultiple ? 1.1 : 1.2,
+                                        }}
+                                    >
+                                        {isMultiple
+                                            ? professor.name.length > 10
+                                                ? professor.name.substring(
+                                                      0,
+                                                      10
+                                                  ) + "..."
+                                                : professor.name
+                                            : professor.name}
+                                    </Typography>
+
+                                    {/* Badge de conflito para o professor */}
+                                    {professorEmConflito && (
+                                        <Box
+                                            sx={{
+                                                width: isMultiple
+                                                    ? "8px"
+                                                    : "10px",
+                                                height: isMultiple
+                                                    ? "8px"
+                                                    : "10px",
+                                                backgroundColor: "#ff5722",
+                                                borderRadius: "50%",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "center",
+                                                flexShrink: 0,
+                                                boxShadow:
+                                                    "0 1px 2px rgba(0,0,0,0.3)",
+                                            }}
+                                        >
+                                            <WarningIcon
+                                                sx={{
+                                                    fontSize: isMultiple
+                                                        ? "6px"
+                                                        : "8px",
+                                                    color: "white",
+                                                }}
+                                            />
+                                        </Box>
+                                    )}
+                                </Box>
+                            );
+                        })}
                     {/* Indicador se há mais professores */}
                     {isMultiple && professoresInfo.length > 2 && (
                         <Typography
@@ -1655,7 +2197,7 @@ const CalendarEvent = ({
                             sx={{
                                 fontSize: "0.5rem",
                                 opacity: 0.7,
-                                fontStyle: 'italic',
+                                fontStyle: "italic",
                                 lineHeight: 1.1,
                             }}
                         >
@@ -1664,7 +2206,7 @@ const CalendarEvent = ({
                     )}
                 </Box>
             )}
-                                                {/* Horário - sempre mostrar, mas com formatação diferente */}
+            {/* Horário - sempre mostrar, mas com formatação diferente */}
             <Typography
                 variant="caption"
                 sx={{
@@ -1672,42 +2214,61 @@ const CalendarEvent = ({
                     opacity: 0.9,
                     display: "block",
                     lineHeight: 1.1,
-                    marginBottom: isMultiple ? (event.comentario ? 0.05 : 0.1) : 0,
+                    marginBottom: isMultiple
+                        ? event.comentario
+                            ? 0.05
+                            : 0.1
+                        : 0,
                 }}
             >
                 {isMultiple
-                    ? `${formatTimeForDisplay(event.startTime)}-${formatTimeForDisplay(getEndTime(event.startTime, event.duration, timeSlots))}`
-                    : `${formatTimeForDisplay(event.startTime)} - ${formatTimeForDisplay(getEndTime(event.startTime, event.duration, timeSlots))}`
-                }
+                    ? `${formatTimeForDisplay(
+                          event.startTime
+                      )}-${formatTimeForDisplay(
+                          getEndTime(event.startTime, event.duration, timeSlots)
+                      )}`
+                    : `${formatTimeForDisplay(
+                          event.startTime
+                      )} - ${formatTimeForDisplay(
+                          getEndTime(event.startTime, event.duration, timeSlots)
+                      )}`}
             </Typography>
 
-                                    {/* Mostrar comentário se existir - SEMPRE mostrar quando há comentário */}
+            {/* Mostrar comentário se existir - SEMPRE mostrar quando há comentário */}
             {event.comentario && event.comentario.trim() !== "" && (
                 <Typography
                     variant="caption"
                     sx={{
                         fontSize: isMultiple ? "0.45rem" : "0.6rem",
                         opacity: isMultiple ? 0.9 : 0.8,
-                        fontStyle: 'italic',
-                        fontWeight: isMultiple ? 'bold' : 'normal',
+                        fontStyle: "italic",
+                        fontWeight: isMultiple ? "bold" : "normal",
                         display: "block",
                         lineHeight: isMultiple ? 1.1 : 1.2,
                         mt: isMultiple ? 0.05 : 0.5,
-                        backgroundColor: isMultiple ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.15)",
+                        backgroundColor: isMultiple
+                            ? "rgba(255,255,255,0.2)"
+                            : "rgba(255,255,255,0.15)",
                         padding: isMultiple ? "1px 3px" : "2px 4px",
                         borderRadius: "2px",
-                        border: isMultiple ? "1px solid rgba(255,255,255,0.3)" : "none",
+                        border: isMultiple
+                            ? "1px solid rgba(255,255,255,0.3)"
+                            : "none",
                         maxWidth: "100%",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
-                        boxShadow: isMultiple ? "0 1px 2px rgba(0,0,0,0.1)" : "none",
+                        boxShadow: isMultiple
+                            ? "0 1px 2px rgba(0,0,0,0.1)"
+                            : "none",
                     }}
                 >
-                    💬 {isMultiple
-                        ? (event.comentario.length > 12 ? event.comentario.substring(0, 12) + "..." : event.comentario)
-                        : event.comentario
-                    }
+                    💬{" "}
+                    {isMultiple
+                        ? event.comentario.length > 12
+                            ? event.comentario.substring(0, 12) + "..."
+                            : event.comentario
+                        : event.comentario}
                 </Typography>
             )}
 
@@ -1754,7 +2315,11 @@ const CalendarEvent = ({
 
             {professoresInfo.length > 0 && (
                 <Box sx={{ mb: 1 }}>
-                    <Typography variant="caption" display="block" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                    <Typography
+                        variant="caption"
+                        display="block"
+                        sx={{ fontWeight: "bold", mb: 0.5 }}
+                    >
                         Professor{professoresInfo.length > 1 ? "es" : ""}:
                     </Typography>
                     {professoresInfo.map((professor) => (
@@ -1771,18 +2336,33 @@ const CalendarEvent = ({
             )}
 
             <Typography variant="caption" display="block" sx={{ mb: 1 }}>
-                <strong>Horário:</strong> {formatTimeForDisplay(event.startTime)} -{" "}
-                {formatTimeForDisplay(getEndTime(event.startTime, event.duration, timeSlots))}
+                <strong>Horário:</strong>{" "}
+                {formatTimeForDisplay(event.startTime)} -{" "}
+                {formatTimeForDisplay(
+                    getEndTime(event.startTime, event.duration, timeSlots)
+                )}
             </Typography>
 
             <Typography variant="caption" display="block" sx={{ mb: 1 }}>
-                <strong>Duração:</strong> {event.duration * 30} minutos ({event.duration} períodos)
+                <strong>Duração:</strong> {event.duration * 30} minutos (
+                {event.duration} períodos)
             </Typography>
 
             {/* Mostrar comentário no tooltip se existir */}
             {event.comentario && (
-                <Box sx={{ mt: 1, p: 1, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 1 }}>
-                    <Typography variant="caption" display="block" sx={{ fontStyle: 'italic' }}>
+                <Box
+                    sx={{
+                        mt: 1,
+                        p: 1,
+                        backgroundColor: "rgba(255,255,255,0.1)",
+                        borderRadius: 1,
+                    }}
+                >
+                    <Typography
+                        variant="caption"
+                        display="block"
+                        sx={{ fontStyle: "italic" }}
+                    >
                         <strong>💬 Observação:</strong> {event.comentario}
                     </Typography>
                 </Box>
@@ -1790,21 +2370,49 @@ const CalendarEvent = ({
 
             {/* Mostrar conflitos no tooltip se existir */}
             {temConflito && conflitosDoEvento.length > 0 && (
-                <Box sx={{ mt: 1, p: 1, backgroundColor: "rgba(255,152,0,0.2)", borderRadius: 1 }}>
-                    <Typography variant="caption" display="block" sx={{ color: "#ff9800", fontWeight: 'bold' }}>
+                <Box
+                    sx={{
+                        mt: 1,
+                        p: 1,
+                        backgroundColor: "rgba(255,152,0,0.2)",
+                        borderRadius: 1,
+                    }}
+                >
+                    <Typography
+                        variant="caption"
+                        display="block"
+                        sx={{ color: "#ff9800", fontWeight: "bold" }}
+                    >
                         ⚠️ {conflitosDoEvento.length} Conflito(s) Detectado(s)
                     </Typography>
                     {conflitosDoEvento.slice(0, 2).map((conflito, index) => (
-                        <Typography key={index} variant="caption" display="block" sx={{ pl: 1, lineHeight: 1.2 }}>
-                            • Professor com aula sobreposta em {conflito.diaNome}
+                        <Typography
+                            key={index}
+                            variant="caption"
+                            display="block"
+                            sx={{ pl: 1, lineHeight: 1.2 }}
+                        >
+                            • Professor com aula sobreposta em{" "}
+                            {conflito.diaNome}
                         </Typography>
                     ))}
                 </Box>
             )}
 
             {!event.disciplinaId && (
-                <Box sx={{ mt: 1, p: 1, backgroundColor: "rgba(158,158,158,0.2)", borderRadius: 1 }}>
-                    <Typography variant="caption" display="block" sx={{ color: "#666", fontStyle: 'italic' }}>
+                <Box
+                    sx={{
+                        mt: 1,
+                        p: 1,
+                        backgroundColor: "rgba(158,158,158,0.2)",
+                        borderRadius: 1,
+                    }}
+                >
+                    <Typography
+                        variant="caption"
+                        display="block"
+                        sx={{ color: "#666", fontStyle: "italic" }}
+                    >
                         ⚠️ Horário incompleto - adicione disciplina e professor
                     </Typography>
                 </Box>
@@ -1873,13 +2481,26 @@ const TimeSlot = ({
                 position: "relative",
                 backgroundColor: isDragOver ? "#e3f2fd" : "transparent",
                 "&:hover": {
-                    backgroundColor: isDragOver ? "#e3f2fd" : (timeSlotsNoturno.includes(time) && !isValidStartTimeNoturno(time) ? "#f0f0f0" : "#f5f5f5"),
+                    backgroundColor: isDragOver
+                        ? "#e3f2fd"
+                        : timeSlotsNoturno.includes(time) &&
+                          !isValidStartTimeNoturno(time)
+                        ? "#f0f0f0"
+                        : "#f5f5f5",
                 },
                 transition: "background-color 0.2s ease",
                 display: "flex",
                 gap: eventsArray.length > 1 ? "1px" : "0",
-                cursor: timeSlotsNoturno.includes(time) && !isValidStartTimeNoturno(time) ? "not-allowed" : "pointer",
-                opacity: timeSlotsNoturno.includes(time) && !isValidStartTimeNoturno(time) ? 0.6 : 1,
+                cursor:
+                    timeSlotsNoturno.includes(time) &&
+                    !isValidStartTimeNoturno(time)
+                        ? "not-allowed"
+                        : "pointer",
+                opacity:
+                    timeSlotsNoturno.includes(time) &&
+                    !isValidStartTimeNoturno(time)
+                        ? 0.6
+                        : 1,
                 ...(sx || {}), // Aplicar estilos adicionais se fornecidos
             }}
             onDrop={handleDrop}
@@ -1887,7 +2508,10 @@ const TimeSlot = ({
             onDragLeave={handleDragLeave}
             onDoubleClick={() => {
                 // Verificar se é um horário válido para início de aula
-                if (timeSlotsNoturno.includes(time) && !isValidStartTimeNoturno(time)) {
+                if (
+                    timeSlotsNoturno.includes(time) &&
+                    !isValidStartTimeNoturno(time)
+                ) {
                     return; // Não permitir criar eventos em 22:30:00
                 }
                 onAddEvent(dayId, time);
@@ -1948,13 +2572,13 @@ const PhaseGrid = ({
         const turnos = getTurnosOferta(phaseNumber);
         timeSlots = [];
 
-        if (turnos.includes('matutino')) {
+        if (turnos.includes("matutino")) {
             timeSlots = [...timeSlots, ...timeSlotsMatutino];
         }
-        if (turnos.includes('vespertino')) {
+        if (turnos.includes("vespertino")) {
             timeSlots = [...timeSlots, ...timeSlotsVespertino];
         }
-        if (turnos.includes('noturno')) {
+        if (turnos.includes("noturno")) {
             timeSlots = [...timeSlots, ...timeSlotsNoturno];
         }
     } else {
@@ -1972,13 +2596,13 @@ const PhaseGrid = ({
     let periodLabels = [];
     if (temMultiplosTurnos) {
         const turnos = getTurnosOferta(phaseNumber);
-        if (turnos.includes('matutino')) {
+        if (turnos.includes("matutino")) {
             periodLabels.push({ label: "Matutino", color: "success" });
         }
-        if (turnos.includes('vespertino')) {
+        if (turnos.includes("vespertino")) {
             periodLabels.push({ label: "Vespertino", color: "warning" });
         }
-        if (turnos.includes('noturno')) {
+        if (turnos.includes("noturno")) {
             periodLabels.push({ label: "Noturno", color: "primary" });
         }
     } else {
@@ -2013,31 +2637,40 @@ const PhaseGrid = ({
                         variant="caption"
                         sx={{
                             ml: 1,
-                            fontStyle: 'italic',
-                            color: 'text.secondary'
+                            fontStyle: "italic",
+                            color: "text.secondary",
                         }}
                     >
                         {(() => {
                             const turnos = getTurnosOferta(phaseNumber);
-                            let inicio = '', fim = '';
+                            let inicio = "",
+                                fim = "";
 
-                            if (turnos.includes('matutino')) {
-                                inicio = '07:30';
+                            if (turnos.includes("matutino")) {
+                                inicio = "07:30";
                             }
 
-                            if (turnos.includes('noturno')) {
-                                fim = '22:30';
-                            } else if (turnos.includes('vespertino')) {
-                                fim = '18:00';
-                            } else if (turnos.includes('matutino') && !turnos.includes('vespertino') && !turnos.includes('noturno')) {
-                                fim = '12:00';
+                            if (turnos.includes("noturno")) {
+                                fim = "22:30";
+                            } else if (turnos.includes("vespertino")) {
+                                fim = "18:00";
+                            } else if (
+                                turnos.includes("matutino") &&
+                                !turnos.includes("vespertino") &&
+                                !turnos.includes("noturno")
+                            ) {
+                                fim = "12:00";
                             }
 
-                            if (!inicio && turnos.includes('vespertino')) {
-                                inicio = '13:30';
+                            if (!inicio && turnos.includes("vespertino")) {
+                                inicio = "13:30";
                             }
-                            if (!inicio && turnos.includes('noturno') && !turnos.includes('vespertino')) {
-                                inicio = '19:00';
+                            if (
+                                !inicio &&
+                                turnos.includes("noturno") &&
+                                !turnos.includes("vespertino")
+                            ) {
+                                inicio = "19:00";
                             }
 
                             return `(${inicio} às ${fim})`;
@@ -2079,8 +2712,11 @@ const PhaseGrid = ({
                     </Box>
                     {timeSlots.map((time, index) => {
                         // Adicionar separador visual entre turnos
-                        const isFirstVespertino = temMultiplosTurnos && time === timeSlotsVespertino[0];
-                        const isFirstNoturno = temMultiplosTurnos && time === timeSlotsNoturno[0];
+                        const isFirstVespertino =
+                            temMultiplosTurnos &&
+                            time === timeSlotsVespertino[0];
+                        const isFirstNoturno =
+                            temMultiplosTurnos && time === timeSlotsNoturno[0];
 
                         return (
                             <Box
@@ -2088,13 +2724,19 @@ const PhaseGrid = ({
                                 sx={{
                                     height: "30px",
                                     borderBottom: "1px solid #e0e0e0",
-                                    borderTop: (isFirstVespertino || isFirstNoturno) ? "2px dashed #bbb" : "none",
+                                    borderTop:
+                                        isFirstVespertino || isFirstNoturno
+                                            ? "2px dashed #bbb"
+                                            : "none",
                                     display: "flex",
                                     alignItems: "center",
                                     justifyContent: "center",
                                     fontSize: "0.75rem",
                                     color: "#666",
-                                    backgroundColor: (isFirstVespertino || isFirstNoturno) ? "#f5f5f5" : "transparent",
+                                    backgroundColor:
+                                        isFirstVespertino || isFirstNoturno
+                                            ? "#f5f5f5"
+                                            : "transparent",
                                 }}
                             >
                                 {formatTimeForDisplay(time)}
@@ -2126,8 +2768,12 @@ const PhaseGrid = ({
 
                         {timeSlots.map((time, index) => {
                             // Adicionar separador visual entre turnos
-                            const isFirstVespertino = temMultiplosTurnos && time === timeSlotsVespertino[0];
-                            const isFirstNoturno = temMultiplosTurnos && time === timeSlotsNoturno[0];
+                            const isFirstVespertino =
+                                temMultiplosTurnos &&
+                                time === timeSlotsVespertino[0];
+                            const isFirstNoturno =
+                                temMultiplosTurnos &&
+                                time === timeSlotsNoturno[0];
 
                             return (
                                 <TimeSlot
@@ -2147,15 +2793,34 @@ const PhaseGrid = ({
                                         onAddEvent(dayId, time, phaseNumber)
                                     }
                                     onResize={(eventId, newDuration) =>
-                                        onResize(eventId, newDuration, phaseNumber)
+                                        onResize(
+                                            eventId,
+                                            newDuration,
+                                            phaseNumber
+                                        )
                                     }
-                                    onEdit={(event) => onEdit(event, phaseNumber)}
-                                    onDelete={(eventId) => onDelete(eventId, phaseNumber)}
+                                    onEdit={(event) =>
+                                        onEdit(event, phaseNumber)
+                                    }
+                                    onDelete={(eventId) =>
+                                        onDelete(eventId, phaseNumber)
+                                    }
                                     timeSlots={timeSlots}
                                     professores={professores}
-                                    verificarSeEventoTemConflito={verificarSeEventoTemConflito}
-                                    obterConflitosDoEvento={obterConflitosDoEvento}
-                                    sx={(isFirstVespertino || isFirstNoturno) ? { borderTop: "2px dashed #bbb", backgroundColor: "#f5f5f5" } : {}}
+                                    verificarSeEventoTemConflito={
+                                        verificarSeEventoTemConflito
+                                    }
+                                    obterConflitosDoEvento={
+                                        obterConflitosDoEvento
+                                    }
+                                    sx={
+                                        isFirstVespertino || isFirstNoturno
+                                            ? {
+                                                  borderTop: "2px dashed #bbb",
+                                                  backgroundColor: "#f5f5f5",
+                                              }
+                                            : {}
+                                    }
                                 />
                             );
                         })}
@@ -2185,9 +2850,9 @@ const pulseKeyframes = `
 `;
 
 // Adicionar o estilo ao document head se ainda não existir
-if (!document.getElementById('conflict-badge-styles')) {
-    const style = document.createElement('style');
-    style.id = 'conflict-badge-styles';
+if (!document.getElementById("conflict-badge-styles")) {
+    const style = document.createElement("style");
+    style.id = "conflict-badge-styles";
     style.textContent = pulseKeyframes;
     document.head.appendChild(style);
 }
@@ -2195,7 +2860,7 @@ if (!document.getElementById('conflict-badge-styles')) {
 export default function Horarios() {
     const [selectedAnoSemestre, setSelectedAnoSemestre] = useState({
         ano: new Date().getFullYear(),
-        semestre: 1
+        semestre: 1,
     });
     const [selectedCurso, setSelectedCurso] = useState(null); // Novo estado para curso selecionado
     const [cursos, setCursos] = useState([]); // Novo estado para lista de cursos
@@ -2236,7 +2901,7 @@ export default function Horarios() {
     // Função para obter o ID do usuário atual
     // TODO: Substituir por sistema de autenticação real
     const getCurrentUserId = () => {
-        return 'gian'; // Usuário de teste
+        return "gian"; // Usuário de teste
     };
 
     // Função para buscar cursos da API (apenas cursos vinculados ao usuário)
@@ -2247,7 +2912,9 @@ export default function Horarios() {
 
             const userId = getCurrentUserId();
 
-            const response = await axios.get(`http://localhost:3010/api/usuarios/${userId}/cursos`);
+            const response = await axios.get(
+                `http://localhost:3010/api/usuarios/${userId}/cursos`
+            );
 
             const cursosData = response.data.cursos || [];
             setCursos(cursosData);
@@ -2259,9 +2926,13 @@ export default function Horarios() {
         } catch (error) {
             console.error("Erro ao buscar cursos do usuário:", error);
             if (error.response?.status === 404) {
-                setErrorCursos("Usuário não encontrado ou sem cursos vinculados.");
+                setErrorCursos(
+                    "Usuário não encontrado ou sem cursos vinculados."
+                );
             } else {
-                setErrorCursos("Erro ao carregar cursos disponíveis para o usuário.");
+                setErrorCursos(
+                    "Erro ao carregar cursos disponíveis para o usuário."
+                );
             }
             setCursos([]);
         } finally {
@@ -2274,15 +2945,19 @@ export default function Horarios() {
         try {
             setLoadingAnosSemestres(true);
             setErrorAnosSemestres(null);
-            const response = await axios.get("http://localhost:3010/api/ano-semestre");
+            const response = await axios.get(
+                "http://localhost:3010/api/ano-semestre"
+            );
 
             const anosSemestresData = response.data.anosSemestres || [];
             setAnosSemestres(anosSemestresData);
 
             // Se não há ano/semestre selecionado ou se o selecionado não existe, selecionar o primeiro disponível
             if (anosSemestresData.length > 0) {
-                const anoSemestreExiste = anosSemestresData.some(as =>
-                    as.ano === selectedAnoSemestre.ano && as.semestre === selectedAnoSemestre.semestre
+                const anoSemestreExiste = anosSemestresData.some(
+                    (as) =>
+                        as.ano === selectedAnoSemestre.ano &&
+                        as.semestre === selectedAnoSemestre.semestre
                 );
 
                 if (!anoSemestreExiste) {
@@ -2290,13 +2965,15 @@ export default function Horarios() {
                     const maisRecente = anosSemestresData[0];
                     setSelectedAnoSemestre({
                         ano: maisRecente.ano,
-                        semestre: maisRecente.semestre
+                        semestre: maisRecente.semestre,
                     });
                 }
             }
         } catch (error) {
             console.error("Erro ao buscar anos/semestres:", error);
-            setErrorAnosSemestres("Erro ao carregar anos/semestres disponíveis.");
+            setErrorAnosSemestres(
+                "Erro ao carregar anos/semestres disponíveis."
+            );
             setAnosSemestres([]);
         } finally {
             setLoadingAnosSemestres(false);
@@ -2355,7 +3032,7 @@ export default function Horarios() {
         }
     };
 
-        // Função para buscar ofertas da API
+    // Função para buscar ofertas da API
     const fetchOfertas = async () => {
         try {
             setLoadingOfertas(true);
@@ -2363,7 +3040,11 @@ export default function Horarios() {
 
             // Fazer requisição com filtros se há ano/semestre e curso selecionados
             const params = {};
-            if (selectedAnoSemestre.ano && selectedAnoSemestre.semestre && selectedCurso?.id) {
+            if (
+                selectedAnoSemestre.ano &&
+                selectedAnoSemestre.semestre &&
+                selectedCurso?.id
+            ) {
                 params.ano = selectedAnoSemestre.ano;
                 params.semestre = selectedAnoSemestre.semestre;
                 params.id_curso = selectedCurso.id;
@@ -2372,13 +3053,18 @@ export default function Horarios() {
                 params.id_curso = selectedCurso.id;
             }
 
-            const response = await axios.get("http://localhost:3010/api/ofertas", { params });
+            const response = await axios.get(
+                "http://localhost:3010/api/ofertas",
+                { params }
+            );
 
             const ofertasData = response.data.ofertas || [];
             setOfertas(ofertasData);
         } catch (error) {
             console.error("Erro ao buscar ofertas:", error);
-            setErrorOfertas("Erro ao carregar ofertas. Usando lógica padrão de turnos.");
+            setErrorOfertas(
+                "Erro ao carregar ofertas. Usando lógica padrão de turnos."
+            );
             setOfertas([]);
         } finally {
             setLoadingOfertas(false);
@@ -2387,11 +3073,11 @@ export default function Horarios() {
 
     // Função para converter horário string para minutos desde meia-noite
     const timeToMinutes = (timeStr) => {
-        if (!timeStr || typeof timeStr !== 'string') {
+        if (!timeStr || typeof timeStr !== "string") {
             return 0;
         }
 
-        const parts = timeStr.split(':');
+        const parts = timeStr.split(":");
         if (parts.length < 2) {
             return 0;
         }
@@ -2400,7 +3086,14 @@ export default function Horarios() {
         const minutes = parseInt(parts[1], 10);
         // Ignorar segundos se existirem
 
-        if (isNaN(hours) || isNaN(minutes) || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) {
+        if (
+            isNaN(hours) ||
+            isNaN(minutes) ||
+            hours < 0 ||
+            hours > 23 ||
+            minutes < 0 ||
+            minutes > 59
+        ) {
             return 0;
         }
 
@@ -2423,10 +3116,10 @@ export default function Horarios() {
         let hora2 = normalizeTimeFromDB(horario2.hora_inicio);
 
         const inicio1 = timeToMinutes(hora1);
-        const fim1 = inicio1 + (horario1.duracao * 30); // Cada slot = 30 min
+        const fim1 = inicio1 + horario1.duracao * 30; // Cada slot = 30 min
 
         const inicio2 = timeToMinutes(hora2);
-        const fim2 = inicio2 + (horario2.duracao * 30);
+        const fim2 = inicio2 + horario2.duracao * 30;
 
         // Validar se os valores são válidos
         if (isNaN(inicio1) || isNaN(fim1) || isNaN(inicio2) || isNaN(fim2)) {
@@ -2443,40 +3136,48 @@ export default function Horarios() {
         return hasOverlap;
     };
 
-        // Função para verificar se um evento específico tem conflitos
+    // Função para verificar se um evento específico tem conflitos
     const verificarSeEventoTemConflito = (evento) => {
         if (!evento || !conflitosHorarios || conflitosHorarios.length === 0) {
             return false;
         }
 
-        const professoresDoEvento = evento.professoresIds && Array.isArray(evento.professoresIds)
-            ? evento.professoresIds
-            : (evento.professorId ? [evento.professorId] : []);
+        const professoresDoEvento =
+            evento.professoresIds && Array.isArray(evento.professoresIds)
+                ? evento.professoresIds
+                : evento.professorId
+                ? [evento.professorId]
+                : [];
 
         // Não mostrar conflitos para eventos sem disciplina definida
-        if (professoresDoEvento.length === 0 || !evento.disciplinaId || !evento.startTime || !evento.dayId) {
+        if (
+            professoresDoEvento.length === 0 ||
+            !evento.disciplinaId ||
+            !evento.startTime ||
+            !evento.dayId
+        ) {
             return false;
         }
 
-                const diaEvento = dayToNumber[evento.dayId];
+        const diaEvento = dayToNumber[evento.dayId];
 
         // Verificar se algum dos professores do evento está em conflito
-        return conflitosHorarios.some(conflito => {
-            const professorMatch = professoresDoEvento.includes(conflito.codigoProfessor);
+        return conflitosHorarios.some((conflito) => {
+            const professorMatch = professoresDoEvento.includes(
+                conflito.codigoProfessor
+            );
 
-            const evento1Match = (
+            const evento1Match =
                 conflito.horario1.id_ccr === evento.disciplinaId &&
                 conflito.horario1.hora_inicio === evento.startTime &&
-                conflito.dia == diaEvento
-            );
+                conflito.dia == diaEvento;
 
-            const evento2Match = (
+            const evento2Match =
                 conflito.horario2.id_ccr === evento.disciplinaId &&
                 conflito.horario2.hora_inicio === evento.startTime &&
-                conflito.dia == diaEvento
-            );
+                conflito.dia == diaEvento;
 
-                        return professorMatch && (evento1Match || evento2Match);
+            return professorMatch && (evento1Match || evento2Match);
         });
     };
 
@@ -2486,38 +3187,49 @@ export default function Horarios() {
             return [];
         }
 
-        const professoresDoEvento = evento.professoresIds && Array.isArray(evento.professoresIds)
-            ? evento.professoresIds
-            : (evento.professorId ? [evento.professorId] : []);
+        const professoresDoEvento =
+            evento.professoresIds && Array.isArray(evento.professoresIds)
+                ? evento.professoresIds
+                : evento.professorId
+                ? [evento.professorId]
+                : [];
 
         // Não retornar conflitos para eventos sem disciplina definida
-        if (professoresDoEvento.length === 0 || !evento.disciplinaId || !evento.startTime || !evento.dayId) {
+        if (
+            professoresDoEvento.length === 0 ||
+            !evento.disciplinaId ||
+            !evento.startTime ||
+            !evento.dayId
+        ) {
             return [];
         }
 
         const diaEvento = dayToNumber[evento.dayId];
 
-        return conflitosHorarios.filter(conflito => {
-            const professorMatch = professoresDoEvento.includes(conflito.codigoProfessor);
+        return conflitosHorarios.filter((conflito) => {
+            const professorMatch = professoresDoEvento.includes(
+                conflito.codigoProfessor
+            );
 
-            const evento1Match = (
+            const evento1Match =
                 conflito.horario1.id_ccr === evento.disciplinaId &&
                 conflito.horario1.hora_inicio === evento.startTime &&
-                conflito.dia == diaEvento
-            );
+                conflito.dia == diaEvento;
 
-            const evento2Match = (
+            const evento2Match =
                 conflito.horario2.id_ccr === evento.disciplinaId &&
                 conflito.horario2.hora_inicio === evento.startTime &&
-                conflito.dia == diaEvento
-            );
+                conflito.dia == diaEvento;
 
             return professorMatch && (evento1Match || evento2Match);
         });
     };
 
     // Função para verificar conflitos de um professor específico em tempo real
-    const verificarConflitoProfessor = async (codigoProfessor, novoEvento = null) => {
+    const verificarConflitoProfessor = async (
+        codigoProfessor,
+        novoEvento = null
+    ) => {
         try {
             const conflitos = [];
             const conflitosSet = new Set(); // Para evitar duplicatas absolutas
@@ -2526,13 +3238,16 @@ export default function Horarios() {
             const allHorariosResponse = await Promise.all(
                 anosSemestres.map(async (anoSem) => {
                     try {
-                        const response = await axios.get("http://localhost:3010/api/horarios", {
-                            params: {
-                                ano: anoSem.ano,
-                                semestre: anoSem.semestre,
-                                id_curso: 1
+                        const response = await axios.get(
+                            "http://localhost:3010/api/horarios",
+                            {
+                                params: {
+                                    ano: anoSem.ano,
+                                    semestre: anoSem.semestre,
+                                    id_curso: 1,
+                                },
                             }
-                        });
+                        );
                         return response.data.horarios || [];
                     } catch (error) {
                         return [];
@@ -2542,12 +3257,12 @@ export default function Horarios() {
 
             const horariosSalvos = allHorariosResponse
                 .flat()
-                .filter(h => h.codigo_docente === codigoProfessor)
-                .map(h => ({
+                .filter((h) => h.codigo_docente === codigoProfessor)
+                .map((h) => ({
                     ...h,
                     uniqueKey: `salvo-${h.id}`,
                     eventoId: h.id,
-                    tipo: 'salvo'
+                    tipo: "salvo",
                 }));
 
             // 2. Coletar horários temporários (não salvos) deste professor
@@ -2556,11 +3271,17 @@ export default function Horarios() {
                 const phaseEvents = events[phaseNumber];
                 if (phaseEvents) {
                     Object.values(phaseEvents).forEach((eventArray) => {
-                        const eventsInSlot = Array.isArray(eventArray) ? eventArray : [eventArray];
+                        const eventsInSlot = Array.isArray(eventArray)
+                            ? eventArray
+                            : [eventArray];
                         eventsInSlot.forEach((event) => {
-                            const professoresDoEvento = event.professoresIds && Array.isArray(event.professoresIds)
-                                ? event.professoresIds
-                                : (event.professorId ? [event.professorId] : []);
+                            const professoresDoEvento =
+                                event.professoresIds &&
+                                Array.isArray(event.professoresIds)
+                                    ? event.professoresIds
+                                    : event.professorId
+                                    ? [event.professorId]
+                                    : [];
 
                             if (professoresDoEvento.includes(codigoProfessor)) {
                                 horariosTemporarios.push({
@@ -2572,9 +3293,9 @@ export default function Horarios() {
                                     semestre: selectedAnoSemestre.semestre,
                                     id_ccr: event.disciplinaId,
                                     disciplinaNome: event.title,
-                                    tipo: 'temporario',
+                                    tipo: "temporario",
                                     eventoId: event.id,
-                                    uniqueKey: `temp-${event.id}`
+                                    uniqueKey: `temp-${event.id}`,
                                 });
                             }
                         });
@@ -2583,9 +3304,15 @@ export default function Horarios() {
             });
 
             // 3. Se há um novo evento sendo criado/editado, substituir o temporário existente
-            if (novoEvento && (novoEvento.professoresIds?.includes(codigoProfessor) || novoEvento.professorId === codigoProfessor)) {
+            if (
+                novoEvento &&
+                (novoEvento.professoresIds?.includes(codigoProfessor) ||
+                    novoEvento.professorId === codigoProfessor)
+            ) {
                 // Remover o horário temporário existente do mesmo evento (se existir)
-                const indexExistente = horariosTemporarios.findIndex(h => h.eventoId === novoEvento.id);
+                const indexExistente = horariosTemporarios.findIndex(
+                    (h) => h.eventoId === novoEvento.id
+                );
                 if (indexExistente >= 0) {
                     horariosTemporarios.splice(indexExistente, 1);
                 }
@@ -2600,9 +3327,9 @@ export default function Horarios() {
                     semestre: selectedAnoSemestre.semestre,
                     id_ccr: novoEvento.disciplinaId,
                     disciplinaNome: novoEvento.title,
-                    tipo: 'novo',
+                    tipo: "novo",
                     eventoId: novoEvento.id,
-                    uniqueKey: `novo-${novoEvento.id}`
+                    uniqueKey: `novo-${novoEvento.id}`,
                 });
             }
 
@@ -2611,11 +3338,16 @@ export default function Horarios() {
 
             // 5. Criar mapa de eventos únicos por ID para evitar comparação do mesmo evento
             const eventosUnicos = new Map();
-            todosHorarios.forEach(horario => {
+            todosHorarios.forEach((horario) => {
                 const eventoId = horario.eventoId || horario.id;
                 if (eventoId) {
                     // Se já existe um evento com este ID, manter apenas o mais recente (novo > temporario > salvo)
-                    const prioridade = horario.tipo === 'novo' ? 3 : horario.tipo === 'temporario' ? 2 : 1;
+                    const prioridade =
+                        horario.tipo === "novo"
+                            ? 3
+                            : horario.tipo === "temporario"
+                            ? 2
+                            : 1;
                     const existente = eventosUnicos.get(eventoId);
 
                     if (!existente || prioridade > existente.prioridade) {
@@ -2633,7 +3365,7 @@ export default function Horarios() {
             // 6. Converter de volta para array e agrupar por dia
             const horariosFinais = Array.from(eventosUnicos.values());
             const horariosPorDia = {};
-            horariosFinais.forEach(horario => {
+            horariosFinais.forEach((horario) => {
                 const dia = horario.dia_semana;
                 if (!horariosPorDia[dia]) {
                     horariosPorDia[dia] = [];
@@ -2645,8 +3377,14 @@ export default function Horarios() {
             Object.entries(horariosPorDia).forEach(([dia, horariosNoDia]) => {
                 // Ordenar por hora para garantir comparação consistente
                 horariosNoDia.sort((a, b) => {
-                    const horaA = typeof a.hora_inicio === 'object' ? a.hora_inicio.toString() : a.hora_inicio;
-                    const horaB = typeof b.hora_inicio === 'object' ? b.hora_inicio.toString() : b.hora_inicio;
+                    const horaA =
+                        typeof a.hora_inicio === "object"
+                            ? a.hora_inicio.toString()
+                            : a.hora_inicio;
+                    const horaB =
+                        typeof b.hora_inicio === "object"
+                            ? b.hora_inicio.toString()
+                            : b.hora_inicio;
                     return horaA.localeCompare(horaB);
                 });
 
@@ -2655,7 +3393,7 @@ export default function Horarios() {
                         const h1 = horariosNoDia[i];
                         const h2 = horariosNoDia[j];
 
-                                                // CRÍTICO: Nunca comparar o mesmo evento consigo mesmo
+                        // CRÍTICO: Nunca comparar o mesmo evento consigo mesmo
                         const evento1Id = h1.eventoId || h1.id;
                         const evento2Id = h2.eventoId || h2.id;
 
@@ -2669,25 +3407,42 @@ export default function Horarios() {
                         }
 
                         // Verificar se são exatamente o mesmo horário (mesmo professor, disciplina, dia, hora)
-                        const hora1 = typeof h1.hora_inicio === 'object' ? h1.hora_inicio.toString().substring(0, 5) : h1.hora_inicio;
-                        const hora2 = typeof h2.hora_inicio === 'object' ? h2.hora_inicio.toString().substring(0, 5) : h2.hora_inicio;
+                        const hora1 =
+                            typeof h1.hora_inicio === "object"
+                                ? h1.hora_inicio.toString().substring(0, 5)
+                                : h1.hora_inicio;
+                        const hora2 =
+                            typeof h2.hora_inicio === "object"
+                                ? h2.hora_inicio.toString().substring(0, 5)
+                                : h2.hora_inicio;
 
-                        if (h1.id_ccr === h2.id_ccr &&
+                        if (
+                            h1.id_ccr === h2.id_ccr &&
                             hora1 === hora2 &&
                             h1.duracao === h2.duracao &&
                             h1.ano === h2.ano &&
                             h1.semestre === h2.semestre &&
-                            h1.codigo_docente === h2.codigo_docente) {
+                            h1.codigo_docente === h2.codigo_docente
+                        ) {
                             continue; // São o mesmo horário, não é conflito
                         }
 
                         // Verificar sobreposição temporal
                         if (horariosSeOverlapam(h1, h2)) {
                             // Criar ID único determinístico para o conflito
-                            const conflict1 = `${h1.id_ccr || 'null'}-${h1.ano}-${h1.semestre}-${hora1}-${h1.duracao}`;
-                            const conflict2 = `${h2.id_ccr || 'null'}-${h2.ano}-${h2.semestre}-${hora2}-${h2.duracao}`;
-                            const sortedConflicts = [conflict1, conflict2].sort();
-                            const conflictId = `${codigoProfessor}-${dia}-${sortedConflicts.join('---')}`;
+                            const conflict1 = `${h1.id_ccr || "null"}-${
+                                h1.ano
+                            }-${h1.semestre}-${hora1}-${h1.duracao}`;
+                            const conflict2 = `${h2.id_ccr || "null"}-${
+                                h2.ano
+                            }-${h2.semestre}-${hora2}-${h2.duracao}`;
+                            const sortedConflicts = [
+                                conflict1,
+                                conflict2,
+                            ].sort();
+                            const conflictId = `${codigoProfessor}-${dia}-${sortedConflicts.join(
+                                "---"
+                            )}`;
 
                             // Verificar se já processamos este conflito
                             if (conflitosSet.has(conflictId)) {
@@ -2695,29 +3450,46 @@ export default function Horarios() {
                             }
                             conflitosSet.add(conflictId);
 
-                            const disciplina1 = disciplinas.find(d => d.id === h1.id_ccr);
-                            const disciplina2 = disciplinas.find(d => d.id === h2.id_ccr);
+                            const disciplina1 = disciplinas.find(
+                                (d) => d.id === h1.id_ccr
+                            );
+                            const disciplina2 = disciplinas.find(
+                                (d) => d.id === h2.id_ccr
+                            );
 
                             conflitos.push({
                                 id: conflictId,
-                                professor: professores.find(p => p.codigo === codigoProfessor)?.name || codigoProfessor,
+                                professor:
+                                    professores.find(
+                                        (p) => p.codigo === codigoProfessor
+                                    )?.name || codigoProfessor,
                                 codigoProfessor,
                                 dia: dia,
-                                diaNome: daysOfWeek.find(d => dayToNumber[d.id] === parseInt(dia))?.title || `Dia ${dia}`,
+                                diaNome:
+                                    daysOfWeek.find(
+                                        (d) =>
+                                            dayToNumber[d.id] === parseInt(dia)
+                                    )?.title || `Dia ${dia}`,
                                 horario1: {
                                     ...h1,
-                                    disciplinaNome: h1.disciplinaNome || disciplina1?.nome || 'Disciplina não encontrada',
+                                    disciplinaNome:
+                                        h1.disciplinaNome ||
+                                        disciplina1?.nome ||
+                                        "Disciplina não encontrada",
                                     hora_inicio: hora1,
                                     ano_semestre: `${h1.ano}/${h1.semestre}`,
-                                    tipo: h1.tipo || 'salvo'
+                                    tipo: h1.tipo || "salvo",
                                 },
                                 horario2: {
                                     ...h2,
-                                    disciplinaNome: h2.disciplinaNome || disciplina2?.nome || 'Disciplina não encontrada',
+                                    disciplinaNome:
+                                        h2.disciplinaNome ||
+                                        disciplina2?.nome ||
+                                        "Disciplina não encontrada",
                                     hora_inicio: hora2,
                                     ano_semestre: `${h2.ano}/${h2.semestre}`,
-                                    tipo: h2.tipo || 'salvo'
-                                }
+                                    tipo: h2.tipo || "salvo",
+                                },
                             });
                         }
                     }
@@ -2726,12 +3498,15 @@ export default function Horarios() {
 
             return conflitos;
         } catch (error) {
-            console.error(`Erro ao verificar conflitos para professor ${codigoProfessor}:`, error);
+            console.error(
+                `Erro ao verificar conflitos para professor ${codigoProfessor}:`,
+                error
+            );
             return [];
         }
     };
 
-                // Função para detectar conflitos de horários entre professores
+    // Função para detectar conflitos de horários entre professores
     const detectarConflitosHorarios = async () => {
         try {
             // Log removido
@@ -2745,14 +3520,23 @@ export default function Horarios() {
                 const phaseEvents = events[phaseNumber];
                 if (phaseEvents) {
                     Object.values(phaseEvents).forEach((eventArray) => {
-                        const eventsInSlot = Array.isArray(eventArray) ? eventArray : [eventArray];
+                        const eventsInSlot = Array.isArray(eventArray)
+                            ? eventArray
+                            : [eventArray];
                         eventsInSlot.forEach((event) => {
                             // Só considerar eventos que têm disciplina definida
                             if (event.disciplinaId) {
-                                if (event.professoresIds && Array.isArray(event.professoresIds)) {
-                                    event.professoresIds.forEach(profId => professoresComHorarios.add(profId));
+                                if (
+                                    event.professoresIds &&
+                                    Array.isArray(event.professoresIds)
+                                ) {
+                                    event.professoresIds.forEach((profId) =>
+                                        professoresComHorarios.add(profId)
+                                    );
                                 } else if (event.professorId) {
-                                    professoresComHorarios.add(event.professorId);
+                                    professoresComHorarios.add(
+                                        event.professorId
+                                    );
                                 }
                             }
                         });
@@ -2773,16 +3557,22 @@ export default function Horarios() {
                     const allHorariosResponse = await Promise.all(
                         anosSemestres.map(async (anoSem) => {
                             try {
-                                const response = await axios.get("http://localhost:3010/api/horarios", {
-                                    params: {
-                                        ano: anoSem.ano,
-                                        semestre: anoSem.semestre,
-                                        id_curso: selectedCurso?.id || 1
+                                const response = await axios.get(
+                                    "http://localhost:3010/api/horarios",
+                                    {
+                                        params: {
+                                            ano: anoSem.ano,
+                                            semestre: anoSem.semestre,
+                                            id_curso: selectedCurso?.id || 1,
+                                        },
                                     }
-                                });
+                                );
                                 return response.data.horarios || [];
                             } catch (error) {
-                                console.warn(`Erro ao buscar horários para ${anoSem.ano}/${anoSem.semestre}:`, error);
+                                console.warn(
+                                    `Erro ao buscar horários para ${anoSem.ano}/${anoSem.semestre}:`,
+                                    error
+                                );
                                 return [];
                             }
                         })
@@ -2791,12 +3581,15 @@ export default function Horarios() {
                     // Flatten e filtrar horários salvos
                     const horariosSalvos = allHorariosResponse
                         .flat()
-                        .filter(h => h.codigo_docente === codigoProfessor && h.id_ccr) // Filtrar apenas horários com disciplina
-                        .map(h => ({
+                        .filter(
+                            (h) =>
+                                h.codigo_docente === codigoProfessor && h.id_ccr
+                        ) // Filtrar apenas horários com disciplina
+                        .map((h) => ({
                             ...h,
                             uniqueKey: `salvo-${h.id}`,
                             eventoId: h.id,
-                            tipo: 'salvo'
+                            tipo: "salvo",
                         }));
 
                     // Coletar horários temporários APENAS para eventos não salvos ou que foram modificados
@@ -2805,41 +3598,65 @@ export default function Horarios() {
                         const phaseEvents = events[phaseNumber];
                         if (phaseEvents) {
                             Object.values(phaseEvents).forEach((eventArray) => {
-                                const eventsInSlot = Array.isArray(eventArray) ? eventArray : [eventArray];
+                                const eventsInSlot = Array.isArray(eventArray)
+                                    ? eventArray
+                                    : [eventArray];
                                 eventsInSlot.forEach((event) => {
-                                    const professoresDoEvento = event.professoresIds && Array.isArray(event.professoresIds)
-                                        ? event.professoresIds
-                                        : (event.professorId ? [event.professorId] : []);
+                                    const professoresDoEvento =
+                                        event.professoresIds &&
+                                        Array.isArray(event.professoresIds)
+                                            ? event.professoresIds
+                                            : event.professorId
+                                            ? [event.professorId]
+                                            : [];
 
-                                    if (professoresDoEvento.includes(codigoProfessor)) {
+                                    if (
+                                        professoresDoEvento.includes(
+                                            codigoProfessor
+                                        )
+                                    ) {
                                         // Verificar se este evento temporário já existe como horário salvo
-                                        const jaExisteNoSalvo = horariosSalvos.some(salvo => {
-                                            return (
-                                                salvo.id_ccr === event.disciplinaId &&
-                                                salvo.dia_semana === dayToNumber[event.dayId] &&
-                                                salvo.hora_inicio === event.startTime &&
-                                                // Nota: ignoramos duração para evitar conflito falso quando apenas
-                                                // o tamanho da aula é alterado antes de sincronizar com o banco.
-                                                salvo.codigo_docente === codigoProfessor &&
-                                                salvo.ano === selectedAnoSemestre.ano &&
-                                                salvo.semestre === selectedAnoSemestre.semestre
-                                            );
-                                        });
+                                        const jaExisteNoSalvo =
+                                            horariosSalvos.some((salvo) => {
+                                                return (
+                                                    salvo.id_ccr ===
+                                                        event.disciplinaId &&
+                                                    salvo.dia_semana ===
+                                                        dayToNumber[
+                                                            event.dayId
+                                                        ] &&
+                                                    salvo.hora_inicio ===
+                                                        event.startTime &&
+                                                    // Nota: ignoramos duração para evitar conflito falso quando apenas
+                                                    // o tamanho da aula é alterado antes de sincronizar com o banco.
+                                                    salvo.codigo_docente ===
+                                                        codigoProfessor &&
+                                                    salvo.ano ===
+                                                        selectedAnoSemestre.ano &&
+                                                    salvo.semestre ===
+                                                        selectedAnoSemestre.semestre
+                                                );
+                                            });
 
                                         // Só adicionar se não existir como salvo (evento realmente novo/modificado) E tem disciplina definida
-                                        if (!jaExisteNoSalvo && event.disciplinaId) {
+                                        if (
+                                            !jaExisteNoSalvo &&
+                                            event.disciplinaId
+                                        ) {
                                             horariosTemporarios.push({
                                                 codigo_docente: codigoProfessor,
-                                                dia_semana: dayToNumber[event.dayId],
+                                                dia_semana:
+                                                    dayToNumber[event.dayId],
                                                 hora_inicio: event.startTime,
                                                 duracao: event.duration || 2,
                                                 ano: selectedAnoSemestre.ano,
-                                                semestre: selectedAnoSemestre.semestre,
+                                                semestre:
+                                                    selectedAnoSemestre.semestre,
                                                 id_ccr: event.disciplinaId,
                                                 disciplinaNome: event.title,
-                                                tipo: 'temporario',
+                                                tipo: "temporario",
                                                 eventoId: event.id,
-                                                uniqueKey: `temp-${event.id}`
+                                                uniqueKey: `temp-${event.id}`,
                                             });
                                         }
                                     }
@@ -2849,20 +3666,26 @@ export default function Horarios() {
                     });
 
                     // Combinar todos os horários
-                    const todosHorarios = [...horariosSalvos, ...horariosTemporarios];
+                    const todosHorarios = [
+                        ...horariosSalvos,
+                        ...horariosTemporarios,
+                    ];
 
                     // Criar mapa de eventos únicos com MÚLTIPLAS CHAVES para evitar duplicatas
                     const eventosUnicos = new Map();
                     const chavesDuplicacao = new Set();
 
-                    todosHorarios.forEach(horario => {
+                    todosHorarios.forEach((horario) => {
                         // Normalizar hora_inicio
                         let horaInicio = horario.hora_inicio;
-                        if (typeof horaInicio === 'object') {
+                        if (typeof horaInicio === "object") {
                             horaInicio = horaInicio.toString().substring(0, 5);
                         }
-                        if (horaInicio && horaInicio.includes(':')) {
-                            horaInicio = horaInicio.split(':').slice(0, 2).join(':');
+                        if (horaInicio && horaInicio.includes(":")) {
+                            horaInicio = horaInicio
+                                .split(":")
+                                .slice(0, 2)
+                                .join(":");
                         }
 
                         // Criar chave única ultra-específica
@@ -2877,15 +3700,30 @@ export default function Horarios() {
                         const eventoId = horario.eventoId || horario.id;
                         if (eventoId) {
                             // Se já existe um evento com este ID, manter apenas o mais recente (novo > temporario > salvo)
-                            const prioridade = horario.tipo === 'novo' ? 3 : horario.tipo === 'temporario' ? 2 : 1;
+                            const prioridade =
+                                horario.tipo === "novo"
+                                    ? 3
+                                    : horario.tipo === "temporario"
+                                    ? 2
+                                    : 1;
                             const existente = eventosUnicos.get(eventoId);
 
-                            if (!existente || prioridade > existente.prioridade) {
-                                eventosUnicos.set(eventoId, { ...horario, prioridade, hora_inicio: horaInicio });
+                            if (
+                                !existente ||
+                                prioridade > existente.prioridade
+                            ) {
+                                eventosUnicos.set(eventoId, {
+                                    ...horario,
+                                    prioridade,
+                                    hora_inicio: horaInicio,
+                                });
                             }
                         } else {
                             // Se não tem ID, usar a chave completa
-                            eventosUnicos.set(chaveCompleta, { ...horario, hora_inicio: horaInicio });
+                            eventosUnicos.set(chaveCompleta, {
+                                ...horario,
+                                hora_inicio: horaInicio,
+                            });
                         }
                     });
 
@@ -2895,7 +3733,7 @@ export default function Horarios() {
 
                     // Agrupar horários por dia da semana
                     const horariosPorDia = {};
-                    horariosFinais.forEach(horario => {
+                    horariosFinais.forEach((horario) => {
                         const dia = horario.dia_semana;
                         if (!horariosPorDia[dia]) {
                             horariosPorDia[dia] = [];
@@ -2904,103 +3742,172 @@ export default function Horarios() {
                     });
 
                     // Verificar conflitos dentro de cada dia
-                    Object.entries(horariosPorDia).forEach(([dia, horariosNoDia]) => {
-                        // Ordenar por hora para garantir comparação consistente
-                        horariosNoDia.sort((a, b) => {
-                            const horaA = typeof a.hora_inicio === 'object' ? a.hora_inicio.toString() : a.hora_inicio;
-                            const horaB = typeof b.hora_inicio === 'object' ? b.hora_inicio.toString() : b.hora_inicio;
-                            return horaA.localeCompare(horaB);
-                        });
+                    Object.entries(horariosPorDia).forEach(
+                        ([dia, horariosNoDia]) => {
+                            // Ordenar por hora para garantir comparação consistente
+                            horariosNoDia.sort((a, b) => {
+                                const horaA =
+                                    typeof a.hora_inicio === "object"
+                                        ? a.hora_inicio.toString()
+                                        : a.hora_inicio;
+                                const horaB =
+                                    typeof b.hora_inicio === "object"
+                                        ? b.hora_inicio.toString()
+                                        : b.hora_inicio;
+                                return horaA.localeCompare(horaB);
+                            });
 
-                        for (let i = 0; i < horariosNoDia.length; i++) {
-                            for (let j = i + 1; j < horariosNoDia.length; j++) {
-                                const h1 = horariosNoDia[i];
-                                const h2 = horariosNoDia[j];
+                            for (let i = 0; i < horariosNoDia.length; i++) {
+                                for (
+                                    let j = i + 1;
+                                    j < horariosNoDia.length;
+                                    j++
+                                ) {
+                                    const h1 = horariosNoDia[i];
+                                    const h2 = horariosNoDia[j];
 
-                                // CRÍTICO: Nunca comparar o mesmo evento consigo mesmo
-                                const evento1Id = h1.eventoId || h1.id;
-                                const evento2Id = h2.eventoId || h2.id;
+                                    // CRÍTICO: Nunca comparar o mesmo evento consigo mesmo
+                                    const evento1Id = h1.eventoId || h1.id;
+                                    const evento2Id = h2.eventoId || h2.id;
 
-                                if (evento1Id && evento2Id && evento1Id === evento2Id) {
-                                    continue; // Pular comparação do mesmo evento
-                                }
-
-                                // IMPORTANTE: Só detectar conflitos entre horários do MESMO ano e semestre
-                                if (h1.ano !== h2.ano || h1.semestre !== h2.semestre) {
-                                    continue; // Horários de períodos diferentes não são conflitos
-                                }
-
-                                // Normalizar horários para comparação
-                                const hora1 = typeof h1.hora_inicio === 'object' ? h1.hora_inicio.toString().substring(0, 5) : h1.hora_inicio;
-                                const hora2 = typeof h2.hora_inicio === 'object' ? h2.hora_inicio.toString().substring(0, 5) : h2.hora_inicio;
-
-                                // Remover segundos se existirem
-                                const hora1Normalizada = hora1?.split(':').slice(0, 2).join(':');
-                                const hora2Normalizada = hora2?.split(':').slice(0, 2).join(':');
-
-                                // Verificar se na prática é o MESMO compromisso (ignora duração, pois
-                                // ela pode ter sido editada antes da sincronização).
-                                const saoOMesmoHorario = (
-                                    h1.id_ccr === h2.id_ccr &&
-                                    hora1Normalizada === hora2Normalizada &&
-                                    h1.ano === h2.ano &&
-                                    h1.semestre === h2.semestre &&
-                                    h1.dia_semana === h2.dia_semana &&
-                                    h1.codigo_docente === h2.codigo_docente
-                                );
-
-                                if (saoOMesmoHorario) {
-                                    continue; // São o mesmo horário, não é conflito
-                                }
-
-                                // Verificar se ambos os horários têm disciplinas e há sobreposição temporal
-                                if (h1.id_ccr && h2.id_ccr && horariosSeOverlapam(h1, h2)) {
-                                    // Criar ID único determinístico baseado nas propriedades dos horários
-                                    const conflict1 = `${h1.id_ccr}-${h1.ano}-${h1.semestre}-${hora1}-${h1.duracao}`;
-                                    const conflict2 = `${h2.id_ccr}-${h2.ano}-${h2.semestre}-${hora2}-${h2.duracao}`;
-                                    const sortedConflicts = [conflict1, conflict2].sort();
-                                    const conflictId = `${codigoProfessor}-${dia}-${sortedConflicts.join('---')}`;
-
-                                    // Verificar se já processamos este conflito globalmente
-                                    if (conflitosProcessados.has(conflictId)) {
-                                        continue;
+                                    if (
+                                        evento1Id &&
+                                        evento2Id &&
+                                        evento1Id === evento2Id
+                                    ) {
+                                        continue; // Pular comparação do mesmo evento
                                     }
-                                    conflitosProcessados.add(conflictId);
 
-                                    const professor = professores.find(p => p.codigo === codigoProfessor);
-                                    const disciplina1 = disciplinas.find(d => d.id === h1.id_ccr);
-                                    const disciplina2 = disciplinas.find(d => d.id === h2.id_ccr);
+                                    // IMPORTANTE: Só detectar conflitos entre horários do MESMO ano e semestre
+                                    if (
+                                        h1.ano !== h2.ano ||
+                                        h1.semestre !== h2.semestre
+                                    ) {
+                                        continue; // Horários de períodos diferentes não são conflitos
+                                    }
 
-                                    const novoConflito = {
-                                        id: conflictId,
-                                        professor: professor ? professor.name : codigoProfessor,
-                                        codigoProfessor,
-                                        dia: dia,
-                                        diaNome: daysOfWeek.find(d => dayToNumber[d.id] === parseInt(dia))?.title || `Dia ${dia}`,
-                                        horario1: {
-                                            ...h1,
-                                            disciplinaNome: h1.disciplinaNome || (disciplina1 ? disciplina1.nome : 'Disciplina não encontrada'),
-                                            hora_inicio: hora1,
-                                            ano_semestre: `${h1.ano}/${h1.semestre}`,
-                                            tipo: h1.tipo || 'salvo'
-                                        },
-                                        horario2: {
-                                            ...h2,
-                                            disciplinaNome: h2.disciplinaNome || (disciplina2 ? disciplina2.nome : 'Disciplina não encontrada'),
-                                            hora_inicio: hora2,
-                                            ano_semestre: `${h2.ano}/${h2.semestre}`,
-                                            tipo: h2.tipo || 'salvo'
+                                    // Normalizar horários para comparação
+                                    const hora1 =
+                                        typeof h1.hora_inicio === "object"
+                                            ? h1.hora_inicio
+                                                  .toString()
+                                                  .substring(0, 5)
+                                            : h1.hora_inicio;
+                                    const hora2 =
+                                        typeof h2.hora_inicio === "object"
+                                            ? h2.hora_inicio
+                                                  .toString()
+                                                  .substring(0, 5)
+                                            : h2.hora_inicio;
+
+                                    // Remover segundos se existirem
+                                    const hora1Normalizada = hora1
+                                        ?.split(":")
+                                        .slice(0, 2)
+                                        .join(":");
+                                    const hora2Normalizada = hora2
+                                        ?.split(":")
+                                        .slice(0, 2)
+                                        .join(":");
+
+                                    // Verificar se na prática é o MESMO compromisso (ignora duração, pois
+                                    // ela pode ter sido editada antes da sincronização).
+                                    const saoOMesmoHorario =
+                                        h1.id_ccr === h2.id_ccr &&
+                                        hora1Normalizada === hora2Normalizada &&
+                                        h1.ano === h2.ano &&
+                                        h1.semestre === h2.semestre &&
+                                        h1.dia_semana === h2.dia_semana &&
+                                        h1.codigo_docente === h2.codigo_docente;
+
+                                    if (saoOMesmoHorario) {
+                                        continue; // São o mesmo horário, não é conflito
+                                    }
+
+                                    // Verificar se ambos os horários têm disciplinas e há sobreposição temporal
+                                    if (
+                                        h1.id_ccr &&
+                                        h2.id_ccr &&
+                                        horariosSeOverlapam(h1, h2)
+                                    ) {
+                                        // Criar ID único determinístico baseado nas propriedades dos horários
+                                        const conflict1 = `${h1.id_ccr}-${h1.ano}-${h1.semestre}-${hora1}-${h1.duracao}`;
+                                        const conflict2 = `${h2.id_ccr}-${h2.ano}-${h2.semestre}-${hora2}-${h2.duracao}`;
+                                        const sortedConflicts = [
+                                            conflict1,
+                                            conflict2,
+                                        ].sort();
+                                        const conflictId = `${codigoProfessor}-${dia}-${sortedConflicts.join(
+                                            "---"
+                                        )}`;
+
+                                        // Verificar se já processamos este conflito globalmente
+                                        if (
+                                            conflitosProcessados.has(conflictId)
+                                        ) {
+                                            continue;
                                         }
-                                    };
+                                        conflitosProcessados.add(conflictId);
 
-                                    // Log removido
-                                    conflitos.push(novoConflito);
+                                        const professor = professores.find(
+                                            (p) => p.codigo === codigoProfessor
+                                        );
+                                        const disciplina1 = disciplinas.find(
+                                            (d) => d.id === h1.id_ccr
+                                        );
+                                        const disciplina2 = disciplinas.find(
+                                            (d) => d.id === h2.id_ccr
+                                        );
+
+                                        const novoConflito = {
+                                            id: conflictId,
+                                            professor: professor
+                                                ? professor.name
+                                                : codigoProfessor,
+                                            codigoProfessor,
+                                            dia: dia,
+                                            diaNome:
+                                                daysOfWeek.find(
+                                                    (d) =>
+                                                        dayToNumber[d.id] ===
+                                                        parseInt(dia)
+                                                )?.title || `Dia ${dia}`,
+                                            horario1: {
+                                                ...h1,
+                                                disciplinaNome:
+                                                    h1.disciplinaNome ||
+                                                    (disciplina1
+                                                        ? disciplina1.nome
+                                                        : "Disciplina não encontrada"),
+                                                hora_inicio: hora1,
+                                                ano_semestre: `${h1.ano}/${h1.semestre}`,
+                                                tipo: h1.tipo || "salvo",
+                                            },
+                                            horario2: {
+                                                ...h2,
+                                                disciplinaNome:
+                                                    h2.disciplinaNome ||
+                                                    (disciplina2
+                                                        ? disciplina2.nome
+                                                        : "Disciplina não encontrada"),
+                                                hora_inicio: hora2,
+                                                ano_semestre: `${h2.ano}/${h2.semestre}`,
+                                                tipo: h2.tipo || "salvo",
+                                            },
+                                        };
+
+                                        // Log removido
+                                        conflitos.push(novoConflito);
+                                    }
                                 }
                             }
                         }
-                    });
+                    );
                 } catch (error) {
-                    console.error(`Erro ao verificar conflitos para professor ${codigoProfessor}:`, error);
+                    console.error(
+                        `Erro ao verificar conflitos para professor ${codigoProfessor}:`,
+                        error
+                    );
                 }
             }
 
@@ -3048,10 +3955,17 @@ export default function Horarios() {
                                         (professorId, index) => {
                                             // Para múltiplos professores, criar ID único apenas se necessário
                                             let uniqueId = event.id;
-                                            if (event.professoresIds.length > 1) {
+                                            if (
+                                                event.professoresIds.length > 1
+                                            ) {
                                                 // Se o ID já contém sufixo -prof, remover antes de adicionar novo
-                                                const baseId = event.id.replace(/-prof\d+$/, '');
-                                                uniqueId = `${baseId}-prof${index + 1}`;
+                                                const baseId = event.id.replace(
+                                                    /-prof\d+$/,
+                                                    ""
+                                                );
+                                                uniqueId = `${baseId}-prof${
+                                                    index + 1
+                                                }`;
                                             }
 
                                             const eventoCopy = {
@@ -3142,7 +4056,7 @@ export default function Horarios() {
         return dbEvent.fase || 1; // Fase padrão se não especificada
     };
 
-            // Função para carregar horários do banco de dados
+    // Função para carregar horários do banco de dados
     const loadHorariosFromDatabase = async () => {
         setLoadingHorarios(true);
         setLoadError(null);
@@ -3253,7 +4167,8 @@ export default function Horarios() {
             });
 
             // Aplicar correção de cores após carregamento
-            const eventsWithFixedColors = fixEventColorsAfterLoading(eventsFormatted);
+            const eventsWithFixedColors =
+                fixEventColorsAfterLoading(eventsFormatted);
 
             setEvents(eventsWithFixedColors);
             setOriginalHorarios(horariosOriginais);
@@ -3306,14 +4221,144 @@ export default function Horarios() {
         return count;
     };
 
-        // Função para verificar se há mudanças pendentes para sincronizar
-    const hasPendingChanges = () => {
-        // Simples comparação: se o número de horários atuais é diferente dos originais
-        const currentCount = getValidHorariosCount();
-        const originalCount = originalHorarios.length;
+    // Função para contar mudanças desde a última sincronização
+    const getChangesCount = () => {
+        // Se ainda não carregou os dados originais, não há mudanças
+        if (!originalHorarios || originalHorarios.length === 0) {
+            return { added: 0, modified: 0, removed: 0, total: 0 };
+        }
 
-        // Se há diferença na quantidade, há mudanças
-        return currentCount !== originalCount;
+        // Converter eventos atuais para formato comparável
+        const currentHorarios = [];
+        Object.keys(events).forEach((phaseNumber) => {
+            const phaseEvents = events[phaseNumber];
+            if (phaseEvents) {
+                Object.values(phaseEvents).forEach((eventArray) => {
+                    const eventsInSlot = Array.isArray(eventArray)
+                        ? eventArray
+                        : [eventArray];
+                    eventsInSlot.forEach((event) => {
+                        // Só considerar horários válidos (com disciplina e professor)
+                        const hasProfessores =
+                            (event.professoresIds &&
+                                Array.isArray(event.professoresIds) &&
+                                event.professoresIds.length > 0) ||
+                            event.professorId;
+
+                        if (event.disciplinaId && hasProfessores) {
+                            // Se tem múltiplos professores, criar registro separado para cada um
+                            if (
+                                event.professoresIds &&
+                                Array.isArray(event.professoresIds)
+                            ) {
+                                event.professoresIds.forEach(
+                                    (professorId, index) => {
+                                        let uniqueId = event.id;
+                                        if (event.professoresIds.length > 1) {
+                                            const baseId = event.id.replace(
+                                                /-prof\d+$/,
+                                                ""
+                                            );
+                                            uniqueId = `${baseId}-prof${
+                                                index + 1
+                                            }`;
+                                        }
+
+                                        currentHorarios.push({
+                                            id: uniqueId,
+                                            id_ccr: event.disciplinaId,
+                                            codigo_docente: professorId,
+                                            dia_semana:
+                                                dayToNumber[event.dayId],
+                                            hora_inicio: normalizeTimeFromDB(
+                                                event.startTime
+                                            ),
+                                            duracao: event.duration,
+                                            fase: parseInt(phaseNumber),
+                                            comentario: event.comentario || "",
+                                        });
+                                    }
+                                );
+                            } else if (event.professorId) {
+                                currentHorarios.push({
+                                    id: event.id,
+                                    id_ccr: event.disciplinaId,
+                                    codigo_docente: event.professorId,
+                                    dia_semana: dayToNumber[event.dayId],
+                                    hora_inicio: normalizeTimeFromDB(
+                                        event.startTime
+                                    ),
+                                    duracao: event.duration,
+                                    fase: parseInt(phaseNumber),
+                                    comentario: event.comentario || "",
+                                });
+                            }
+                        }
+                    });
+                });
+            }
+        });
+
+        let added = 0,
+            modified = 0,
+            removed = 0;
+
+        // Contar adições e modificações
+        currentHorarios.forEach((current) => {
+            // Normalizar hora_inicio para comparação
+            const currentHora = normalizeTimeFromDB(current.hora_inicio);
+
+            const original = originalHorarios.find((orig) => {
+                const originalHora = normalizeTimeFromDB(orig.hora_inicio);
+                return (
+                    orig.id_ccr === current.id_ccr &&
+                    orig.codigo_docente === current.codigo_docente &&
+                    orig.dia_semana === current.dia_semana &&
+                    originalHora === currentHora
+                );
+            });
+
+            if (!original) {
+                added++; // Novo horário
+            } else {
+                // Verificar se foi modificado (duração, fase ou comentário)
+                const isModified =
+                    original.duracao !== current.duracao ||
+                    original.fase !== current.fase ||
+                    (original.comentario || "") !== (current.comentario || "");
+
+                if (isModified) {
+                    modified++;
+                }
+            }
+        });
+
+        // Contar remoções
+        originalHorarios.forEach((original) => {
+            const originalHora = normalizeTimeFromDB(original.hora_inicio);
+
+            const current = currentHorarios.find((curr) => {
+                const currentHora = normalizeTimeFromDB(curr.hora_inicio);
+                return (
+                    curr.id_ccr === original.id_ccr &&
+                    curr.codigo_docente === original.codigo_docente &&
+                    curr.dia_semana === original.dia_semana &&
+                    currentHora === originalHora
+                );
+            });
+
+            if (!current) {
+                removed++; // Horário removido
+            }
+        });
+
+        return { added, modified, removed, total: added + modified + removed };
+    };
+
+    // Função para verificar se há mudanças pendentes para sincronizar
+    const hasPendingChanges = () => {
+        const changes = getChangesCount();
+        return changes.total > 0;
     };
 
     // Função para obter turno de uma fase específica baseado na oferta
@@ -3322,42 +4367,66 @@ export default function Horarios() {
         if (!ofertas || ofertas.length === 0) {
             // Se não há ofertas carregadas, usar lógica padrão como fallback
             const isOddPhase = phaseNumber % 2 === 1;
-            const defaultTurno = phaseNumber === 9 ? "noturno" : (isEvenSemester ? (!isOddPhase ? "vespertino" : "noturno") : (isOddPhase ? "vespertino" : "noturno"));
+            const defaultTurno =
+                phaseNumber === 9
+                    ? "noturno"
+                    : isEvenSemester
+                    ? !isOddPhase
+                        ? "vespertino"
+                        : "noturno"
+                    : isOddPhase
+                    ? "vespertino"
+                    : "noturno";
             return [defaultTurno];
         }
 
         // Buscar todas as ofertas para a fase atual no ano/semestre selecionado
-        const ofertasFase = ofertas.filter(o =>
-            o.ano === selectedAnoSemestre.ano &&
-            o.semestre === selectedAnoSemestre.semestre &&
-            o.fase === phaseNumber &&
-            o.id_curso === (selectedCurso?.id || 1)
+        const ofertasFase = ofertas.filter(
+            (o) =>
+                o.ano === selectedAnoSemestre.ano &&
+                o.semestre === selectedAnoSemestre.semestre &&
+                o.fase === phaseNumber &&
+                o.id_curso === (selectedCurso?.id || 1)
         );
 
         if (ofertasFase.length === 0) {
             // Se não encontrou ofertas específicas, usar lógica padrão
             const isOddPhase = phaseNumber % 2 === 1;
-            const defaultTurno = phaseNumber === 9 ? "noturno" : (isEvenSemester ? (!isOddPhase ? "vespertino" : "noturno") : (isOddPhase ? "vespertino" : "noturno"));
+            const defaultTurno =
+                phaseNumber === 9
+                    ? "noturno"
+                    : isEvenSemester
+                    ? !isOddPhase
+                        ? "vespertino"
+                        : "noturno"
+                    : isOddPhase
+                    ? "vespertino"
+                    : "noturno";
             return [defaultTurno];
         }
 
         // Coletar todos os turnos das ofertas
-        const turnos = ofertasFase.map(oferta => {
-            if (oferta && oferta.turno) {
-                // Interpretar os valores de turno: M/m = matutino, V/v = vespertino, N/n = noturno
-                const turnoValue = oferta.turno.toString().toLowerCase();
-                if (turnoValue === 'm' || turnoValue === 'matutino') {
-                    return "matutino";
-                } else if (turnoValue === 'v' || turnoValue === 'vespertino') {
-                    return "vespertino";
-                } else if (turnoValue === 'n' || turnoValue === 'noturno') {
-                    return "noturno";
-                } else {
-                    return turnoValue;
+        const turnos = ofertasFase
+            .map((oferta) => {
+                if (oferta && oferta.turno) {
+                    // Interpretar os valores de turno: M/m = matutino, V/v = vespertino, N/n = noturno
+                    const turnoValue = oferta.turno.toString().toLowerCase();
+                    if (turnoValue === "m" || turnoValue === "matutino") {
+                        return "matutino";
+                    } else if (
+                        turnoValue === "v" ||
+                        turnoValue === "vespertino"
+                    ) {
+                        return "vespertino";
+                    } else if (turnoValue === "n" || turnoValue === "noturno") {
+                        return "noturno";
+                    } else {
+                        return turnoValue;
+                    }
                 }
-            }
-            return null;
-        }).filter(Boolean); // Remover valores null/undefined
+                return null;
+            })
+            .filter(Boolean); // Remover valores null/undefined
 
         // Remover duplicatas e retornar array com todos os turnos únicos
         return [...new Set(turnos)];
@@ -3403,7 +4472,7 @@ export default function Horarios() {
         return turno === "matutino";
     };
 
-        // Função para obter fases disponíveis baseado nas ofertas
+    // Função para obter fases disponíveis baseado nas ofertas
     const getFasesDisponiveis = () => {
         if (!ofertas || ofertas.length === 0) {
             // Se ainda está carregando ofertas ou houve erro, retornar array vazio
@@ -3411,10 +4480,11 @@ export default function Horarios() {
         }
 
         // Filtrar ofertas para o ano/semestre/curso atual
-        const ofertasAtuais = ofertas.filter(o =>
-            o.ano === selectedAnoSemestre.ano &&
-            o.semestre === selectedAnoSemestre.semestre &&
-            o.id_curso === (selectedCurso?.id || 1)
+        const ofertasAtuais = ofertas.filter(
+            (o) =>
+                o.ano === selectedAnoSemestre.ano &&
+                o.semestre === selectedAnoSemestre.semestre &&
+                o.id_curso === (selectedCurso?.id || 1)
         );
 
         if (ofertasAtuais.length === 0) {
@@ -3423,7 +4493,7 @@ export default function Horarios() {
         }
 
         // Extrair e ordenar as fases das ofertas
-        const fases = ofertasAtuais.map(o => o.fase).sort((a, b) => a - b);
+        const fases = ofertasAtuais.map((o) => o.fase).sort((a, b) => a - b);
 
         // Remover duplicatas e retornar
         return [...new Set(fases)];
@@ -3439,7 +4509,12 @@ export default function Horarios() {
 
     // Carregar horários quando disciplinas estiverem carregadas, curso selecionado e ano/semestre mudar
     useEffect(() => {
-        if (disciplinas.length > 0 && selectedCurso && selectedAnoSemestre.ano && selectedAnoSemestre.semestre) {
+        if (
+            disciplinas.length > 0 &&
+            selectedCurso &&
+            selectedAnoSemestre.ano &&
+            selectedAnoSemestre.semestre
+        ) {
             // Limpar eventos atuais antes de carregar novos
             setEvents({});
             setOriginalHorarios([]);
@@ -3449,7 +4524,11 @@ export default function Horarios() {
 
     // Recarregar ofertas quando ano/semestre ou curso mudar
     useEffect(() => {
-        if (selectedCurso && selectedAnoSemestre.ano && selectedAnoSemestre.semestre) {
+        if (
+            selectedCurso &&
+            selectedAnoSemestre.ano &&
+            selectedAnoSemestre.semestre
+        ) {
             fetchOfertas();
         }
     }, [selectedCurso, selectedAnoSemestre]);
@@ -3462,7 +4541,11 @@ export default function Horarios() {
     // Detectar conflitos quando eventos ou dados mudarem
     useEffect(() => {
         const detectConflicts = async () => {
-            if (professores.length > 0 && disciplinas.length > 0 && anosSemestres.length > 0) {
+            if (
+                professores.length > 0 &&
+                disciplinas.length > 0 &&
+                anosSemestres.length > 0
+            ) {
                 // Log removido
                 await detectarConflitosHorarios();
             }
@@ -3487,8 +4570,14 @@ export default function Horarios() {
     ) => {
         if (!disciplinaId || !events[phaseNumber]) return null;
 
-            // Buscar a disciplina no período da manhã vespertina (13:30-15:30)
-    const morningSlots = ["13:30:00", "14:00:00", "14:30:00", "15:00:00", "15:30:00"];
+        // Buscar a disciplina no período da manhã vespertina (13:30-15:30)
+        const morningSlots = [
+            "13:30:00",
+            "14:00:00",
+            "14:30:00",
+            "15:00:00",
+            "15:30:00",
+        ];
 
         for (const [, eventArray] of Object.entries(events[phaseNumber])) {
             // eventArray agora é um array de eventos
@@ -3508,31 +4597,37 @@ export default function Horarios() {
         return null;
     };
 
-        // Função para corrigir cores após carregamento dos dados
+    // Função para corrigir cores após carregamento dos dados
     const fixEventColorsAfterLoading = (eventsFormatted) => {
         // Para cada fase
-        Object.keys(eventsFormatted).forEach(phase => {
+        Object.keys(eventsFormatted).forEach((phase) => {
             const phaseEvents = eventsFormatted[phase];
 
             // Para cada slot de eventos
-            Object.keys(phaseEvents).forEach(slotKey => {
+            Object.keys(phaseEvents).forEach((slotKey) => {
                 const eventsInSlot = Array.isArray(phaseEvents[slotKey])
                     ? phaseEvents[slotKey]
                     : [phaseEvents[slotKey]];
 
                 // Para cada evento no slot
-                eventsInSlot.forEach(event => {
-                    if (event.startTime && timeSlotsVespertino.includes(event.startTime)) {
-                        const timeIndex = timeSlotsVespertino.indexOf(event.startTime);
+                eventsInSlot.forEach((event) => {
+                    if (
+                        event.startTime &&
+                        timeSlotsVespertino.includes(event.startTime)
+                    ) {
+                        const timeIndex = timeSlotsVespertino.indexOf(
+                            event.startTime
+                        );
 
                         // Se é período da tarde (16:00-18:00)
                         if (timeIndex >= 5) {
                             // Buscar cor da mesma disciplina no período da manhã
-                            const morningColor = getDisciplinaColorFromMorningPeriod(
-                                event.disciplinaId,
-                                phase,
-                                eventsFormatted
-                            );
+                            const morningColor =
+                                getDisciplinaColorFromMorningPeriod(
+                                    event.disciplinaId,
+                                    phase,
+                                    eventsFormatted
+                                );
 
                             if (morningColor) {
                                 event.color = morningColor;
@@ -3549,7 +4644,7 @@ export default function Horarios() {
                         event.color = getColorByDay(event.dayId);
                     }
                 });
-                        });
+            });
         });
 
         return eventsFormatted;
@@ -3587,7 +4682,9 @@ export default function Horarios() {
         (eventData, dayId, time, phaseNumber) => {
             // Validação: não permitir mover eventos sem disciplina
             if (!eventData.disciplinaId) {
-                setSnackbarMessage("Não é possível mover um horário sem disciplina definida. Complete as informações primeiro.");
+                setSnackbarMessage(
+                    "Não é possível mover um horário sem disciplina definida. Complete as informações primeiro."
+                );
                 setSnackbarOpen(true);
                 return;
             }
@@ -3692,7 +4789,8 @@ export default function Horarios() {
                         const updatedEvents = eventArray.map((event) => {
                             if (event.id === eventId) {
                                 // Verificar se a fase tem múltiplos turnos
-                                const temMultiplosTurnos = hasMultiplosTurnos(phaseNumber);
+                                const temMultiplosTurnos =
+                                    hasMultiplosTurnos(phaseNumber);
 
                                 // Determinar os slots de tempo disponíveis
                                 let timeSlots;
@@ -3701,19 +4799,30 @@ export default function Horarios() {
                                     const turnos = getTurnosOferta(phaseNumber);
                                     timeSlots = [];
 
-                                    if (turnos.includes('matutino')) {
-                                        timeSlots = [...timeSlots, ...timeSlotsMatutino];
+                                    if (turnos.includes("matutino")) {
+                                        timeSlots = [
+                                            ...timeSlots,
+                                            ...timeSlotsMatutino,
+                                        ];
                                     }
-                                    if (turnos.includes('vespertino')) {
-                                        timeSlots = [...timeSlots, ...timeSlotsVespertino];
+                                    if (turnos.includes("vespertino")) {
+                                        timeSlots = [
+                                            ...timeSlots,
+                                            ...timeSlotsVespertino,
+                                        ];
                                     }
-                                    if (turnos.includes('noturno')) {
-                                        timeSlots = [...timeSlots, ...timeSlotsNoturno];
+                                    if (turnos.includes("noturno")) {
+                                        timeSlots = [
+                                            ...timeSlots,
+                                            ...timeSlotsNoturno,
+                                        ];
                                     }
                                 } else {
                                     // Usar a função para determinar o turno baseado na oferta
-                                    const isMatutino = isPhaseMatutino(phaseNumber);
-                                    const isVespertino = isPhaseVespertino(phaseNumber);
+                                    const isMatutino =
+                                        isPhaseMatutino(phaseNumber);
+                                    const isVespertino =
+                                        isPhaseVespertino(phaseNumber);
 
                                     if (isMatutino) {
                                         timeSlots = timeSlotsMatutino;
@@ -3725,7 +4834,9 @@ export default function Horarios() {
                                 }
 
                                 // Calcular a duração máxima com base no slot inicial
-                                const startIndex = timeSlots.indexOf(event.startTime);
+                                const startIndex = timeSlots.indexOf(
+                                    event.startTime
+                                );
                                 let maxDuration = 0;
 
                                 if (startIndex >= 0) {
@@ -3765,56 +4876,59 @@ export default function Horarios() {
             // Verificar se a fase tem múltiplos turnos
             const temMultiplosTurnos = hasMultiplosTurnos(phaseNumber);
 
-                    // Determinar se é horário matutino, vespertino ou noturno baseado na hora clicada
-        const isHorarioMatutino = timeSlotsMatutino.includes(time);
-        const isHorarioVespertino = timeSlotsVespertino.includes(time);
-        const isHorarioNoturno = timeSlotsNoturno.includes(time);
+            // Determinar se é horário matutino, vespertino ou noturno baseado na hora clicada
+            const isHorarioMatutino = timeSlotsMatutino.includes(time);
+            const isHorarioVespertino = timeSlotsVespertino.includes(time);
+            const isHorarioNoturno = timeSlotsNoturno.includes(time);
 
-        // Verificar se a fase é matutino ou vespertino (quando não tem múltiplos turnos)
-        const isMatutino = isPhaseMatutino(phaseNumber);
-        const isVespertino = isPhaseVespertino(phaseNumber);
+            // Verificar se a fase é matutino ou vespertino (quando não tem múltiplos turnos)
+            const isMatutino = isPhaseMatutino(phaseNumber);
+            const isVespertino = isPhaseVespertino(phaseNumber);
 
-        let defaultDuration = 2;
+            let defaultDuration = 2;
 
-                    // Lógica para definir duração padrão
-        if (isHorarioMatutino) {
-            // Matutino: 07:30 - 12:00
-            const timeIndex = timeSlotsMatutino.indexOf(time);
+            // Lógica para definir duração padrão
+            if (isHorarioMatutino) {
+                // Matutino: 07:30 - 12:00
+                const timeIndex = timeSlotsMatutino.indexOf(time);
 
-            if (timeIndex >= 0 && timeIndex < 5) {
-                // Clique entre 07:30 e 09:30 -> cobre até 10:00 (5 slots)
-                defaultDuration = 5;
-            } else if (timeIndex >= 5) {
-                // Clique entre 10:00 e 12:00 -> criar evento das 10:00 às 12:00
-                time = "10:00:00"; // Sempre começa em 10:00:00
-                defaultDuration = 4; // 10:00:00, 10:30:00, 11:00:00, 11:30:00 = 4 slots até 12:00:00
+                if (timeIndex >= 0 && timeIndex < 5) {
+                    // Clique entre 07:30 e 09:30 -> cobre até 10:00 (5 slots)
+                    defaultDuration = 5;
+                } else if (timeIndex >= 5) {
+                    // Clique entre 10:00 e 12:00 -> criar evento das 10:00 às 12:00
+                    time = "10:00:00"; // Sempre começa em 10:00:00
+                    defaultDuration = 4; // 10:00:00, 10:30:00, 11:00:00, 11:30:00 = 4 slots até 12:00:00
+                }
+            } else if (isHorarioVespertino) {
+                // Vespertino: 13:30 - 18:00
+                const timeIndex = timeSlotsVespertino.indexOf(time);
+
+                if (timeIndex >= 0 && timeIndex < 5) {
+                    // Clique entre 13:30 e 15:30 -> cobre até 16:00 (5 slots)
+                    defaultDuration = 5;
+                } else if (timeIndex >= 5) {
+                    // Clique entre 16:00:00 e 18:00:00 -> sempre cria horário das 16:00:00 às 18:00:00
+                    time = "16:00:00"; // Sempre começa em 16:00:00
+                    defaultDuration = 4; // 16:00:00, 16:30:00, 17:00:00, 17:30:00 = 4 slots até 18:00:00
+                }
+            } else if (isHorarioNoturno) {
+                // Verificar se está no início do período noturno
+                const timeIndex = timeSlotsNoturno.indexOf(time);
+
+                if (timeIndex === 0) {
+                    // Se clicou em 19:00:00, criar evento para todo o período noturno
+                    defaultDuration = 7; // 19:00:00 até 22:00:00 (7 slots, máximo para início de aula)
+                } else {
+                    // Caso contrário, criar evento com duração apropriada até o final
+                    // Mas limitando para que nenhuma aula comece após 22:00:00
+                    const maxDurationToLimit = Math.min(
+                        timeSlotsNoturno.length - timeIndex,
+                        7 - timeIndex
+                    );
+                    defaultDuration = maxDurationToLimit;
+                }
             }
-        } else if (isHorarioVespertino) {
-            // Vespertino: 13:30 - 18:00
-            const timeIndex = timeSlotsVespertino.indexOf(time);
-
-            if (timeIndex >= 0 && timeIndex < 5) {
-                // Clique entre 13:30 e 15:30 -> cobre até 16:00 (5 slots)
-                defaultDuration = 5;
-            } else if (timeIndex >= 5) {
-                // Clique entre 16:00:00 e 18:00:00 -> sempre cria horário das 16:00:00 às 18:00:00
-                time = "16:00:00"; // Sempre começa em 16:00:00
-                defaultDuration = 4; // 16:00:00, 16:30:00, 17:00:00, 17:30:00 = 4 slots até 18:00:00
-            }
-        } else if (isHorarioNoturno) {
-            // Verificar se está no início do período noturno
-            const timeIndex = timeSlotsNoturno.indexOf(time);
-
-            if (timeIndex === 0) {
-                // Se clicou em 19:00:00, criar evento para todo o período noturno
-                defaultDuration = 7; // 19:00:00 até 22:00:00 (7 slots, máximo para início de aula)
-            } else {
-                // Caso contrário, criar evento com duração apropriada até o final
-                // Mas limitando para que nenhuma aula comece após 22:00:00
-                const maxDurationToLimit = Math.min(timeSlotsNoturno.length - timeIndex, 7 - timeIndex);
-                defaultDuration = maxDurationToLimit;
-            }
-        }
 
             // Cor padrão inicial baseada no dia
             const defaultColor = getColorByDay(dayId);
@@ -3853,7 +4967,7 @@ export default function Horarios() {
         [selectedAnoSemestre, isPhaseVespertino, hasMultiplosTurnos]
     );
 
-        const handleEditEvent = useCallback((event, phaseNumber) => {
+    const handleEditEvent = useCallback((event, phaseNumber) => {
         // Fazer backup completo do evento original
         setOriginalEventBackup(JSON.parse(JSON.stringify(event)));
         setSelectedEvent(event);
@@ -3861,55 +4975,77 @@ export default function Horarios() {
         setModalOpen(true);
     }, []);
 
-    const handleDeleteEvent = useCallback((eventId, phaseNumber) => {
-        setEvents((prev) => {
-            const newEvents = { ...prev };
+    const handleDeleteEvent = useCallback(
+        (eventId, phaseNumber) => {
+            setEvents((prev) => {
+                const newEvents = { ...prev };
 
-            if (!newEvents[phaseNumber]) {
-                return newEvents;
-            }
-
-            // Procurar e remover o evento em todos os slots da fase
-            Object.keys(newEvents[phaseNumber]).forEach((key) => {
-                const eventArray = Array.isArray(newEvents[phaseNumber][key])
-                    ? newEvents[phaseNumber][key]
-                    : [newEvents[phaseNumber][key]];
-
-                const filteredEvents = eventArray.filter(
-                    (event) => event.id !== eventId
-                );
-
-                if (filteredEvents.length === 0) {
-                    // Se não há mais eventos no slot, remover a chave
-                    delete newEvents[phaseNumber][key];
-                } else if (filteredEvents.length === 1) {
-                    // Se resta apenas um evento, converter de array para objeto único
-                    newEvents[phaseNumber][key] = filteredEvents[0];
-                } else {
-                    // Se restam múltiplos eventos, manter como array
-                    newEvents[phaseNumber][key] = filteredEvents;
+                if (!newEvents[phaseNumber]) {
+                    return newEvents;
                 }
-            });
 
-            return newEvents;
-        });
-    }, [professores, disciplinas, anosSemestres]);
+                // Criar nova referência da fase
+                newEvents[phaseNumber] = { ...newEvents[phaseNumber] };
+
+                // Procurar e remover o evento em todos os slots da fase
+                Object.keys(newEvents[phaseNumber]).forEach((key) => {
+                    const eventArray = Array.isArray(
+                        newEvents[phaseNumber][key]
+                    )
+                        ? newEvents[phaseNumber][key]
+                        : [newEvents[phaseNumber][key]];
+
+                    const filteredEvents = eventArray.filter(
+                        (event) => event.id !== eventId
+                    );
+
+                    if (filteredEvents.length === 0) {
+                        // Se não há mais eventos no slot, remover a chave
+                        delete newEvents[phaseNumber][key];
+                    } else if (filteredEvents.length === 1) {
+                        // Se resta apenas um evento, converter de array para objeto único
+                        newEvents[phaseNumber][key] = filteredEvents[0];
+                    } else {
+                        // Se restam múltiplos eventos, manter como array
+                        newEvents[phaseNumber][key] = filteredEvents;
+                    }
+                });
+
+                return newEvents;
+            });
+        },
+        [professores, disciplinas, anosSemestres]
+    );
 
     const handleSaveEvent = useCallback(
         (eventData) => {
             // Validação obrigatória: disciplina deve estar definida
             if (!eventData.disciplinaId) {
-                console.error("Tentativa de salvar evento sem disciplina:", eventData);
-                setSnackbarMessage("Erro: Não é possível salvar um horário sem disciplina definida.");
+                console.error(
+                    "Tentativa de salvar evento sem disciplina:",
+                    eventData
+                );
+                setSnackbarMessage(
+                    "Erro: Não é possível salvar um horário sem disciplina definida."
+                );
                 setSnackbarOpen(true);
                 return;
             }
 
             // Validação obrigatória: pelo menos um professor deve estar definido
-            const hasProfessores = (eventData.professoresIds && Array.isArray(eventData.professoresIds) && eventData.professoresIds.length > 0) || eventData.professorId;
+            const hasProfessores =
+                (eventData.professoresIds &&
+                    Array.isArray(eventData.professoresIds) &&
+                    eventData.professoresIds.length > 0) ||
+                eventData.professorId;
             if (!hasProfessores) {
-                console.error("Tentativa de salvar evento sem professor:", eventData);
-                setSnackbarMessage("Erro: Não é possível salvar um horário sem professor definido.");
+                console.error(
+                    "Tentativa de salvar evento sem professor:",
+                    eventData
+                );
+                setSnackbarMessage(
+                    "Erro: Não é possível salvar um horário sem professor definido."
+                );
                 setSnackbarOpen(true);
                 return;
             }
@@ -3955,13 +5091,30 @@ export default function Horarios() {
                         : [newEvents[selectedPhase][existingEventKey]];
 
                     const updatedEvents = eventArray.map((event) => {
+
                         if (event.id === eventData.id) {
                             const ano = selectedAnoSemestre.ano;
                             const semestre = selectedAnoSemestre.semestre;
 
                             const updatedEvent = {
                                 ...event,
-                                ...eventData,
+                                // Atualizar todos os campos principais da UI
+                                title: eventData.title || "",
+                                disciplinaId: eventData.disciplinaId,
+                                professoresIds:
+                                    eventData.professoresIds ||
+                                    [eventData.professorId].filter(Boolean),
+                                professorId:
+                                    eventData.professorId ||
+                                    (eventData.professoresIds &&
+                                        eventData.professoresIds[0]) ||
+                                    "",
+                                comentario: eventData.comentario || "",
+                                startTime:
+                                    eventData.startTime || event.startTime,
+                                duration: eventData.duration || event.duration,
+                                dayId: eventData.dayId || event.dayId,
+
                                 // Manter cor original se não mudou de disciplina
                                 color:
                                     event.disciplinaId ===
@@ -3973,34 +5126,52 @@ export default function Horarios() {
                                 id_ccr:
                                     eventData.disciplinaId || eventData.id_ccr,
                                 codigo_docente:
-                                    eventData.professoresIds?.[0] ||
+                                    (eventData.professoresIds &&
+                                        eventData.professoresIds[0]) ||
                                     eventData.professorId ||
-                                    eventData.codigo_docente, // Manter compatibilidade
+                                    eventData.codigo_docente,
                                 dia_semana:
                                     dayToNumber[eventData.dayId] ||
                                     eventData.dia_semana,
                                 ano: ano,
                                 semestre: semestre,
-                                fase: selectedPhase, // Incluir a fase
+                                fase: selectedPhase,
                                 hora_inicio:
                                     eventData.startTime ||
                                     eventData.hora_inicio,
                                 duracao:
                                     eventData.duration || eventData.duracao,
-                                comentario: eventData.comentario || "", // CRÍTICO: Incluir comentário na atualização
                             };
 
                             return updatedEvent;
                         }
                         return event;
                     });
-
                     // Preservar estrutura: single event ou array
+                    // CORREÇÃO: Forçar criação de nova referência para o React detectar mudanças
+                    // Criar nova referência da fase também
+                    newEvents[selectedPhase] = { ...newEvents[selectedPhase] };
+
                     if (updatedEvents.length === 1) {
-                        newEvents[selectedPhase][existingEventKey] = updatedEvents[0];
+
+
+                        // Criar nova referência do objeto para forçar re-render
+                        newEvents[selectedPhase][existingEventKey] = {
+                            ...updatedEvents[0],
+                        };
+
+
                     } else {
-                        newEvents[selectedPhase][existingEventKey] = updatedEvents;
+
+
+
+                        // Criar novo array com novas referências dos objetos
+                        newEvents[selectedPhase][existingEventKey] =
+                            updatedEvents.map((event) => ({ ...event }));
+
+
                     }
+
                 } else {
                     // Para eventos novos
                     const newKey = `${eventData.dayId}-${eventData.startTime}`;
@@ -4032,6 +5203,9 @@ export default function Horarios() {
                     };
 
                     // Se já existe evento no slot, adicionar ao array; senão, criar objeto único
+                    // Criar nova referência da fase também para novos eventos
+                    newEvents[selectedPhase] = { ...newEvents[selectedPhase] };
+
                     if (newEvents[selectedPhase][newKey]) {
                         const existingEvents = Array.isArray(
                             newEvents[selectedPhase][newKey]
@@ -4058,16 +5232,66 @@ export default function Horarios() {
                     );
                 }
 
-                                return newEvents;
+
+                // ================= PROPAGAR PROFESSORES NO VESPERTINO =================
+                // Se o evento está em qualquer slot vespertino e existe outro evento da mesma disciplina
+                // no vespertino, garantir que todos usem a MESMA lista de professores
+                const vespertinoSlots = timeSlotsVespertino;
+                const disciplinaAlvo = eventData.disciplinaId;
+                if (disciplinaAlvo && vespertinoSlots.includes(eventData.startTime)) {
+                    const novosProfIds = eventData.professoresIds && Array.isArray(eventData.professoresIds)
+                        ? [...eventData.professoresIds]
+                        : eventData.professorId
+                        ? [eventData.professorId]
+                        : [];
+
+                    const novoProfessorPrincipal = novosProfIds[0] || "";
+
+                    // Percorrer todos os eventos da fase e sincronizar
+                    Object.keys(newEvents[selectedPhase]).forEach((slotKey) => {
+                        const evArray = Array.isArray(newEvents[selectedPhase][slotKey])
+                            ? newEvents[selectedPhase][slotKey]
+                            : [newEvents[selectedPhase][slotKey]];
+
+                        const sincronizados = evArray.map((ev) => {
+                            if (
+                                ev.id !== eventData.id &&
+                                ev.disciplinaId === disciplinaAlvo &&
+                                vespertinoSlots.includes(ev.startTime)
+                            ) {
+                                return {
+                                    ...ev,
+                                    professoresIds: [...novosProfIds],
+                                    professorId: novoProfessorPrincipal,
+                                    codigo_docente: novoProfessorPrincipal,
+                                    comentario: eventData.comentario || "",
+                                };
+                            }
+                            return ev;
+                        });
+
+                        // Reatribuir para garantir nova referência
+                        newEvents[selectedPhase][slotKey] = sincronizados.length === 1 ? sincronizados[0] : sincronizados;
+                    });
+                }
+
+                return newEvents;
             });
 
             // Limpar backup após salvar com sucesso
             setOriginalEventBackup(null);
         },
-        [selectedPhase, getEventColor, selectedAnoSemestre, professores, disciplinas, anosSemestres]
+        [
+            selectedPhase,
+            getEventColor,
+            selectedAnoSemestre,
+            professores,
+            disciplinas,
+            anosSemestres,
+        ]
     );
 
-        // Função para atualizar cores de disciplinas relacionadas
+    // Função para atualizar cores de disciplinas relacionadas
     const updateRelatedDisciplinaColors = (
         events,
         phaseNumber,
@@ -4076,7 +5300,13 @@ export default function Horarios() {
     ) => {
         if (!events[phaseNumber] || !disciplinaId) return;
 
-        const morningSlots = ["13:30:00", "14:00:00", "14:30:00", "15:00:00", "15:30:00"];
+        const morningSlots = [
+            "13:30:00",
+            "14:00:00",
+            "14:30:00",
+            "15:00:00",
+            "15:30:00",
+        ];
         let morningColor = null;
 
         // Encontrar cor da disciplina no período da manhã
@@ -4098,54 +5328,71 @@ export default function Horarios() {
 
         // Se encontrou cor da manhã, aplicar nas partes da tarde
         if (morningColor) {
-            const afternoonSlots = ["16:00:00", "16:30:00", "17:00:00", "17:30:00"];
+            const afternoonSlots = [
+                "16:00:00",
+                "16:30:00",
+                "17:00:00",
+                "17:30:00",
+            ];
 
             for (const [eventKey, eventArray] of Object.entries(
                 events[phaseNumber]
             )) {
-                            const eventsInSlot = Array.isArray(eventArray)
-                ? eventArray
-                : [eventArray];
-            const updatedEvents = eventsInSlot.map((event) => {
-                // 🛡️ PROTEÇÃO GLOBAL: Proteger qualquer evento com o ID protegido, independente do horário
-                if (protectedEventId && event.id === protectedEventId) {
-                    return event; // Manter exatamente como está, incluindo comentário
-                }
+                const eventsInSlot = Array.isArray(eventArray)
+                    ? eventArray
+                    : [eventArray];
+                const updatedEvents = eventsInSlot.map((event) => {
+                    // 🛡️ PROTEÇÃO GLOBAL: Proteger qualquer evento com o ID protegido, independente do horário
+                    if (protectedEventId && event.id === protectedEventId) {
+                        return event; // Manter exatamente como está, incluindo comentário
+                    }
 
-                if (
-                    event.disciplinaId === disciplinaId &&
-                    afternoonSlots.includes(event.startTime)
-                ) {
-                    // CORREÇÃO: Preservar TODOS os dados do evento, incluindo comentários
-                    return {
-                        ...event,
-                        color: morningColor
-                    };
-                }
-                return event;
-            });
+                    if (
+                        event.disciplinaId === disciplinaId &&
+                        afternoonSlots.includes(event.startTime)
+                    ) {
+                        // CORREÇÃO: Preservar TODOS os dados do evento, incluindo comentários
+                        return {
+                            ...event,
+                            color: morningColor,
+                        };
+                    }
+                    return event;
+                });
 
-                            // Preservar estrutura: single event ou array
-            if (updatedEvents.length === 1) {
-                events[phaseNumber][eventKey] = updatedEvents[0];
-            } else {
-                events[phaseNumber][eventKey] = updatedEvents;
-            }
-            }
+                // Preservar estrutura: single event ou array
+                if (updatedEvents.length === 1) {
+                    events[phaseNumber][eventKey] = updatedEvents[0];
+                } else {
+                    events[phaseNumber][eventKey] = updatedEvents;
                 }
+            }
+        }
     };
 
-            const handleModalClose = useCallback(() => {
-        // Se há backup do evento original, restaurar o estado
-        if (originalEventBackup && selectedEvent && selectedEvent.id === originalEventBackup.id && selectedPhase) {
+    // Recebe "wasSaved": true quando o usuário clicou em Salvar; false em cancelamento
+    const handleModalClose = useCallback((wasSaved = false) => {
+        // Restaurar somente se o usuário CANCELAR (wasSaved = false)
+        if (
+            !wasSaved &&
+            originalEventBackup &&
+            selectedEvent &&
+            selectedEvent.id === originalEventBackup.id &&
+            selectedPhase
+        ) {
             setEvents((prev) => {
                 const newEvents = { ...prev };
 
                 if (!newEvents[selectedPhase]) return prev;
 
+                // Criar nova referência da fase
+                newEvents[selectedPhase] = { ...newEvents[selectedPhase] };
+
                 // Encontrar e restaurar o evento
                 Object.keys(newEvents[selectedPhase]).forEach((key) => {
-                    const eventArray = Array.isArray(newEvents[selectedPhase][key])
+                    const eventArray = Array.isArray(
+                        newEvents[selectedPhase][key]
+                    )
                         ? newEvents[selectedPhase][key]
                         : [newEvents[selectedPhase][key]];
 
@@ -4156,7 +5403,10 @@ export default function Horarios() {
                         return event;
                     });
 
-                    newEvents[selectedPhase][key] = updatedEvents.length === 1 ? updatedEvents[0] : updatedEvents;
+                    newEvents[selectedPhase][key] =
+                        updatedEvents.length === 1
+                            ? updatedEvents[0]
+                            : updatedEvents;
                 });
 
                 return newEvents;
@@ -4165,7 +5415,6 @@ export default function Horarios() {
 
         setModalOpen(false);
         setSelectedEvent(null);
-        setSelectedPhase(null);
         setOriginalEventBackup(null);
     }, [originalEventBackup, selectedEvent, selectedPhase]);
 
@@ -4182,7 +5431,8 @@ export default function Horarios() {
                 <Box>
                     <Typography variant="h4">Grade de Horários</Typography>
                     <Typography variant="caption" color="textSecondary">
-                        Usuário: {getCurrentUserId()} • Mostrando apenas cursos vinculados
+                        Usuário: {getCurrentUserId()} • Mostrando apenas cursos
+                        vinculados
                     </Typography>
                 </Box>
 
@@ -4196,15 +5446,28 @@ export default function Horarios() {
                         {loadingHorarios ? "Carregando..." : "Recarregar"}
                     </Button>
 
-                    <Badge badgeContent={conflitosHorarios.length} color="error">
+                    <Badge
+                        badgeContent={conflitosHorarios.length}
+                        color="error"
+                    >
                         <Button
-                            variant={conflitosHorarios.length > 0 ? "contained" : "outlined"}
-                            color={conflitosHorarios.length > 0 ? "warning" : "primary"}
+                            variant={
+                                conflitosHorarios.length > 0
+                                    ? "contained"
+                                    : "outlined"
+                            }
+                            color={
+                                conflitosHorarios.length > 0
+                                    ? "warning"
+                                    : "primary"
+                            }
                             onClick={() => setShowConflitos(true)}
                             startIcon={<WarningIcon />}
                             sx={{ minWidth: "140px" }}
                         >
-                            {conflitosHorarios.length > 0 ? "Ver Conflitos" : "Sem Conflitos"}
+                            {conflitosHorarios.length > 0
+                                ? "Ver Conflitos"
+                                : "Sem Conflitos"}
                         </Button>
                     </Badge>
 
@@ -4212,9 +5475,7 @@ export default function Horarios() {
                         variant="contained"
                         color="primary"
                         onClick={saveAllHorariosToDatabase}
-                        disabled={
-                            savingHorarios || (getValidHorariosCount() === 0 && !hasPendingChanges())
-                        }
+                        disabled={savingHorarios || !hasPendingChanges()}
                         startIcon={
                             savingHorarios ? (
                                 <CircularProgress size={20} />
@@ -4224,13 +5485,18 @@ export default function Horarios() {
                         }
                         sx={{ minWidth: "180px" }}
                     >
-                        {savingHorarios
-                            ? "Salvando..."
-                            : getValidHorariosCount() > 0
-                            ? `Sincronizar Mudanças (${getValidHorariosCount()})`
-                            : hasPendingChanges()
-                            ? "Sincronizar Mudanças"
-                            : "Nenhuma Mudança"}
+                        {(() => {
+                            if (savingHorarios) {
+                                return "Salvando...";
+                            }
+
+                            const changes = getChangesCount();
+                            if (changes.total > 0) {
+                                return `Sincronizar Mudanças (${changes.total})`;
+                            }
+
+                            return "Nenhuma Mudança";
+                        })()}
                     </Button>
 
                     <FormControl sx={{ minWidth: 180 }}>
@@ -4238,20 +5504,24 @@ export default function Horarios() {
                         <Select
                             value={selectedCurso ? selectedCurso.id : ""}
                             onChange={(e) => {
-                                const curso = cursos.find(c => c.id === e.target.value);
+                                const curso = cursos.find(
+                                    (c) => c.id === e.target.value
+                                );
                                 setSelectedCurso(curso);
                             }}
                             label="Curso"
                             disabled={loadingCursos || cursos.length === 0}
-                            startAdornment={loadingCursos && (
-                                <CircularProgress size={16} sx={{ mr: 1 }} />
-                            )}
+                            startAdornment={
+                                loadingCursos && (
+                                    <CircularProgress
+                                        size={16}
+                                        sx={{ mr: 1 }}
+                                    />
+                                )
+                            }
                         >
                             {cursos.map((curso) => (
-                                <MenuItem
-                                    key={curso.id}
-                                    value={curso.id}
-                                >
+                                <MenuItem key={curso.id} value={curso.id}>
                                     {curso.nome} ({curso.codigo})
                                 </MenuItem>
                             ))}
@@ -4266,33 +5536,50 @@ export default function Horarios() {
                     <FormControl sx={{ minWidth: 200 }}>
                         <InputLabel>Ano/Semestre</InputLabel>
                         <Select
-                            value={anosSemestres.length > 0 ? `${selectedAnoSemestre.ano}-${selectedAnoSemestre.semestre}` : ""}
+                            value={
+                                anosSemestres.length > 0
+                                    ? `${selectedAnoSemestre.ano}-${selectedAnoSemestre.semestre}`
+                                    : ""
+                            }
                             onChange={(e) => {
-                                const [ano, semestre] = e.target.value.split('-');
+                                const [ano, semestre] =
+                                    e.target.value.split("-");
                                 setSelectedAnoSemestre({
                                     ano: parseInt(ano),
-                                    semestre: parseInt(semestre)
+                                    semestre: parseInt(semestre),
                                 });
                             }}
                             label="Ano/Semestre"
-                            disabled={loadingAnosSemestres || anosSemestres.length === 0 || loadingHorarios || !selectedCurso}
-                            startAdornment={loadingHorarios && (
-                                <CircularProgress size={16} sx={{ mr: 1 }} />
-                            )}
+                            disabled={
+                                loadingAnosSemestres ||
+                                anosSemestres.length === 0 ||
+                                loadingHorarios ||
+                                !selectedCurso
+                            }
+                            startAdornment={
+                                loadingHorarios && (
+                                    <CircularProgress
+                                        size={16}
+                                        sx={{ mr: 1 }}
+                                    />
+                                )
+                            }
                         >
                             {anosSemestres.map((anoSemestre) => (
                                 <MenuItem
                                     key={`${anoSemestre.ano}-${anoSemestre.semestre}`}
                                     value={`${anoSemestre.ano}-${anoSemestre.semestre}`}
                                 >
-                                    {anoSemestre.ano}/{anoSemestre.semestre}º Semestre
+                                    {anoSemestre.ano}/{anoSemestre.semestre}º
+                                    Semestre
                                 </MenuItem>
                             ))}
-                            {anosSemestres.length === 0 && !loadingAnosSemestres && (
-                                <MenuItem disabled>
-                                    Nenhum ano/semestre cadastrado
-                                </MenuItem>
-                            )}
+                            {anosSemestres.length === 0 &&
+                                !loadingAnosSemestres && (
+                                    <MenuItem disabled>
+                                        Nenhum ano/semestre cadastrado
+                                    </MenuItem>
+                                )}
                         </Select>
                     </FormControl>
                 </Box>
@@ -4301,13 +5588,13 @@ export default function Horarios() {
             {/* Alerts de feedback para salvamento */}
             {saveSuccess && (
                 <Alert severity="success" sx={{ mb: 2 }}>
-                     Horários salvos no banco de dados com sucesso!
+                    Horários salvos no banco de dados com sucesso!
                 </Alert>
             )}
 
             {saveError && (
                 <Alert severity="error" sx={{ mb: 2 }}>
-                     {saveError}
+                    {saveError}
                 </Alert>
             )}
 
@@ -4325,7 +5612,7 @@ export default function Horarios() {
                         </Button>
                     }
                 >
-                     {loadError}
+                    {loadError}
                 </Alert>
             )}
 
@@ -4343,7 +5630,7 @@ export default function Horarios() {
                         </Button>
                     }
                 >
-                     {errorCursos}
+                    {errorCursos}
                 </Alert>
             )}
 
@@ -4361,23 +5648,24 @@ export default function Horarios() {
                         </Button>
                     }
                 >
-                     {errorAnosSemestres}
+                    {errorAnosSemestres}
                 </Alert>
             )}
 
             {!selectedCurso && !loadingCursos && cursos.length > 0 && (
                 <Alert severity="info" sx={{ mb: 2 }}>
-                     Selecione um curso para visualizar os horários disponíveis.
+                    Selecione um curso para visualizar os horários disponíveis.
                 </Alert>
             )}
 
             {!loadingCursos && cursos.length === 0 && !errorCursos && (
                 <Alert severity="warning" sx={{ mb: 2 }}>
-                     Nenhum curso vinculado ao usuário '{getCurrentUserId()}'. Solicite acesso aos cursos necessários.
+                    Nenhum curso vinculado ao usuário '{getCurrentUserId()}'.
+                    Solicite acesso aos cursos necessários.
                 </Alert>
             )}
 
-                        {conflitosHorarios.length > 0 && (
+            {conflitosHorarios.length > 0 && (
                 <Alert
                     severity="warning"
                     sx={{ mb: 2 }}
@@ -4391,7 +5679,8 @@ export default function Horarios() {
                         </Button>
                     }
                 >
-                     {conflitosHorarios.length} conflito(s) de horários detectado(s). Professores com aulas sobrepostas encontrados.
+                    {conflitosHorarios.length} conflito(s) de horários
+                    detectado(s). Professores com aulas sobrepostas encontrados.
                 </Alert>
             )}
 
@@ -4409,11 +5698,16 @@ export default function Horarios() {
                         </Button>
                     }
                 >
-                     {errorOfertas}
+                    {errorOfertas}
                 </Alert>
             )}
 
-            {loadingCursos || loadingProfessores || loadingDisciplinas || loadingHorarios || loadingAnosSemestres || loadingOfertas ? (
+            {loadingCursos ||
+            loadingProfessores ||
+            loadingDisciplinas ||
+            loadingHorarios ||
+            loadingAnosSemestres ||
+            loadingOfertas ? (
                 <Box
                     sx={{
                         display: "flex",
@@ -4438,7 +5732,12 @@ export default function Horarios() {
                                 : "Carregando horários salvos..."}
                         </Typography>
                         {loadingOfertas && (
-                            <Typography variant="caption" color="textSecondary" display="block" sx={{ mt: 1 }}>
+                            <Typography
+                                variant="caption"
+                                color="textSecondary"
+                                display="block"
+                                sx={{ mt: 1 }}
+                            >
                                 Determinando fases disponíveis para o período...
                             </Typography>
                         )}
@@ -4454,15 +5753,15 @@ export default function Horarios() {
                                 <Button
                                     color="inherit"
                                     size="small"
-                                                                onClick={() => {
-                                fetchCursos();
-                                fetchProfessores();
-                                fetchDisciplinas();
-                                fetchAnosSemestres();
-                                if (selectedCurso) {
-                                    fetchOfertas();
-                                }
-                            }}
+                                    onClick={() => {
+                                        fetchCursos();
+                                        fetchProfessores();
+                                        fetchDisciplinas();
+                                        fetchAnosSemestres();
+                                        if (selectedCurso) {
+                                            fetchOfertas();
+                                        }
+                                    }}
                                 >
                                     Tentar novamente
                                 </Button>
@@ -4476,19 +5775,26 @@ export default function Horarios() {
                     {(() => {
                         const fasesDisponiveis = getFasesDisponiveis();
 
-                        if (Object.keys(events).length === 0 && !loadingHorarios && fasesDisponiveis.length > 0) {
+                        if (
+                            Object.keys(events).length === 0 &&
+                            !loadingHorarios &&
+                            fasesDisponiveis.length > 0
+                        ) {
                             return (
                                 <Alert severity="info" sx={{ mb: 2 }}>
-                                     Nenhum horário encontrado para {selectedAnoSemestre.ano}/{selectedAnoSemestre.semestre}º semestre.
+                                    Nenhum horário encontrado para{" "}
+                                    {selectedAnoSemestre.ano}/
+                                    {selectedAnoSemestre.semestre}º semestre.
                                     <br />
-                                    Comece criando horários clicando duas vezes nas células da grade.
+                                    Comece criando horários clicando duas vezes
+                                    nas células da grade.
                                 </Alert>
                             );
                         }
                         return null;
                     })()}
 
-                                        {/* Verificar se há ofertas para o período atual */}
+                    {/* Verificar se há ofertas para o período atual */}
                     {(() => {
                         const fasesDisponiveis = getFasesDisponiveis();
 
@@ -4496,17 +5802,30 @@ export default function Horarios() {
                             if (fasesDisponiveis.length === 0) {
                                 return (
                                     <Alert severity="error" sx={{ mb: 2 }}>
-                                        Nenhuma oferta de fase cadastrada para {selectedAnoSemestre.ano}/{selectedAnoSemestre.semestre}º semestre.
+                                        Nenhuma oferta de fase cadastrada para{" "}
+                                        {selectedAnoSemestre.ano}/
+                                        {selectedAnoSemestre.semestre}º
+                                        semestre.
                                         <br />
-                                        <Typography variant="body2" sx={{ mt: 1, fontWeight: 'bold' }}>
+                                        <Typography
+                                            variant="body2"
+                                            sx={{ mt: 1, fontWeight: "bold" }}
+                                        >
                                             Para começar a usar o sistema:
                                         </Typography>
-                                        <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
-                                            1. Cadastre ofertas de fases via API: <code>POST /api/ofertas</code>
+                                        <Typography
+                                            variant="caption"
+                                            display="block"
+                                            sx={{ mt: 0.5 }}
+                                        >
+                                            1. Cadastre ofertas de fases via
+                                            API: <code>POST /api/ofertas</code>
                                             <br />
-                                            2. Defina o turno de cada fase (vespertino/noturno)
+                                            2. Defina o turno de cada fase
+                                            (vespertino/noturno)
                                             <br />
-                                            3. Os grids de horários aparecerão automaticamente
+                                            3. Os grids de horários aparecerão
+                                            automaticamente
                                         </Typography>
                                     </Alert>
                                 );
@@ -4515,17 +5834,27 @@ export default function Horarios() {
                         return null;
                     })()}
 
-                                        {/* Mostrar informações sobre fases disponíveis */}
+                    {/* Mostrar informações sobre fases disponíveis */}
                     {(() => {
                         const fasesDisponiveis = getFasesDisponiveis();
 
-                        if (!loadingOfertas && !loadingHorarios && fasesDisponiveis.length > 0) {
+                        if (
+                            !loadingOfertas &&
+                            !loadingHorarios &&
+                            fasesDisponiveis.length > 0
+                        ) {
                             return (
                                 <Alert severity="success" sx={{ mb: 2 }}>
-                                    Exibindo {fasesDisponiveis.length} fase(s) conforme ofertas cadastradas: {fasesDisponiveis.join(', ')}ª
+                                    Exibindo {fasesDisponiveis.length} fase(s)
+                                    conforme ofertas cadastradas:{" "}
+                                    {fasesDisponiveis.join(", ")}ª
                                     <br />
-                                    <Typography variant="caption" display="block">
-                                        Para adicionar mais fases, cadastre ofertas adicionais na API.
+                                    <Typography
+                                        variant="caption"
+                                        display="block"
+                                    >
+                                        Para adicionar mais fases, cadastre
+                                        ofertas adicionais na API.
                                     </Typography>
                                 </Alert>
                             );
@@ -4533,32 +5862,37 @@ export default function Horarios() {
                         return null;
                     })()}
 
-                    {selectedCurso && getFasesDisponiveis().map((phaseNumber) => {
-                        const phaseEvents = events[phaseNumber] || {};
-                        const eventCount = Object.keys(phaseEvents).length;
+                    {selectedCurso &&
+                        getFasesDisponiveis().map((phaseNumber) => {
+                            const phaseEvents = events[phaseNumber] || {};
+                            const eventCount = Object.keys(phaseEvents).length;
 
-                        return (
-                            <PhaseGrid
-                                key={phaseNumber}
-                                phaseNumber={phaseNumber}
-                                isEvenSemester={isEvenSemester}
-                                events={phaseEvents}
-                                onDropEvent={handleDropEvent}
-                                onAddEvent={handleAddEvent}
-                                onResize={handleResizeEvent}
-                                onEdit={handleEditEvent}
-                                onDelete={handleDeleteEvent}
-                                professores={professores}
-                                verificarSeEventoTemConflito={verificarSeEventoTemConflito}
-                                obterConflitosDoEvento={obterConflitosDoEvento}
-                                isPhaseVespertino={isPhaseVespertino}
-                                isPhaseMatutino={isPhaseMatutino}
-                                hasMultiplosTurnos={hasMultiplosTurnos}
-                                hasTurnoEspecifico={hasTurnoEspecifico}
-                                getTurnosOferta={getTurnosOferta}
-                            />
-                        );
-                    })}
+                            return (
+                                <PhaseGrid
+                                    key={phaseNumber}
+                                    phaseNumber={phaseNumber}
+                                    isEvenSemester={isEvenSemester}
+                                    events={phaseEvents}
+                                    onDropEvent={handleDropEvent}
+                                    onAddEvent={handleAddEvent}
+                                    onResize={handleResizeEvent}
+                                    onEdit={handleEditEvent}
+                                    onDelete={handleDeleteEvent}
+                                    professores={professores}
+                                    verificarSeEventoTemConflito={
+                                        verificarSeEventoTemConflito
+                                    }
+                                    obterConflitosDoEvento={
+                                        obterConflitosDoEvento
+                                    }
+                                    isPhaseVespertino={isPhaseVespertino}
+                                    isPhaseMatutino={isPhaseMatutino}
+                                    hasMultiplosTurnos={hasMultiplosTurnos}
+                                    hasTurnoEspecifico={hasTurnoEspecifico}
+                                    getTurnosOferta={getTurnosOferta}
+                                />
+                            );
+                        })}
 
                     <Box sx={{ mt: 3, textAlign: "center" }}>
                         <Typography
@@ -4576,21 +5910,60 @@ export default function Horarios() {
                             color="primary"
                             fontWeight="bold"
                         >
-                             Status ({selectedCurso ? `${selectedCurso.nome} - ` : ''}{selectedAnoSemestre.ano}/{selectedAnoSemestre.semestre}º semestre): {getValidHorariosCount()} horários
-                            completos {getValidHorariosCount() === 0 && hasPendingChanges()
-                                ? "• Mudanças pendentes para sincronizar"
-                                : "(com disciplina e professor obrigatórios) prontos para salvar"}
-                            • {getFasesDisponiveis().length > 0
-                                ? `${getFasesDisponiveis().length} fase(s) disponível(is)`
-                                : "Nenhuma fase disponível (cadastre ofertas)"}
+                            {(() => {
+                                const validCount = getValidHorariosCount();
+                                const changes = getChangesCount();
+                                const fasesCount = getFasesDisponiveis().length;
+
+                                let statusText = `Status (${
+                                    selectedCurso
+                                        ? `${selectedCurso.nome} - `
+                                        : ""
+                                }${selectedAnoSemestre.ano}/${
+                                    selectedAnoSemestre.semestre
+                                }º semestre): ${validCount} horários completos`;
+
+                                if (changes.total > 0) {
+                                    const changeDetails = [];
+                                    if (changes.added > 0)
+                                        changeDetails.push(
+                                            `${changes.added} novo(s)`
+                                        );
+                                    if (changes.modified > 0)
+                                        changeDetails.push(
+                                            `${changes.modified} editado(s)`
+                                        );
+                                    if (changes.removed > 0)
+                                        changeDetails.push(
+                                            `${changes.removed} removido(s)`
+                                        );
+
+                                    statusText += ` • ${
+                                        changes.total
+                                    } mudança(s) pendente(s) (${changeDetails.join(
+                                        ", "
+                                    )})`;
+                                } else {
+                                    statusText += " • Sincronizado com o banco";
+                                }
+
+                                statusText += ` • ${
+                                    fasesCount > 0
+                                        ? `${fasesCount} fase(s) disponível(is)`
+                                        : "Nenhuma fase disponível (cadastre ofertas)"
+                                }`;
+
+                                return statusText;
+                            })()}
                         </Typography>
                         <Typography
                             variant="caption"
                             color="textSecondary"
                             display="block"
-                            sx={{ mt: 0.5, fontStyle: 'italic' }}
+                            sx={{ mt: 0.5, fontStyle: "italic" }}
                         >
-                            Horários sem disciplina ou professor não podem ser salvos no sistema
+                            Horários sem disciplina ou professor não podem ser
+                            salvos no sistema
                         </Typography>
                     </Box>
                 </>
@@ -4599,7 +5972,6 @@ export default function Horarios() {
             <EventModal
                 open={modalOpen}
                 onClose={handleModalClose}
-                onCancel={handleModalClose}
                 event={selectedEvent}
                 onSave={handleSaveEvent}
                 professores={professores}
@@ -4632,13 +6004,13 @@ export default function Horarios() {
                 open={snackbarOpen}
                 autoHideDuration={6000}
                 onClose={() => setSnackbarOpen(false)}
-                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+                anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
             >
                 <Alert
                     onClose={() => setSnackbarOpen(false)}
                     severity="error"
                     variant="filled"
-                    sx={{ width: '100%' }}
+                    sx={{ width: "100%" }}
                 >
                     {snackbarMessage}
                 </Alert>
