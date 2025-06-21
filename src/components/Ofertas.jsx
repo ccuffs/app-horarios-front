@@ -98,17 +98,34 @@ export default function Ofertas() {
 
     async function handleAddOrUpdate() {
         try {
+            // Validar dados obrigatórios antes de enviar
+            if (!formData.ano || !formData.semestre || !formData.id_curso || !formData.fase) {
+                setMessageText("Por favor, preencha todos os campos obrigatórios: Ano, Semestre, Curso e Fase!");
+                setMessageSeverity("error");
+                setOpenMessage(true);
+                return;
+            }
+
             // Prepara os dados convertendo strings para números onde necessário
             const dataToSend = {
                 ano: parseInt(formData.ano) || null,
                 semestre: parseInt(formData.semestre) || null,
                 id_curso: parseInt(formData.id_curso) || null,
                 fase: parseInt(formData.fase) || null,
-                turno: formData.turno,
+                turno: formData.turno || null,
             };
 
+            // Validar se os números são válidos
+            if (isNaN(dataToSend.ano) || isNaN(dataToSend.semestre) ||
+                isNaN(dataToSend.id_curso) || isNaN(dataToSend.fase)) {
+                setMessageText("Por favor, insira valores numéricos válidos!");
+                setMessageSeverity("error");
+                setOpenMessage(true);
+                return;
+            }
+
             if (edit) {
-                await axios.put(`/ofertas/${dataToSend.ano}/${dataToSend.semestre}/${dataToSend.id_curso}/${dataToSend.fase}`, dataToSend);
+                await axios.put(`/ofertas/${dataToSend.ano}/${dataToSend.semestre}/${dataToSend.id_curso}/${dataToSend.fase}/${dataToSend.turno}`, dataToSend);
                 setMessageText("Oferta atualizada com sucesso!");
             } else {
                 await axios.post("/ofertas", dataToSend);
@@ -118,7 +135,18 @@ export default function Ofertas() {
             setFormData({ ano: "", semestre: "", id_curso: "", fase: "", turno: "" });
             setEdit(false);
         } catch (error) {
-            setMessageText("Falha ao gravar oferta!");
+            console.error("Erro ao salvar oferta:", error);
+
+            // Melhor tratamento de erro baseado na resposta da API
+            if (error.response?.data?.message) {
+                setMessageText(error.response.data.message);
+            } else if (error.response?.status === 409) {
+                setMessageText("Esta oferta já existe no sistema!");
+            } else if (error.response?.status === 400) {
+                setMessageText("Dados inválidos. Verifique os campos preenchidos!");
+            } else {
+                setMessageText("Falha ao gravar oferta! Verifique os dados e tente novamente.");
+            }
             setMessageSeverity("error");
         } finally {
             setOpenMessage(true);
@@ -172,7 +200,20 @@ export default function Ofertas() {
             renderCell: (params) => params.row.curso ? params.row.curso.nome : "N/A"
         },
         { field: "fase", headerName: "Fase", width: 100 },
-        { field: "turno", headerName: "Turno", width: 130 },
+        {
+            field: "turno",
+            headerName: "Turno",
+            width: 130,
+            renderCell: (params) => {
+                const turnos = {
+                    'M': 'Matutino',
+                    'V': 'Vespertino',
+                    'I': 'Integral',
+                    'N': 'Noturno'
+                };
+                return turnos[params.value] || params.value;
+            }
+        },
         {
             field: "actions",
             headerName: "Ações",
@@ -273,10 +314,10 @@ export default function Ofertas() {
                                 onChange={handleInputChange}
                                 name="turno"
                             >
-                                <MenuItem value="Matutino">Matutino</MenuItem>
-                                <MenuItem value="Vespertino">Vespertino</MenuItem>
-                                <MenuItem value="Integral">Integral</MenuItem>
-                                <MenuItem value="Noturno">Noturno</MenuItem>
+                                <MenuItem value="M">M - Matutino</MenuItem>
+                                <MenuItem value="V">V - Vespertino</MenuItem>
+                                <MenuItem value="I">I - Integral</MenuItem>
+                                <MenuItem value="N">N - Noturno</MenuItem>
                             </Select>
                         </FormControl>
                     </Stack>

@@ -2883,7 +2883,6 @@ export default function Horarios() {
     const [saveError, setSaveError] = useState(null);
     const [loadingHorarios, setLoadingHorarios] = useState(false);
     const [loadError, setLoadError] = useState(null);
-    const numberOfPhases = 9; // Máximo de fases (para fallback)
     const [originalHorarios, setOriginalHorarios] = useState([]);
     const [anosSemestres, setAnosSemestres] = useState([]);
     const [loadingAnosSemestres, setLoadingAnosSemestres] = useState(true);
@@ -5117,7 +5116,7 @@ export default function Horarios() {
                         : [newEvents[selectedPhase][existingEventKey]];
 
                     const updatedEvents = eventArray.map((event) => {
-                        console.log(event);
+
                         if (event.id === eventData.id) {
                             const ano = selectedAnoSemestre.ano;
                             const semestre = selectedAnoSemestre.semestre;
@@ -5179,48 +5178,23 @@ export default function Horarios() {
                     newEvents[selectedPhase] = { ...newEvents[selectedPhase] };
 
                     if (updatedEvents.length === 1) {
-                        console.log("selectedPhase", selectedPhase);
-                        console.log("existingEventKey", existingEventKey);
-                        console.log(
-                            "evento newEvents[selectedPhase][existingEventKey]:",
-                            newEvents[selectedPhase][existingEventKey]
-                        );
-                        console.log(
-                            "evento updatedEvents[0]:",
-                            updatedEvents[0]
-                        );
+
 
                         // Criar nova referência do objeto para forçar re-render
                         newEvents[selectedPhase][existingEventKey] = {
                             ...updatedEvents[0],
                         };
 
-                        console.log(
-                            "evento DEPOIS:",
-                            newEvents[selectedPhase][existingEventKey]
-                        );
+
                     } else {
-                        console.log("selectedPhase", selectedPhase);
-                        console.log("existingEventKey", existingEventKey);
-                        console.log(
-                            "array events newEvents[selectedPhase][existingEventKey]:",
-                            newEvents[selectedPhase][existingEventKey]
-                        );
-                        console.log(
-                            "array events updatedEvents:",
-                            updatedEvents
-                        );
 
                         // Criar novo array com novas referências dos objetos
                         newEvents[selectedPhase][existingEventKey] =
                             updatedEvents.map((event) => ({ ...event }));
 
-                        console.log(
-                            "array events DEPOIS:",
-                            newEvents[selectedPhase][existingEventKey]
-                        );
+
                     }
-                    console.log("newEvents antes de sair do if", newEvents);
+
                 } else {
                     // Para eventos novos
                     const newKey = `${eventData.dayId}-${eventData.startTime}`;
@@ -5272,9 +5246,9 @@ export default function Horarios() {
                 }
 
                 // Após salvar, verificar se há outras partes da mesma disciplina para atualizar cores
-                console.log("newEvents antes de atualizar cores", newEvents);
+
                 if (eventData.disciplinaId) {
-                    console.log("newEvents", newEvents);
+
                     updateRelatedDisciplinaColors(
                         newEvents,
                         selectedPhase,
@@ -5282,7 +5256,7 @@ export default function Horarios() {
                         eventData.id // Passar o ID do evento recém-atualizado para protegê-lo
                     );
                 }
-                console.log("newEvents depois de atualizar cores", newEvents);
+
                 return newEvents;
             });
 
