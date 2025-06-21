@@ -1138,12 +1138,14 @@ const EventModal = ({
                                                     conflito.professor.includes(
                                                         professor?.name
                                                     ) ||
-                                                    conflito.horario1
-                                                        .codigo_docente ===
-                                                        profId ||
-                                                    conflito.horario2
-                                                        .codigo_docente ===
-                                                        profId
+                                                    String(
+                                                        conflito.horario1
+                                                            .codigo_docente
+                                                    ) === String(profId) ||
+                                                    String(
+                                                        conflito.horario2
+                                                            .codigo_docente
+                                                    ) === String(profId)
                                             );
 
                                         return (
@@ -1513,7 +1515,10 @@ const EventModal = ({
                             justifyContent: "flex-end",
                         }}
                     >
-                        <Button onClick={() => handleClose(false)} variant="outlined">
+                        <Button
+                            onClick={() => handleClose(false)}
+                            variant="outlined"
+                        >
                             Cancelar
                         </Button>
                         <Button
@@ -1931,10 +1936,6 @@ const CalendarEvent = ({
         ? obterConflitosDoEvento(event)
         : [];
 
-    // Debug: log apenas quando há conflitos
-    if (temConflito) {
-        // Log removido
-    }
 
     // Calcular largura e posição quando há múltiplos eventos
     const calculateMultipleEventStyles = () => {
@@ -2123,8 +2124,8 @@ const CalendarEvent = ({
                             // Verificar se este professor específico está em conflito
                             const professorEmConflito = conflitosDoEvento.some(
                                 (conflito) =>
-                                    conflito.professorCodigo ===
-                                    professor.codigo
+                                    String(conflito.codigoProfessor) ===
+                                    String(professor.codigo)
                             );
 
                             return (
@@ -3144,9 +3145,9 @@ export default function Horarios() {
 
         const professoresDoEvento =
             evento.professoresIds && Array.isArray(evento.professoresIds)
-                ? evento.professoresIds
+                ? evento.professoresIds.map(String)
                 : evento.professorId
-                ? [evento.professorId]
+                ? [String(evento.professorId)]
                 : [];
 
         // Não mostrar conflitos para eventos sem disciplina definida
@@ -3164,20 +3165,33 @@ export default function Horarios() {
         // Verificar se algum dos professores do evento está em conflito
         return conflitosHorarios.some((conflito) => {
             const professorMatch = professoresDoEvento.includes(
-                conflito.codigoProfessor
+                String(conflito.codigoProfessor)
             );
 
-            const evento1Match =
-                conflito.horario1.id_ccr === evento.disciplinaId &&
-                conflito.horario1.hora_inicio === evento.startTime &&
-                conflito.dia == diaEvento;
+            if (!professorMatch || conflito.dia != diaEvento) {
+                return false;
+            }
 
-            const evento2Match =
-                conflito.horario2.id_ccr === evento.disciplinaId &&
-                conflito.horario2.hora_inicio === evento.startTime &&
-                conflito.dia == diaEvento;
+            // Adaptar o evento atual para o formato esperado pela função de overlap
+            const eventoAdaptado = {
+                hora_inicio: normalizeTimeFromDB(evento.startTime),
+                duracao: evento.duration || 2,
+            };
 
-            return professorMatch && (evento1Match || evento2Match);
+            const horario1Adaptado = {
+                hora_inicio: normalizeTimeFromDB(conflito.horario1.hora_inicio),
+                duracao: conflito.horario1.duracao,
+            };
+
+            const horario2Adaptado = {
+                hora_inicio: normalizeTimeFromDB(conflito.horario2.hora_inicio),
+                duracao: conflito.horario2.duracao,
+            };
+
+            return (
+                horariosSeOverlapam(eventoAdaptado, horario1Adaptado) ||
+                horariosSeOverlapam(eventoAdaptado, horario2Adaptado)
+            );
         });
     };
 
@@ -3189,9 +3203,9 @@ export default function Horarios() {
 
         const professoresDoEvento =
             evento.professoresIds && Array.isArray(evento.professoresIds)
-                ? evento.professoresIds
+                ? evento.professoresIds.map(String)
                 : evento.professorId
-                ? [evento.professorId]
+                ? [String(evento.professorId)]
                 : [];
 
         // Não retornar conflitos para eventos sem disciplina definida
@@ -3208,20 +3222,32 @@ export default function Horarios() {
 
         return conflitosHorarios.filter((conflito) => {
             const professorMatch = professoresDoEvento.includes(
-                conflito.codigoProfessor
+                String(conflito.codigoProfessor)
             );
 
-            const evento1Match =
-                conflito.horario1.id_ccr === evento.disciplinaId &&
-                conflito.horario1.hora_inicio === evento.startTime &&
-                conflito.dia == diaEvento;
+            if (!professorMatch || conflito.dia != diaEvento) {
+                return false;
+            }
 
-            const evento2Match =
-                conflito.horario2.id_ccr === evento.disciplinaId &&
-                conflito.horario2.hora_inicio === evento.startTime &&
-                conflito.dia == diaEvento;
+            const eventoAdaptado = {
+                hora_inicio: normalizeTimeFromDB(evento.startTime),
+                duracao: evento.duration || 2,
+            };
 
-            return professorMatch && (evento1Match || evento2Match);
+            const horario1Adaptado = {
+                hora_inicio: normalizeTimeFromDB(conflito.horario1.hora_inicio),
+                duracao: conflito.horario1.duracao,
+            };
+
+            const horario2Adaptado = {
+                hora_inicio: normalizeTimeFromDB(conflito.horario2.hora_inicio),
+                duracao: conflito.horario2.duracao,
+            };
+
+            return (
+                horariosSeOverlapam(eventoAdaptado, horario1Adaptado) ||
+                horariosSeOverlapam(eventoAdaptado, horario2Adaptado)
+            );
         });
     };
 
@@ -5091,7 +5117,7 @@ export default function Horarios() {
                         : [newEvents[selectedPhase][existingEventKey]];
 
                     const updatedEvents = eventArray.map((event) => {
-
+                        console.log(event);
                         if (event.id === eventData.id) {
                             const ano = selectedAnoSemestre.ano;
                             const semestre = selectedAnoSemestre.semestre;
@@ -5153,25 +5179,48 @@ export default function Horarios() {
                     newEvents[selectedPhase] = { ...newEvents[selectedPhase] };
 
                     if (updatedEvents.length === 1) {
-
+                        console.log("selectedPhase", selectedPhase);
+                        console.log("existingEventKey", existingEventKey);
+                        console.log(
+                            "evento newEvents[selectedPhase][existingEventKey]:",
+                            newEvents[selectedPhase][existingEventKey]
+                        );
+                        console.log(
+                            "evento updatedEvents[0]:",
+                            updatedEvents[0]
+                        );
 
                         // Criar nova referência do objeto para forçar re-render
                         newEvents[selectedPhase][existingEventKey] = {
                             ...updatedEvents[0],
                         };
 
-
+                        console.log(
+                            "evento DEPOIS:",
+                            newEvents[selectedPhase][existingEventKey]
+                        );
                     } else {
-
-
+                        console.log("selectedPhase", selectedPhase);
+                        console.log("existingEventKey", existingEventKey);
+                        console.log(
+                            "array events newEvents[selectedPhase][existingEventKey]:",
+                            newEvents[selectedPhase][existingEventKey]
+                        );
+                        console.log(
+                            "array events updatedEvents:",
+                            updatedEvents
+                        );
 
                         // Criar novo array com novas referências dos objetos
                         newEvents[selectedPhase][existingEventKey] =
                             updatedEvents.map((event) => ({ ...event }));
 
-
+                        console.log(
+                            "array events DEPOIS:",
+                            newEvents[selectedPhase][existingEventKey]
+                        );
                     }
-
+                    console.log("newEvents antes de sair do if", newEvents);
                 } else {
                     // Para eventos novos
                     const newKey = `${eventData.dayId}-${eventData.startTime}`;
@@ -5223,7 +5272,9 @@ export default function Horarios() {
                 }
 
                 // Após salvar, verificar se há outras partes da mesma disciplina para atualizar cores
+                console.log("newEvents antes de atualizar cores", newEvents);
                 if (eventData.disciplinaId) {
+                    console.log("newEvents", newEvents);
                     updateRelatedDisciplinaColors(
                         newEvents,
                         selectedPhase,
@@ -5231,50 +5282,7 @@ export default function Horarios() {
                         eventData.id // Passar o ID do evento recém-atualizado para protegê-lo
                     );
                 }
-
-
-                // ================= PROPAGAR PROFESSORES NO VESPERTINO =================
-                // Se o evento está em qualquer slot vespertino e existe outro evento da mesma disciplina
-                // no vespertino, garantir que todos usem a MESMA lista de professores
-                const vespertinoSlots = timeSlotsVespertino;
-                const disciplinaAlvo = eventData.disciplinaId;
-                if (disciplinaAlvo && vespertinoSlots.includes(eventData.startTime)) {
-                    const novosProfIds = eventData.professoresIds && Array.isArray(eventData.professoresIds)
-                        ? [...eventData.professoresIds]
-                        : eventData.professorId
-                        ? [eventData.professorId]
-                        : [];
-
-                    const novoProfessorPrincipal = novosProfIds[0] || "";
-
-                    // Percorrer todos os eventos da fase e sincronizar
-                    Object.keys(newEvents[selectedPhase]).forEach((slotKey) => {
-                        const evArray = Array.isArray(newEvents[selectedPhase][slotKey])
-                            ? newEvents[selectedPhase][slotKey]
-                            : [newEvents[selectedPhase][slotKey]];
-
-                        const sincronizados = evArray.map((ev) => {
-                            if (
-                                ev.id !== eventData.id &&
-                                ev.disciplinaId === disciplinaAlvo &&
-                                vespertinoSlots.includes(ev.startTime)
-                            ) {
-                                return {
-                                    ...ev,
-                                    professoresIds: [...novosProfIds],
-                                    professorId: novoProfessorPrincipal,
-                                    codigo_docente: novoProfessorPrincipal,
-                                    comentario: eventData.comentario || "",
-                                };
-                            }
-                            return ev;
-                        });
-
-                        // Reatribuir para garantir nova referência
-                        newEvents[selectedPhase][slotKey] = sincronizados.length === 1 ? sincronizados[0] : sincronizados;
-                    });
-                }
-
+                console.log("newEvents depois de atualizar cores", newEvents);
                 return newEvents;
             });
 
@@ -5371,52 +5379,55 @@ export default function Horarios() {
     };
 
     // Recebe "wasSaved": true quando o usuário clicou em Salvar; false em cancelamento
-    const handleModalClose = useCallback((wasSaved = false) => {
-        // Restaurar somente se o usuário CANCELAR (wasSaved = false)
-        if (
-            !wasSaved &&
-            originalEventBackup &&
-            selectedEvent &&
-            selectedEvent.id === originalEventBackup.id &&
-            selectedPhase
-        ) {
-            setEvents((prev) => {
-                const newEvents = { ...prev };
+    const handleModalClose = useCallback(
+        (wasSaved = false) => {
+            // Restaurar somente se o usuário CANCELAR (wasSaved = false)
+            if (
+                !wasSaved &&
+                originalEventBackup &&
+                selectedEvent &&
+                selectedEvent.id === originalEventBackup.id &&
+                selectedPhase
+            ) {
+                setEvents((prev) => {
+                    const newEvents = { ...prev };
 
-                if (!newEvents[selectedPhase]) return prev;
+                    if (!newEvents[selectedPhase]) return prev;
 
-                // Criar nova referência da fase
-                newEvents[selectedPhase] = { ...newEvents[selectedPhase] };
+                    // Criar nova referência da fase
+                    newEvents[selectedPhase] = { ...newEvents[selectedPhase] };
 
-                // Encontrar e restaurar o evento
-                Object.keys(newEvents[selectedPhase]).forEach((key) => {
-                    const eventArray = Array.isArray(
-                        newEvents[selectedPhase][key]
-                    )
-                        ? newEvents[selectedPhase][key]
-                        : [newEvents[selectedPhase][key]];
+                    // Encontrar e restaurar o evento
+                    Object.keys(newEvents[selectedPhase]).forEach((key) => {
+                        const eventArray = Array.isArray(
+                            newEvents[selectedPhase][key]
+                        )
+                            ? newEvents[selectedPhase][key]
+                            : [newEvents[selectedPhase][key]];
 
-                    const updatedEvents = eventArray.map((event) => {
-                        if (event.id === originalEventBackup.id) {
-                            return originalEventBackup; // Restaurar estado original
-                        }
-                        return event;
+                        const updatedEvents = eventArray.map((event) => {
+                            if (event.id === originalEventBackup.id) {
+                                return originalEventBackup; // Restaurar estado original
+                            }
+                            return event;
+                        });
+
+                        newEvents[selectedPhase][key] =
+                            updatedEvents.length === 1
+                                ? updatedEvents[0]
+                                : updatedEvents;
                     });
 
-                    newEvents[selectedPhase][key] =
-                        updatedEvents.length === 1
-                            ? updatedEvents[0]
-                            : updatedEvents;
+                    return newEvents;
                 });
+            }
 
-                return newEvents;
-            });
-        }
-
-        setModalOpen(false);
-        setSelectedEvent(null);
-        setOriginalEventBackup(null);
-    }, [originalEventBackup, selectedEvent, selectedPhase]);
+            setModalOpen(false);
+            setSelectedEvent(null);
+            setOriginalEventBackup(null);
+        },
+        [originalEventBackup, selectedEvent, selectedPhase]
+    );
 
     return (
         <Box sx={{ padding: 2 }}>
@@ -5662,25 +5673,6 @@ export default function Horarios() {
                 <Alert severity="warning" sx={{ mb: 2 }}>
                     Nenhum curso vinculado ao usuário '{getCurrentUserId()}'.
                     Solicite acesso aos cursos necessários.
-                </Alert>
-            )}
-
-            {conflitosHorarios.length > 0 && (
-                <Alert
-                    severity="warning"
-                    sx={{ mb: 2 }}
-                    action={
-                        <Button
-                            color="inherit"
-                            size="small"
-                            onClick={() => setShowConflitos(true)}
-                        >
-                            Ver Detalhes
-                        </Button>
-                    }
-                >
-                    {conflitosHorarios.length} conflito(s) de horários
-                    detectado(s). Professores com aulas sobrepostas encontrados.
                 </Alert>
             )}
 
