@@ -6,7 +6,8 @@ import {
     Paper,
     Button,
     // Switch,
-    // FormControlLabel,
+    FormControlLabel,
+    Checkbox,
     Modal,
     TextField,
     Select,
@@ -214,6 +215,7 @@ const eventToDbFormat = (
         duracao: event.duration || event.duracao,
         comentario: event.comentario || "",
         id: event.id,
+        permitirConflito: event.permitirConflito || false,
     };
 };
 
@@ -245,6 +247,7 @@ const dbToEventFormat = (dbEvent, disciplinas) => {
         hora_inicio: startTime,
         duracao: dbEvent.duracao || 2,
         comentario: dbEvent.comentario || "",
+        permitirConflito: dbEvent.permitirConflito || false,
     };
 
     return event;
@@ -399,6 +402,7 @@ const EventModal = ({
     const [searchTerm, setSearchTerm] = useState("");
     const [professorAutoSelected, setProfessorAutoSelected] = useState(false);
     const [comentario, setComentario] = useState("");
+    const [permitirConflito, setPermitirConflito] = useState(false);
     const [conflitosTempoRealLocal, setConflitosTempoRealLocal] = useState([]);
     const [verificandoConflitos, setVerificandoConflitos] = useState(false);
     const [erroValidacao, setErroValidacao] = useState("");
@@ -428,6 +432,7 @@ const EventModal = ({
                 title: getUniqueDisciplinas(disciplinas).find(
                     (d) => d.id === disciplinaId
                 )?.nome,
+                permitirConflito: permitirConflito,
             };
 
             const todosConflitos = [];
@@ -575,6 +580,7 @@ const EventModal = ({
                             tipo: "novo",
                             eventoId: eventoSimulado.id,
                             uniqueKey: `novo-${eventoSimulado.id}`,
+                            permitirConflito: eventoSimulado.permitirConflito,
                         };
 
                         // Verificar conflitos do evento atual contra todos os outros
@@ -636,6 +642,11 @@ const EventModal = ({
                                     outroHorario.codigo_docente
                             ) {
                                 return; // É o mesmo compromisso (possível edição), não gera conflito
+                            }
+
+                            // Verificar se algum dos eventos permite conflito
+                            if (horarioAtual.permitirConflito || outroHorario.permitirConflito) {
+                                return; // Pular se algum evento permitir conflito
                             }
 
                             // Verificar se ambos os horários têm disciplinas e há sobreposição
@@ -856,6 +867,7 @@ const EventModal = ({
                         )
             );
             setComentario(event.comentario || "");
+            setPermitirConflito(event.permitirConflito || false);
 
             // Verificar conflitos iniciais se há professores
             if (autoSelectedProfessoresIds.length > 0) {
@@ -867,6 +879,7 @@ const EventModal = ({
             setProfessoresIds([]);
             setSearchTerm("");
             setComentario("");
+            setPermitirConflito(false);
         }
     }, [
         event,
@@ -913,6 +926,7 @@ const EventModal = ({
             professoresIds: professoresIds, // Agora é array
             professorId: professoresIds[0], // Manter compatibilidade
             comentario: comentario,
+            permitirConflito: permitirConflito,
 
             // Garantir que campos essenciais estejam presentes
             id: event?.id, // Preservar ID para edição
@@ -946,6 +960,7 @@ const EventModal = ({
         setSearchTerm("");
         setProfessorAutoSelected(false);
         setComentario("");
+        setPermitirConflito(false);
         setConflitosTempoRealLocal([]);
         setVerificandoConflitos(false);
         setErroValidacao(""); // Limpar erros de validação
@@ -1507,6 +1522,26 @@ const EventModal = ({
                         placeholder="Adicione observações sobre este horário..."
                     />
 
+                    <FormControlLabel
+                        control={
+                            <Checkbox
+                                checked={permitirConflito}
+                                onChange={(e) => setPermitirConflito(e.target.checked)}
+                                color="warning"
+                            />
+                        }
+                        label={
+                            <Box>
+                                <Typography variant="body2">
+                                    Permitir conflito de horários
+                                </Typography>
+                                <Typography variant="caption" color="textSecondary">
+                                    Marque esta opção se este horário pode ter sobreposição com outros do mesmo professor
+                                </Typography>
+                            </Box>
+                        }
+                    />
+
                     {erroValidacao && (
                         <Alert severity="error" sx={{ mt: 1 }}>
                             {erroValidacao}
@@ -1943,8 +1978,10 @@ const CalendarEvent = ({
 
     // Buscar nomes dos professores
     const getProfessoresInfo = () => {
+        let professoresList = [];
+
         if (event.professoresIds && Array.isArray(event.professoresIds)) {
-            return event.professoresIds
+            professoresList = event.professoresIds
                 .map((profId) =>
                     professores.find(
                         (p) => p.codigo === profId || p.id === profId
@@ -1956,9 +1993,17 @@ const CalendarEvent = ({
                 (p) =>
                     p.codigo === event.professorId || p.id === event.professorId
             );
-            return professor ? [professor] : [];
+            if (professor) {
+                professoresList = [professor];
+            }
         }
-        return [];
+
+        // Remover duplicatas baseadas no código do professor
+        const uniqueProfessores = professoresList.filter((professor, index, self) =>
+            index === self.findIndex(p => p.codigo === professor.codigo)
+        );
+
+        return uniqueProfessores;
     };
 
     const professoresInfo = getProfessoresInfo();
@@ -3491,6 +3536,11 @@ export default function Horarios() {
                             continue; // São o mesmo horário, não é conflito
                         }
 
+                        // Verificar se algum dos eventos permite conflito
+                        if (h1.permitirConflito || h2.permitirConflito) {
+                            continue; // Pular se algum evento permitir conflito
+                        }
+
                         // Verificar sobreposição temporal
                         if (horariosSeOverlapam(h1, h2)) {
                             // Criar ID único determinístico para o conflito
@@ -3656,7 +3706,8 @@ export default function Horarios() {
                             .filter(
                                 (h) =>
                                     h.codigo_docente === codigoProfessor &&
-                                    h.id_ccr
+                                    h.id_ccr &&
+                                    !h.permitirConflito // Ignorar horários que permitem conflito
                             ) // Filtrar apenas horários com disciplina
                             .map((h) => ({
                                 ...h,
@@ -3719,10 +3770,11 @@ export default function Horarios() {
                                                         }
                                                     );
 
-                                                // Só adicionar se não existir como salvo (evento realmente novo/modificado) E tem disciplina definida
+                                                // Só adicionar se não existir como salvo (evento realmente novo/modificado) E tem disciplina definida E não permite conflito
                                                 if (
                                                     !jaExisteNoSalvo &&
-                                                    event.disciplinaId
+                                                    event.disciplinaId &&
+                                                    !event.permitirConflito
                                                 ) {
                                                     horariosTemporarios.push({
                                                         codigo_docente:
@@ -3744,6 +3796,7 @@ export default function Horarios() {
                                                         tipo: "temporario",
                                                         eventoId: event.id,
                                                         uniqueKey: `temp-${event.id}`,
+                                                        permitirConflito: event.permitirConflito || false,
                                                     });
                                                 }
                                             }
@@ -4199,7 +4252,7 @@ export default function Horarios() {
                     horaInicio = horaInicio.substring(0, 5);
                 }
 
-                const key = `${horario.id_ccr}-${horario.dia_semana}-${horaInicio}`;
+                const key = `${horario.id_ccr}-${horario.dia_semana}-${horaInicio}-${horario.fase}`;
 
                 if (!groupedHorarios[key]) {
                     groupedHorarios[key] = [];
@@ -4228,7 +4281,9 @@ export default function Horarios() {
 
                 // Se há múltiplos professores para o mesmo horário
                 if (grupo.length > 1) {
-                    event.professoresIds = grupo.map((h) => h.codigo_docente);
+                    // Remover duplicatas de código_docente
+                    const uniqueProfessores = [...new Set(grupo.map((h) => h.codigo_docente))];
+                    event.professoresIds = uniqueProfessores;
                     event.professorId = grupo[0].codigo_docente; // Compatibilidade
                 } else {
                     event.professoresIds = [baseHorario.codigo_docente];
@@ -4417,6 +4472,7 @@ export default function Horarios() {
                     orig.id_ccr === current.id_ccr &&
                     orig.codigo_docente === current.codigo_docente &&
                     orig.dia_semana === current.dia_semana &&
+                    orig.fase === current.fase &&
                     originalHora === currentHora
                 );
             });
@@ -4446,6 +4502,7 @@ export default function Horarios() {
                     curr.id_ccr === original.id_ccr &&
                     curr.codigo_docente === original.codigo_docente &&
                     curr.dia_semana === original.dia_semana &&
+                    curr.fase === original.fase &&
                     currentHora === originalHora
                 );
             });
@@ -5220,6 +5277,7 @@ export default function Horarios() {
                                         eventData.professoresIds[0]) ||
                                     "",
                                 comentario: eventData.comentario || "",
+                                permitirConflito: eventData.permitirConflito || false,
                                 startTime:
                                     eventData.startTime || event.startTime,
                                 duration: eventData.duration || event.duration,
@@ -5251,6 +5309,7 @@ export default function Horarios() {
                                     eventData.hora_inicio,
                                 duracao:
                                     eventData.duration || eventData.duracao,
+                                permitirConflito: eventData.permitirConflito || false,
                             };
 
                             return updatedEvent;
@@ -5300,6 +5359,7 @@ export default function Horarios() {
                             eventData.startTime || eventData.hora_inicio,
                         duracao: eventData.duration || eventData.duracao,
                         comentario: eventData.comentario || "",
+                        permitirConflito: eventData.permitirConflito || false,
                     };
 
                     // Se já existe evento no slot, adicionar ao array; senão, criar objeto único
