@@ -5172,6 +5172,7 @@ export default function Horarios() {
                 // Verificar se o evento já existe na estrutura atual
                 let eventExists = false;
                 let existingEventKey = null;
+                let originalDisciplinaId = null; // Declarar no escopo mais amplo
 
                 Object.keys(newEvents[selectedPhase]).forEach((key) => {
                     const eventArray = Array.isArray(
@@ -5182,6 +5183,11 @@ export default function Horarios() {
                     if (eventArray.some((event) => event.id === eventData.id)) {
                         eventExists = true;
                         existingEventKey = key;
+                        // Capturar disciplina original
+                        const originalEvent = eventArray.find(event => event.id === eventData.id);
+                        if (originalEvent) {
+                            originalDisciplinaId = originalEvent.disciplinaId;
+                        }
                     }
                 });
 
@@ -5192,6 +5198,8 @@ export default function Horarios() {
                     )
                         ? newEvents[selectedPhase][existingEventKey]
                         : [newEvents[selectedPhase][existingEventKey]];
+
+
 
                     const updatedEvents = eventArray.map((event) => {
                         if (event.id === eventData.id) {
@@ -5314,7 +5322,7 @@ export default function Horarios() {
                     }
                 }
 
-                // Após salvar, verificar se há outras partes da mesma disciplina para atualizar cores
+                // Após salvar, verificar se há outras partes da mesma disciplina para atualizar cores e sincronizar dados
 
                 if (eventData.disciplinaId) {
                     updateRelatedDisciplinaColors(
@@ -5322,6 +5330,17 @@ export default function Horarios() {
                         selectedPhase,
                         eventData.disciplinaId,
                         eventData.id // Passar o ID do evento recém-atualizado para protegê-lo
+                    );
+
+                    // Sincronizar disciplina e professores em eventos relacionados da mesma oferta
+                    // Usar disciplina original se evento existia (para sincronização), senão usar a atual
+                    const disciplinaParaSincronizar = (eventExists && originalDisciplinaId) ? originalDisciplinaId : eventData.disciplinaId;
+                    updateRelatedEvents(
+                        newEvents,
+                        selectedPhase,
+                        disciplinaParaSincronizar,
+                        eventData,
+                        eventData.id // ID do evento atual para proteção
                     );
                 }
 
@@ -5340,6 +5359,53 @@ export default function Horarios() {
             anosSemestres,
         ]
     );
+
+    // Função para sincronizar disciplina e professores em eventos relacionados da mesma oferta
+    const updateRelatedEvents = (
+        events,
+        phaseNumber,
+        originalDisciplinaId,
+        updatedEventData,
+        protectedEventId = null
+    ) => {
+        if (!events[phaseNumber] || !originalDisciplinaId || !updatedEventData) return;
+
+        // Encontrar todos os eventos da disciplina original na mesma fase
+        for (const [eventKey, eventArray] of Object.entries(events[phaseNumber])) {
+            const eventsInSlot = Array.isArray(eventArray) ? eventArray : [eventArray];
+
+            const updatedEvents = eventsInSlot.map((event) => {
+                // Proteger o evento que acabou de ser atualizado
+                if (protectedEventId && event.id === protectedEventId) {
+                    return event;
+                }
+
+                // Sincronizar apenas eventos da mesma disciplina original
+                if (event.disciplinaId === originalDisciplinaId) {
+                    return {
+                        ...event,
+                        // Sincronizar disciplina
+                        disciplinaId: updatedEventData.disciplinaId,
+                        title: updatedEventData.title,
+                        id_ccr: updatedEventData.disciplinaId,
+
+                        // Sincronizar professores
+                        professoresIds: updatedEventData.professoresIds || [updatedEventData.professorId].filter(Boolean),
+                        professorId: updatedEventData.professorId || (updatedEventData.professoresIds && updatedEventData.professoresIds[0]) || "",
+                        codigo_docente: (updatedEventData.professoresIds && updatedEventData.professoresIds[0]) || updatedEventData.professorId || event.codigo_docente,
+                    };
+                }
+                return event;
+            });
+
+            // Atualizar a estrutura preservando formato original
+            if (updatedEvents.length === 1) {
+                events[phaseNumber][eventKey] = updatedEvents[0];
+            } else {
+                events[phaseNumber][eventKey] = updatedEvents;
+            }
+        }
+    };
 
     // Função para atualizar cores de disciplinas relacionadas
     const updateRelatedDisciplinaColors = (
