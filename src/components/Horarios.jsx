@@ -435,258 +435,293 @@ const EventModal = ({
 
             // Verificar conflitos para cada professor selecionado
             for (const profId of professoresSelecionados) {
-                try {
-                    // 1. BUSCAR HORÁRIOS SALVOS NO BANCO
-                    const allHorariosResponse = await Promise.all(
-                        anosSemestres.map(async (anoSem) => {
-                            try {
-                                const response = await axios.get(
-                                    "http://localhost:3010/api/horarios",
-                                    {
-                                        params: {
-                                            ano: anoSem.ano,
-                                            semestre: anoSem.semestre,
-                                            id_curso: selectedCurso?.id || 1,
-                                        },
+                // Ignorar verificação de conflitos para professor sem.professor
+                if (profId !== "sem.professor") {
+                    try {
+                        // 1. BUSCAR HORÁRIOS SALVOS NO BANCO
+                        const allHorariosResponse = await Promise.all(
+                            anosSemestres.map(async (anoSem) => {
+                                try {
+                                    const response = await axios.get(
+                                        "http://localhost:3010/api/horarios",
+                                        {
+                                            params: {
+                                                ano: anoSem.ano,
+                                                semestre: anoSem.semestre,
+                                                id_curso:
+                                                    selectedCurso?.id || 1,
+                                            },
+                                        }
+                                    );
+                                    return response.data.horarios || [];
+                                } catch (error) {
+                                    return [];
+                                }
+                            })
+                        );
+
+                        const horariosSalvos = allHorariosResponse
+                            .flat()
+                            .filter(
+                                (h) => h.codigo_docente === profId && h.id_ccr
+                            ) // Filtrar apenas horários com disciplina
+                            .map((h) => ({
+                                ...h,
+                                eventoId: h.id,
+                                tipo: "salvo",
+                                uniqueKey: `salvo-${h.id}`,
+                            }));
+
+                        // 2. COLETAR HORÁRIOS TEMPORÁRIOS (TELA)
+                        const horariosTemporarios = [];
+                        Object.keys(events).forEach((phaseNumber) => {
+                            const phaseEvents = events[phaseNumber];
+                            if (phaseEvents) {
+                                Object.values(phaseEvents).forEach(
+                                    (eventArray) => {
+                                        const eventsInSlot = Array.isArray(
+                                            eventArray
+                                        )
+                                            ? eventArray
+                                            : [eventArray];
+                                        eventsInSlot.forEach(
+                                            (existingEvent) => {
+                                                const professoresDoEvento =
+                                                    existingEvent.professoresIds &&
+                                                    Array.isArray(
+                                                        existingEvent.professoresIds
+                                                    )
+                                                        ? existingEvent.professoresIds
+                                                        : existingEvent.professorId
+                                                        ? [
+                                                              existingEvent.professorId,
+                                                          ]
+                                                        : [];
+
+                                                if (
+                                                    professoresDoEvento.includes(
+                                                        profId
+                                                    )
+                                                ) {
+                                                    // Só adicionar se tem disciplina definida
+                                                    if (
+                                                        existingEvent.disciplinaId
+                                                    ) {
+                                                        horariosTemporarios.push(
+                                                            {
+                                                                codigo_docente:
+                                                                    profId,
+                                                                dia_semana:
+                                                                    dayToNumber[
+                                                                        existingEvent
+                                                                            .dayId
+                                                                    ],
+                                                                hora_inicio:
+                                                                    existingEvent.startTime,
+                                                                duracao:
+                                                                    existingEvent.duration ||
+                                                                    2,
+                                                                ano: selectedAnoSemestre.ano,
+                                                                semestre:
+                                                                    selectedAnoSemestre.semestre,
+                                                                id_ccr: existingEvent.disciplinaId,
+                                                                disciplinaNome:
+                                                                    existingEvent.title,
+                                                                tipo: "temporario",
+                                                                eventoId:
+                                                                    existingEvent.id,
+                                                                uniqueKey: `temp-${existingEvent.id}`,
+                                                            }
+                                                        );
+                                                    }
+                                                }
+                                            }
+                                        );
                                     }
                                 );
-                                return response.data.horarios || [];
-                            } catch (error) {
-                                return [];
                             }
-                        })
-                    );
+                        });
 
-                    const horariosSalvos = allHorariosResponse
-                        .flat()
-                        .filter((h) => h.codigo_docente === profId && h.id_ccr) // Filtrar apenas horários com disciplina
-                        .map((h) => ({
-                            ...h,
-                            eventoId: h.id,
-                            tipo: "salvo",
-                            uniqueKey: `salvo-${h.id}`,
-                        }));
+                        // 3. COMBINAR E REMOVER DUPLICATAS, MANTENDO O MAIS RECENTE
+                        const eventosUnicos = new Map();
+                        // Adicionar salvos primeiro
+                        horariosSalvos.forEach((h) =>
+                            eventosUnicos.set(h.eventoId, h)
+                        );
+                        // Sobrescrever com temporários (que são mais recentes)
+                        horariosTemporarios.forEach((h) =>
+                            eventosUnicos.set(h.eventoId, h)
+                        );
 
-                    // 2. COLETAR HORÁRIOS TEMPORÁRIOS (TELA)
-                    const horariosTemporarios = [];
-                    Object.keys(events).forEach((phaseNumber) => {
-                        const phaseEvents = events[phaseNumber];
-                        if (phaseEvents) {
-                            Object.values(phaseEvents).forEach((eventArray) => {
-                                const eventsInSlot = Array.isArray(eventArray)
-                                    ? eventArray
-                                    : [eventArray];
-                                eventsInSlot.forEach((existingEvent) => {
-                                    const professoresDoEvento =
-                                        existingEvent.professoresIds &&
-                                        Array.isArray(
-                                            existingEvent.professoresIds
-                                        )
-                                            ? existingEvent.professoresIds
-                                            : existingEvent.professorId
-                                            ? [existingEvent.professorId]
-                                            : [];
-
-                                    if (professoresDoEvento.includes(profId)) {
-                                        // Só adicionar se tem disciplina definida
-                                        if (existingEvent.disciplinaId) {
-                                            horariosTemporarios.push({
-                                                codigo_docente: profId,
-                                                dia_semana:
-                                                    dayToNumber[
-                                                        existingEvent.dayId
-                                                    ],
-                                                hora_inicio:
-                                                    existingEvent.startTime,
-                                                duracao:
-                                                    existingEvent.duration || 2,
-                                                ano: selectedAnoSemestre.ano,
-                                                semestre:
-                                                    selectedAnoSemestre.semestre,
-                                                id_ccr: existingEvent.disciplinaId,
-                                                disciplinaNome:
-                                                    existingEvent.title,
-                                                tipo: "temporario",
-                                                eventoId: existingEvent.id,
-                                                uniqueKey: `temp-${existingEvent.id}`,
-                                            });
-                                        }
-                                    }
-                                });
-                            });
-                        }
-                    });
-
-                    // 3. COMBINAR E REMOVER DUPLICATAS, MANTENDO O MAIS RECENTE
-                    const eventosUnicos = new Map();
-                    // Adicionar salvos primeiro
-                    horariosSalvos.forEach((h) =>
-                        eventosUnicos.set(h.eventoId, h)
-                    );
-                    // Sobrescrever com temporários (que são mais recentes)
-                    horariosTemporarios.forEach((h) =>
-                        eventosUnicos.set(h.eventoId, h)
-                    );
-
-                    // REMOVER o evento ATUAL da lista de verificação
-                    if (eventoSimulado.id) {
-                        eventosUnicos.delete(eventoSimulado.id);
-                    }
-
-                    const todosHorariosOutros = Array.from(
-                        eventosUnicos.values()
-                    );
-
-                    // Criar horário do evento atual sendo editado
-                    const horarioAtual = {
-                        codigo_docente: profId,
-                        dia_semana: dayToNumber[eventoSimulado.dayId],
-                        hora_inicio: eventoSimulado.startTime,
-                        duracao: eventoSimulado.duration || 2,
-                        ano: selectedAnoSemestre.ano,
-                        semestre: selectedAnoSemestre.semestre,
-                        id_ccr: eventoSimulado.disciplinaId,
-                        disciplinaNome: eventoSimulado.title,
-                        tipo: "novo",
-                        eventoId: eventoSimulado.id,
-                        uniqueKey: `novo-${eventoSimulado.id}`,
-                    };
-
-                    // Verificar conflitos do evento atual contra todos os outros
-                    todosHorariosOutros.forEach((outroHorario) => {
-                        // CRÍTICO: Nunca comparar o mesmo evento consigo mesmo
-                        const evento1Id = horarioAtual.eventoId;
-                        const evento2Id = outroHorario.eventoId;
-
-                        if (evento1Id && evento2Id && evento1Id === evento2Id) {
-                            return; // Pular comparação do mesmo evento
+                        // REMOVER o evento ATUAL da lista de verificação
+                        if (eventoSimulado.id) {
+                            eventosUnicos.delete(eventoSimulado.id);
                         }
 
-                        // Verificar se há sobreposição de dias
-                        if (
-                            horarioAtual.dia_semana !== outroHorario.dia_semana
-                        ) {
-                            return;
-                        }
+                        const todosHorariosOutros = Array.from(
+                            eventosUnicos.values()
+                        );
 
-                        // IMPORTANTE: Só detectar conflitos entre horários do MESMO ano e semestre
-                        if (
-                            horarioAtual.ano !== outroHorario.ano ||
-                            horarioAtual.semestre !== outroHorario.semestre
-                        ) {
-                            return; // Horários de períodos diferentes não são conflitos
-                        }
+                        // Criar horário do evento atual sendo editado
+                        const horarioAtual = {
+                            codigo_docente: profId,
+                            dia_semana: dayToNumber[eventoSimulado.dayId],
+                            hora_inicio: eventoSimulado.startTime,
+                            duracao: eventoSimulado.duration || 2,
+                            ano: selectedAnoSemestre.ano,
+                            semestre: selectedAnoSemestre.semestre,
+                            id_ccr: eventoSimulado.disciplinaId,
+                            disciplinaNome: eventoSimulado.title,
+                            tipo: "novo",
+                            eventoId: eventoSimulado.id,
+                            uniqueKey: `novo-${eventoSimulado.id}`,
+                        };
 
-                        // Verificar se são exatamente o mesmo horário
-                        const hora1 =
-                            typeof horarioAtual.hora_inicio === "object"
-                                ? horarioAtual.hora_inicio
-                                      .toString()
-                                      .substring(0, 5)
-                                : horarioAtual.hora_inicio;
-                        const hora2 =
-                            typeof outroHorario.hora_inicio === "object"
-                                ? outroHorario.hora_inicio
-                                      .toString()
-                                      .substring(0, 5)
-                                : outroHorario.hora_inicio;
+                        // Verificar conflitos do evento atual contra todos os outros
+                        todosHorariosOutros.forEach((outroHorario) => {
+                            // CRÍTICO: Nunca comparar o mesmo evento consigo mesmo
+                            const evento1Id = horarioAtual.eventoId;
+                            const evento2Id = outroHorario.eventoId;
 
-                        // Considerar que é o MESMO compromisso (portanto não é conflito) se todos os
-                        // atributos básicos coincidirem – ignoramos diferença de duração para permitir
-                        // edições que apenas alteram o tamanho da aula.
-                        if (
-                            horarioAtual.id_ccr === outroHorario.id_ccr &&
-                            hora1 === hora2 &&
-                            horarioAtual.ano === outroHorario.ano &&
-                            horarioAtual.semestre === outroHorario.semestre &&
-                            horarioAtual.dia_semana ===
-                                outroHorario.dia_semana &&
-                            horarioAtual.codigo_docente ===
-                                outroHorario.codigo_docente
-                        ) {
-                            return; // É o mesmo compromisso (possível edição), não gera conflito
-                        }
+                            if (
+                                evento1Id &&
+                                evento2Id &&
+                                evento1Id === evento2Id
+                            ) {
+                                return; // Pular comparação do mesmo evento
+                            }
 
-                        // Verificar se ambos os horários têm disciplinas e há sobreposição
-                        if (
-                            horarioAtual.id_ccr &&
-                            outroHorario.id_ccr &&
-                            horariosSeOverlapam(horarioAtual, outroHorario)
-                        ) {
-                            // Criar ID único para evitar duplicatas
-                            const conflict1 = `${
-                                horarioAtual.id_ccr || "null"
-                            }-${horarioAtual.ano}-${
-                                horarioAtual.semestre
-                            }-${hora1}-${horarioAtual.duracao}`;
-                            const conflict2 = `${
-                                outroHorario.id_ccr || "null"
-                            }-${outroHorario.ano}-${
-                                outroHorario.semestre
-                            }-${hora2}-${outroHorario.duracao}`;
-                            const sortedConflicts = [
-                                conflict1,
-                                conflict2,
-                            ].sort();
-                            const conflictId = `${profId}-${
-                                horarioAtual.dia_semana
-                            }-${sortedConflicts.join("---")}`;
-
-                            // Verificar se já processamos este conflito
-                            if (conflitosSet.has(conflictId)) {
+                            // Verificar se há sobreposição de dias
+                            if (
+                                horarioAtual.dia_semana !==
+                                outroHorario.dia_semana
+                            ) {
                                 return;
                             }
-                            conflitosSet.add(conflictId);
 
-                            const disciplina1 = disciplinas.find(
-                                (d) => d.id === horarioAtual.id_ccr
-                            );
-                            const disciplina2 = disciplinas.find(
-                                (d) => d.id === outroHorario.id_ccr
-                            );
+                            // IMPORTANTE: Só detectar conflitos entre horários do MESMO ano e semestre
+                            if (
+                                horarioAtual.ano !== outroHorario.ano ||
+                                horarioAtual.semestre !== outroHorario.semestre
+                            ) {
+                                return; // Horários de períodos diferentes não são conflitos
+                            }
 
-                            todosConflitos.push({
-                                id: conflictId,
-                                professor:
-                                    professores.find((p) => p.codigo === profId)
-                                        ?.name || profId,
-                                codigoProfessor: profId,
-                                dia: horarioAtual.dia_semana,
-                                diaNome:
-                                    daysOfWeek.find(
-                                        (d) =>
-                                            dayToNumber[d.id] ===
-                                            parseInt(horarioAtual.dia_semana)
-                                    )?.title ||
-                                    `Dia ${horarioAtual.dia_semana}`,
-                                horario1: {
-                                    ...horarioAtual,
-                                    disciplinaNome:
-                                        horarioAtual.disciplinaNome ||
-                                        disciplina1?.nome ||
-                                        "Disciplina não encontrada",
-                                    hora_inicio: hora1,
-                                    ano_semestre: `${horarioAtual.ano}/${horarioAtual.semestre}`,
-                                    tipo: horarioAtual.tipo || "novo",
-                                },
-                                horario2: {
-                                    ...outroHorario,
-                                    disciplinaNome:
-                                        outroHorario.disciplinaNome ||
-                                        disciplina2?.nome ||
-                                        "Disciplina não encontrada",
-                                    hora_inicio: hora2,
-                                    ano_semestre: `${outroHorario.ano}/${outroHorario.semestre}`,
-                                    tipo: outroHorario.tipo || "salvo",
-                                },
-                            });
-                        }
-                    });
-                } catch (error) {
-                    console.error(
-                        `Erro ao verificar conflitos para professor ${profId}:`,
-                        error
-                    );
+                            // Verificar se são exatamente o mesmo horário
+                            const hora1 =
+                                typeof horarioAtual.hora_inicio === "object"
+                                    ? horarioAtual.hora_inicio
+                                          .toString()
+                                          .substring(0, 5)
+                                    : horarioAtual.hora_inicio;
+                            const hora2 =
+                                typeof outroHorario.hora_inicio === "object"
+                                    ? outroHorario.hora_inicio
+                                          .toString()
+                                          .substring(0, 5)
+                                    : outroHorario.hora_inicio;
+
+                            // Considerar que é o MESMO compromisso (portanto não é conflito) se todos os
+                            // atributos básicos coincidirem – ignoramos diferença de duração para permitir
+                            // edições que apenas alteram o tamanho da aula.
+                            if (
+                                horarioAtual.id_ccr === outroHorario.id_ccr &&
+                                hora1 === hora2 &&
+                                horarioAtual.ano === outroHorario.ano &&
+                                horarioAtual.semestre ===
+                                    outroHorario.semestre &&
+                                horarioAtual.dia_semana ===
+                                    outroHorario.dia_semana &&
+                                horarioAtual.codigo_docente ===
+                                    outroHorario.codigo_docente
+                            ) {
+                                return; // É o mesmo compromisso (possível edição), não gera conflito
+                            }
+
+                            // Verificar se ambos os horários têm disciplinas e há sobreposição
+                            if (
+                                horarioAtual.id_ccr &&
+                                outroHorario.id_ccr &&
+                                horariosSeOverlapam(horarioAtual, outroHorario)
+                            ) {
+                                // Criar ID único para evitar duplicatas
+                                const conflict1 = `${
+                                    horarioAtual.id_ccr || "null"
+                                }-${horarioAtual.ano}-${
+                                    horarioAtual.semestre
+                                }-${hora1}-${horarioAtual.duracao}`;
+                                const conflict2 = `${
+                                    outroHorario.id_ccr || "null"
+                                }-${outroHorario.ano}-${
+                                    outroHorario.semestre
+                                }-${hora2}-${outroHorario.duracao}`;
+                                const sortedConflicts = [
+                                    conflict1,
+                                    conflict2,
+                                ].sort();
+                                const conflictId = `${profId}-${
+                                    horarioAtual.dia_semana
+                                }-${sortedConflicts.join("---")}`;
+
+                                // Verificar se já processamos este conflito
+                                if (conflitosSet.has(conflictId)) {
+                                    return;
+                                }
+                                conflitosSet.add(conflictId);
+
+                                const disciplina1 = disciplinas.find(
+                                    (d) => d.id === horarioAtual.id_ccr
+                                );
+                                const disciplina2 = disciplinas.find(
+                                    (d) => d.id === outroHorario.id_ccr
+                                );
+
+                                todosConflitos.push({
+                                    id: conflictId,
+                                    professor:
+                                        professores.find(
+                                            (p) => p.codigo === profId
+                                        )?.name || profId,
+                                    codigoProfessor: profId,
+                                    dia: horarioAtual.dia_semana,
+                                    diaNome:
+                                        daysOfWeek.find(
+                                            (d) =>
+                                                dayToNumber[d.id] ===
+                                                parseInt(
+                                                    horarioAtual.dia_semana
+                                                )
+                                        )?.title ||
+                                        `Dia ${horarioAtual.dia_semana}`,
+                                    horario1: {
+                                        ...horarioAtual,
+                                        disciplinaNome:
+                                            horarioAtual.disciplinaNome ||
+                                            disciplina1?.nome ||
+                                            "Disciplina não encontrada",
+                                        hora_inicio: hora1,
+                                        ano_semestre: `${horarioAtual.ano}/${horarioAtual.semestre}`,
+                                        tipo: horarioAtual.tipo || "novo",
+                                    },
+                                    horario2: {
+                                        ...outroHorario,
+                                        disciplinaNome:
+                                            outroHorario.disciplinaNome ||
+                                            disciplina2?.nome ||
+                                            "Disciplina não encontrada",
+                                        hora_inicio: hora2,
+                                        ano_semestre: `${outroHorario.ano}/${outroHorario.semestre}`,
+                                        tipo: outroHorario.tipo || "salvo",
+                                    },
+                                });
+                            }
+                        });
+                    } catch (error) {
+                        console.error(
+                            `Erro ao verificar conflitos para professor ${profId}:`,
+                            error
+                        );
+                    }
                 }
             }
 
@@ -1935,7 +1970,6 @@ const CalendarEvent = ({
     const conflitosDoEvento = obterConflitosDoEvento
         ? obterConflitosDoEvento(event)
         : [];
-
 
     // Calcular largura e posição quando há múltiplos eventos
     const calculateMultipleEventStyles = () => {
@@ -3256,6 +3290,11 @@ export default function Horarios() {
         novoEvento = null
     ) => {
         try {
+            // Ignorar verificação de conflitos para professor sem.professor
+            if (codigoProfessor === "sem.professor") {
+                return [];
+            }
+
             const conflitos = [];
             const conflitosSet = new Set(); // Para evitar duplicatas absolutas
 
@@ -3555,10 +3594,15 @@ export default function Horarios() {
                                     event.professoresIds &&
                                     Array.isArray(event.professoresIds)
                                 ) {
-                                    event.professoresIds.forEach((profId) =>
-                                        professoresComHorarios.add(profId)
-                                    );
-                                } else if (event.professorId) {
+                                    event.professoresIds.forEach((profId) => {
+                                        if (profId !== "sem.professor") {
+                                            professoresComHorarios.add(profId);
+                                        }
+                                    });
+                                } else if (
+                                    event.professorId &&
+                                    event.professorId !== "sem.professor"
+                                ) {
                                     professoresComHorarios.add(
                                         event.professorId
                                     );
@@ -3576,363 +3620,397 @@ export default function Horarios() {
 
             // Para cada professor, buscar todos os seus horários em todos os anos/semestres
             for (const codigoProfessor of professoresComHorarios) {
-                try {
-                    // Log removido
-                    // Buscar horários em todos os anos/semestres para este professor
-                    const allHorariosResponse = await Promise.all(
-                        anosSemestres.map(async (anoSem) => {
-                            try {
-                                const response = await axios.get(
-                                    "http://localhost:3010/api/horarios",
-                                    {
-                                        params: {
-                                            ano: anoSem.ano,
-                                            semestre: anoSem.semestre,
-                                            id_curso: selectedCurso?.id || 1,
-                                        },
-                                    }
-                                );
-                                return response.data.horarios || [];
-                            } catch (error) {
-                                console.warn(
-                                    `Erro ao buscar horários para ${anoSem.ano}/${anoSem.semestre}:`,
-                                    error
-                                );
-                                return [];
-                            }
-                        })
-                    );
-
-                    // Flatten e filtrar horários salvos
-                    const horariosSalvos = allHorariosResponse
-                        .flat()
-                        .filter(
-                            (h) =>
-                                h.codigo_docente === codigoProfessor && h.id_ccr
-                        ) // Filtrar apenas horários com disciplina
-                        .map((h) => ({
-                            ...h,
-                            uniqueKey: `salvo-${h.id}`,
-                            eventoId: h.id,
-                            tipo: "salvo",
-                        }));
-
-                    // Coletar horários temporários APENAS para eventos não salvos ou que foram modificados
-                    const horariosTemporarios = [];
-                    Object.keys(events).forEach((phaseNumber) => {
-                        const phaseEvents = events[phaseNumber];
-                        if (phaseEvents) {
-                            Object.values(phaseEvents).forEach((eventArray) => {
-                                const eventsInSlot = Array.isArray(eventArray)
-                                    ? eventArray
-                                    : [eventArray];
-                                eventsInSlot.forEach((event) => {
-                                    const professoresDoEvento =
-                                        event.professoresIds &&
-                                        Array.isArray(event.professoresIds)
-                                            ? event.professoresIds
-                                            : event.professorId
-                                            ? [event.professorId]
-                                            : [];
-
-                                    if (
-                                        professoresDoEvento.includes(
-                                            codigoProfessor
-                                        )
-                                    ) {
-                                        // Verificar se este evento temporário já existe como horário salvo
-                                        const jaExisteNoSalvo =
-                                            horariosSalvos.some((salvo) => {
-                                                return (
-                                                    salvo.id_ccr ===
-                                                        event.disciplinaId &&
-                                                    salvo.dia_semana ===
-                                                        dayToNumber[
-                                                            event.dayId
-                                                        ] &&
-                                                    salvo.hora_inicio ===
-                                                        event.startTime &&
-                                                    // Nota: ignoramos duração para evitar conflito falso quando apenas
-                                                    // o tamanho da aula é alterado antes de sincronizar com o banco.
-                                                    salvo.codigo_docente ===
-                                                        codigoProfessor &&
-                                                    salvo.ano ===
-                                                        selectedAnoSemestre.ano &&
-                                                    salvo.semestre ===
-                                                        selectedAnoSemestre.semestre
-                                                );
-                                            });
-
-                                        // Só adicionar se não existir como salvo (evento realmente novo/modificado) E tem disciplina definida
-                                        if (
-                                            !jaExisteNoSalvo &&
-                                            event.disciplinaId
-                                        ) {
-                                            horariosTemporarios.push({
-                                                codigo_docente: codigoProfessor,
-                                                dia_semana:
-                                                    dayToNumber[event.dayId],
-                                                hora_inicio: event.startTime,
-                                                duracao: event.duration || 2,
-                                                ano: selectedAnoSemestre.ano,
-                                                semestre:
-                                                    selectedAnoSemestre.semestre,
-                                                id_ccr: event.disciplinaId,
-                                                disciplinaNome: event.title,
-                                                tipo: "temporario",
-                                                eventoId: event.id,
-                                                uniqueKey: `temp-${event.id}`,
-                                            });
+                // Ignorar verificação de conflitos para professor sem.professor
+                if (codigoProfessor !== "sem.professor") {
+                    try {
+                        // Log removido
+                        // Buscar horários em todos os anos/semestres para este professor
+                        const allHorariosResponse = await Promise.all(
+                            anosSemestres.map(async (anoSem) => {
+                                try {
+                                    const response = await axios.get(
+                                        "http://localhost:3010/api/horarios",
+                                        {
+                                            params: {
+                                                ano: anoSem.ano,
+                                                semestre: anoSem.semestre,
+                                                id_curso:
+                                                    selectedCurso?.id || 1,
+                                            },
                                         }
+                                    );
+                                    return response.data.horarios || [];
+                                } catch (error) {
+                                    console.warn(
+                                        `Erro ao buscar horários para ${anoSem.ano}/${anoSem.semestre}:`,
+                                        error
+                                    );
+                                    return [];
+                                }
+                            })
+                        );
+
+                        // Flatten e filtrar horários salvos
+                        const horariosSalvos = allHorariosResponse
+                            .flat()
+                            .filter(
+                                (h) =>
+                                    h.codigo_docente === codigoProfessor &&
+                                    h.id_ccr
+                            ) // Filtrar apenas horários com disciplina
+                            .map((h) => ({
+                                ...h,
+                                uniqueKey: `salvo-${h.id}`,
+                                eventoId: h.id,
+                                tipo: "salvo",
+                            }));
+
+                        // Coletar horários temporários APENAS para eventos não salvos ou que foram modificados
+                        const horariosTemporarios = [];
+                        Object.keys(events).forEach((phaseNumber) => {
+                            const phaseEvents = events[phaseNumber];
+                            if (phaseEvents) {
+                                Object.values(phaseEvents).forEach(
+                                    (eventArray) => {
+                                        const eventsInSlot = Array.isArray(
+                                            eventArray
+                                        )
+                                            ? eventArray
+                                            : [eventArray];
+                                        eventsInSlot.forEach((event) => {
+                                            const professoresDoEvento =
+                                                event.professoresIds &&
+                                                Array.isArray(
+                                                    event.professoresIds
+                                                )
+                                                    ? event.professoresIds
+                                                    : event.professorId
+                                                    ? [event.professorId]
+                                                    : [];
+
+                                            if (
+                                                professoresDoEvento.includes(
+                                                    codigoProfessor
+                                                )
+                                            ) {
+                                                // Verificar se este evento temporário já existe como horário salvo
+                                                const jaExisteNoSalvo =
+                                                    horariosSalvos.some(
+                                                        (salvo) => {
+                                                            return (
+                                                                salvo.id_ccr ===
+                                                                    event.disciplinaId &&
+                                                                salvo.dia_semana ===
+                                                                    dayToNumber[
+                                                                        event
+                                                                            .dayId
+                                                                    ] &&
+                                                                salvo.hora_inicio ===
+                                                                    event.startTime &&
+                                                                // Nota: ignoramos duração para evitar conflito falso quando apenas
+                                                                // o tamanho da aula é alterado antes de sincronizar com o banco.
+                                                                salvo.codigo_docente ===
+                                                                    codigoProfessor &&
+                                                                salvo.ano ===
+                                                                    selectedAnoSemestre.ano &&
+                                                                salvo.semestre ===
+                                                                    selectedAnoSemestre.semestre
+                                                            );
+                                                        }
+                                                    );
+
+                                                // Só adicionar se não existir como salvo (evento realmente novo/modificado) E tem disciplina definida
+                                                if (
+                                                    !jaExisteNoSalvo &&
+                                                    event.disciplinaId
+                                                ) {
+                                                    horariosTemporarios.push({
+                                                        codigo_docente:
+                                                            codigoProfessor,
+                                                        dia_semana:
+                                                            dayToNumber[
+                                                                event.dayId
+                                                            ],
+                                                        hora_inicio:
+                                                            event.startTime,
+                                                        duracao:
+                                                            event.duration || 2,
+                                                        ano: selectedAnoSemestre.ano,
+                                                        semestre:
+                                                            selectedAnoSemestre.semestre,
+                                                        id_ccr: event.disciplinaId,
+                                                        disciplinaNome:
+                                                            event.title,
+                                                        tipo: "temporario",
+                                                        eventoId: event.id,
+                                                        uniqueKey: `temp-${event.id}`,
+                                                    });
+                                                }
+                                            }
+                                        });
                                     }
-                                });
-                            });
-                        }
-                    });
+                                );
+                            }
+                        });
 
-                    // Combinar todos os horários
-                    const todosHorarios = [
-                        ...horariosSalvos,
-                        ...horariosTemporarios,
-                    ];
+                        // Combinar todos os horários
+                        const todosHorarios = [
+                            ...horariosSalvos,
+                            ...horariosTemporarios,
+                        ];
 
-                    // Criar mapa de eventos únicos com MÚLTIPLAS CHAVES para evitar duplicatas
-                    const eventosUnicos = new Map();
-                    const chavesDuplicacao = new Set();
+                        // Criar mapa de eventos únicos com MÚLTIPLAS CHAVES para evitar duplicatas
+                        const eventosUnicos = new Map();
+                        const chavesDuplicacao = new Set();
 
-                    todosHorarios.forEach((horario) => {
-                        // Normalizar hora_inicio
-                        let horaInicio = horario.hora_inicio;
-                        if (typeof horaInicio === "object") {
-                            horaInicio = horaInicio.toString().substring(0, 5);
-                        }
-                        if (horaInicio && horaInicio.includes(":")) {
-                            horaInicio = horaInicio
-                                .split(":")
-                                .slice(0, 2)
-                                .join(":");
-                        }
+                        todosHorarios.forEach((horario) => {
+                            // Normalizar hora_inicio
+                            let horaInicio = horario.hora_inicio;
+                            if (typeof horaInicio === "object") {
+                                horaInicio = horaInicio
+                                    .toString()
+                                    .substring(0, 5);
+                            }
+                            if (horaInicio && horaInicio.includes(":")) {
+                                horaInicio = horaInicio
+                                    .split(":")
+                                    .slice(0, 2)
+                                    .join(":");
+                            }
 
-                        // Criar chave única ultra-específica
-                        const chaveCompleta = `${codigoProfessor}-${horario.id_ccr}-${horario.dia_semana}-${horaInicio}-${horario.duracao}-${horario.ano}-${horario.semestre}`;
+                            // Criar chave única ultra-específica
+                            const chaveCompleta = `${codigoProfessor}-${horario.id_ccr}-${horario.dia_semana}-${horaInicio}-${horario.duracao}-${horario.ano}-${horario.semestre}`;
 
-                        // Se já existe essa chave exata, pular (evitar duplicatas absolutas)
-                        if (chavesDuplicacao.has(chaveCompleta)) {
-                            return;
-                        }
-                        chavesDuplicacao.add(chaveCompleta);
+                            // Se já existe essa chave exata, pular (evitar duplicatas absolutas)
+                            if (chavesDuplicacao.has(chaveCompleta)) {
+                                return;
+                            }
+                            chavesDuplicacao.add(chaveCompleta);
 
-                        const eventoId = horario.eventoId || horario.id;
-                        if (eventoId) {
-                            // Se já existe um evento com este ID, manter apenas o mais recente (novo > temporario > salvo)
-                            const prioridade =
-                                horario.tipo === "novo"
-                                    ? 3
-                                    : horario.tipo === "temporario"
-                                    ? 2
-                                    : 1;
-                            const existente = eventosUnicos.get(eventoId);
+                            const eventoId = horario.eventoId || horario.id;
+                            if (eventoId) {
+                                // Se já existe um evento com este ID, manter apenas o mais recente (novo > temporario > salvo)
+                                const prioridade =
+                                    horario.tipo === "novo"
+                                        ? 3
+                                        : horario.tipo === "temporario"
+                                        ? 2
+                                        : 1;
+                                const existente = eventosUnicos.get(eventoId);
 
-                            if (
-                                !existente ||
-                                prioridade > existente.prioridade
-                            ) {
-                                eventosUnicos.set(eventoId, {
+                                if (
+                                    !existente ||
+                                    prioridade > existente.prioridade
+                                ) {
+                                    eventosUnicos.set(eventoId, {
+                                        ...horario,
+                                        prioridade,
+                                        hora_inicio: horaInicio,
+                                    });
+                                }
+                            } else {
+                                // Se não tem ID, usar a chave completa
+                                eventosUnicos.set(chaveCompleta, {
                                     ...horario,
-                                    prioridade,
                                     hora_inicio: horaInicio,
                                 });
                             }
-                        } else {
-                            // Se não tem ID, usar a chave completa
-                            eventosUnicos.set(chaveCompleta, {
-                                ...horario,
-                                hora_inicio: horaInicio,
-                            });
-                        }
-                    });
+                        });
 
-                    // Converter de volta para array
-                    const horariosFinais = Array.from(eventosUnicos.values());
-                    // Log removido
+                        // Converter de volta para array
+                        const horariosFinais = Array.from(
+                            eventosUnicos.values()
+                        );
+                        // Log removido
 
-                    // Agrupar horários por dia da semana
-                    const horariosPorDia = {};
-                    horariosFinais.forEach((horario) => {
-                        const dia = horario.dia_semana;
-                        if (!horariosPorDia[dia]) {
-                            horariosPorDia[dia] = [];
-                        }
-                        horariosPorDia[dia].push(horario);
-                    });
+                        // Agrupar horários por dia da semana
+                        const horariosPorDia = {};
+                        horariosFinais.forEach((horario) => {
+                            const dia = horario.dia_semana;
+                            if (!horariosPorDia[dia]) {
+                                horariosPorDia[dia] = [];
+                            }
+                            horariosPorDia[dia].push(horario);
+                        });
 
-                    // Verificar conflitos dentro de cada dia
-                    Object.entries(horariosPorDia).forEach(
-                        ([dia, horariosNoDia]) => {
-                            // Ordenar por hora para garantir comparação consistente
-                            horariosNoDia.sort((a, b) => {
-                                const horaA =
-                                    typeof a.hora_inicio === "object"
-                                        ? a.hora_inicio.toString()
-                                        : a.hora_inicio;
-                                const horaB =
-                                    typeof b.hora_inicio === "object"
-                                        ? b.hora_inicio.toString()
-                                        : b.hora_inicio;
-                                return horaA.localeCompare(horaB);
-                            });
+                        // Verificar conflitos dentro de cada dia
+                        Object.entries(horariosPorDia).forEach(
+                            ([dia, horariosNoDia]) => {
+                                // Ordenar por hora para garantir comparação consistente
+                                horariosNoDia.sort((a, b) => {
+                                    const horaA =
+                                        typeof a.hora_inicio === "object"
+                                            ? a.hora_inicio.toString()
+                                            : a.hora_inicio;
+                                    const horaB =
+                                        typeof b.hora_inicio === "object"
+                                            ? b.hora_inicio.toString()
+                                            : b.hora_inicio;
+                                    return horaA.localeCompare(horaB);
+                                });
 
-                            for (let i = 0; i < horariosNoDia.length; i++) {
-                                for (
-                                    let j = i + 1;
-                                    j < horariosNoDia.length;
-                                    j++
-                                ) {
-                                    const h1 = horariosNoDia[i];
-                                    const h2 = horariosNoDia[j];
-
-                                    // CRÍTICO: Nunca comparar o mesmo evento consigo mesmo
-                                    const evento1Id = h1.eventoId || h1.id;
-                                    const evento2Id = h2.eventoId || h2.id;
-
-                                    if (
-                                        evento1Id &&
-                                        evento2Id &&
-                                        evento1Id === evento2Id
+                                for (let i = 0; i < horariosNoDia.length; i++) {
+                                    for (
+                                        let j = i + 1;
+                                        j < horariosNoDia.length;
+                                        j++
                                     ) {
-                                        continue; // Pular comparação do mesmo evento
-                                    }
+                                        const h1 = horariosNoDia[i];
+                                        const h2 = horariosNoDia[j];
 
-                                    // IMPORTANTE: Só detectar conflitos entre horários do MESMO ano e semestre
-                                    if (
-                                        h1.ano !== h2.ano ||
-                                        h1.semestre !== h2.semestre
-                                    ) {
-                                        continue; // Horários de períodos diferentes não são conflitos
-                                    }
+                                        // CRÍTICO: Nunca comparar o mesmo evento consigo mesmo
+                                        const evento1Id = h1.eventoId || h1.id;
+                                        const evento2Id = h2.eventoId || h2.id;
 
-                                    // Normalizar horários para comparação
-                                    const hora1 =
-                                        typeof h1.hora_inicio === "object"
-                                            ? h1.hora_inicio
-                                                  .toString()
-                                                  .substring(0, 5)
-                                            : h1.hora_inicio;
-                                    const hora2 =
-                                        typeof h2.hora_inicio === "object"
-                                            ? h2.hora_inicio
-                                                  .toString()
-                                                  .substring(0, 5)
-                                            : h2.hora_inicio;
-
-                                    // Remover segundos se existirem
-                                    const hora1Normalizada = hora1
-                                        ?.split(":")
-                                        .slice(0, 2)
-                                        .join(":");
-                                    const hora2Normalizada = hora2
-                                        ?.split(":")
-                                        .slice(0, 2)
-                                        .join(":");
-
-                                    // Verificar se na prática é o MESMO compromisso (ignora duração, pois
-                                    // ela pode ter sido editada antes da sincronização).
-                                    const saoOMesmoHorario =
-                                        h1.id_ccr === h2.id_ccr &&
-                                        hora1Normalizada === hora2Normalizada &&
-                                        h1.ano === h2.ano &&
-                                        h1.semestre === h2.semestre &&
-                                        h1.dia_semana === h2.dia_semana &&
-                                        h1.codigo_docente === h2.codigo_docente;
-
-                                    if (saoOMesmoHorario) {
-                                        continue; // São o mesmo horário, não é conflito
-                                    }
-
-                                    // Verificar se ambos os horários têm disciplinas e há sobreposição temporal
-                                    if (
-                                        h1.id_ccr &&
-                                        h2.id_ccr &&
-                                        horariosSeOverlapam(h1, h2)
-                                    ) {
-                                        // Criar ID único determinístico baseado nas propriedades dos horários
-                                        const conflict1 = `${h1.id_ccr}-${h1.ano}-${h1.semestre}-${hora1}-${h1.duracao}`;
-                                        const conflict2 = `${h2.id_ccr}-${h2.ano}-${h2.semestre}-${hora2}-${h2.duracao}`;
-                                        const sortedConflicts = [
-                                            conflict1,
-                                            conflict2,
-                                        ].sort();
-                                        const conflictId = `${codigoProfessor}-${dia}-${sortedConflicts.join(
-                                            "---"
-                                        )}`;
-
-                                        // Verificar se já processamos este conflito globalmente
                                         if (
-                                            conflitosProcessados.has(conflictId)
+                                            evento1Id &&
+                                            evento2Id &&
+                                            evento1Id === evento2Id
                                         ) {
-                                            continue;
+                                            continue; // Pular comparação do mesmo evento
                                         }
-                                        conflitosProcessados.add(conflictId);
 
-                                        const professor = professores.find(
-                                            (p) => p.codigo === codigoProfessor
-                                        );
-                                        const disciplina1 = disciplinas.find(
-                                            (d) => d.id === h1.id_ccr
-                                        );
-                                        const disciplina2 = disciplinas.find(
-                                            (d) => d.id === h2.id_ccr
-                                        );
+                                        // IMPORTANTE: Só detectar conflitos entre horários do MESMO ano e semestre
+                                        if (
+                                            h1.ano !== h2.ano ||
+                                            h1.semestre !== h2.semestre
+                                        ) {
+                                            continue; // Horários de períodos diferentes não são conflitos
+                                        }
 
-                                        const novoConflito = {
-                                            id: conflictId,
-                                            professor: professor
-                                                ? professor.name
-                                                : codigoProfessor,
-                                            codigoProfessor,
-                                            dia: dia,
-                                            diaNome:
-                                                daysOfWeek.find(
-                                                    (d) =>
-                                                        dayToNumber[d.id] ===
-                                                        parseInt(dia)
-                                                )?.title || `Dia ${dia}`,
-                                            horario1: {
-                                                ...h1,
-                                                disciplinaNome:
-                                                    h1.disciplinaNome ||
-                                                    (disciplina1
-                                                        ? disciplina1.nome
-                                                        : "Disciplina não encontrada"),
-                                                hora_inicio: hora1,
-                                                ano_semestre: `${h1.ano}/${h1.semestre}`,
-                                                tipo: h1.tipo || "salvo",
-                                            },
-                                            horario2: {
-                                                ...h2,
-                                                disciplinaNome:
-                                                    h2.disciplinaNome ||
-                                                    (disciplina2
-                                                        ? disciplina2.nome
-                                                        : "Disciplina não encontrada"),
-                                                hora_inicio: hora2,
-                                                ano_semestre: `${h2.ano}/${h2.semestre}`,
-                                                tipo: h2.tipo || "salvo",
-                                            },
-                                        };
+                                        // Normalizar horários para comparação
+                                        const hora1 =
+                                            typeof h1.hora_inicio === "object"
+                                                ? h1.hora_inicio
+                                                      .toString()
+                                                      .substring(0, 5)
+                                                : h1.hora_inicio;
+                                        const hora2 =
+                                            typeof h2.hora_inicio === "object"
+                                                ? h2.hora_inicio
+                                                      .toString()
+                                                      .substring(0, 5)
+                                                : h2.hora_inicio;
 
-                                        // Log removido
-                                        conflitos.push(novoConflito);
+                                        // Remover segundos se existirem
+                                        const hora1Normalizada = hora1
+                                            ?.split(":")
+                                            .slice(0, 2)
+                                            .join(":");
+                                        const hora2Normalizada = hora2
+                                            ?.split(":")
+                                            .slice(0, 2)
+                                            .join(":");
+
+                                        // Verificar se na prática é o MESMO compromisso (ignora duração, pois
+                                        // ela pode ter sido editada antes da sincronização).
+                                        const saoOMesmoHorario =
+                                            h1.id_ccr === h2.id_ccr &&
+                                            hora1Normalizada ===
+                                                hora2Normalizada &&
+                                            h1.ano === h2.ano &&
+                                            h1.semestre === h2.semestre &&
+                                            h1.dia_semana === h2.dia_semana &&
+                                            h1.codigo_docente ===
+                                                h2.codigo_docente;
+
+                                        if (saoOMesmoHorario) {
+                                            continue; // São o mesmo horário, não é conflito
+                                        }
+
+                                        // Verificar se ambos os horários têm disciplinas e há sobreposição temporal
+                                        if (
+                                            h1.id_ccr &&
+                                            h2.id_ccr &&
+                                            horariosSeOverlapam(h1, h2)
+                                        ) {
+                                            // Criar ID único determinístico baseado nas propriedades dos horários
+                                            const conflict1 = `${h1.id_ccr}-${h1.ano}-${h1.semestre}-${hora1}-${h1.duracao}`;
+                                            const conflict2 = `${h2.id_ccr}-${h2.ano}-${h2.semestre}-${hora2}-${h2.duracao}`;
+                                            const sortedConflicts = [
+                                                conflict1,
+                                                conflict2,
+                                            ].sort();
+                                            const conflictId = `${codigoProfessor}-${dia}-${sortedConflicts.join(
+                                                "---"
+                                            )}`;
+
+                                            // Verificar se já processamos este conflito globalmente
+                                            if (
+                                                conflitosProcessados.has(
+                                                    conflictId
+                                                )
+                                            ) {
+                                                continue;
+                                            }
+                                            conflitosProcessados.add(
+                                                conflictId
+                                            );
+
+                                            const professor = professores.find(
+                                                (p) =>
+                                                    p.codigo === codigoProfessor
+                                            );
+                                            const disciplina1 =
+                                                disciplinas.find(
+                                                    (d) => d.id === h1.id_ccr
+                                                );
+                                            const disciplina2 =
+                                                disciplinas.find(
+                                                    (d) => d.id === h2.id_ccr
+                                                );
+
+                                            const novoConflito = {
+                                                id: conflictId,
+                                                professor: professor
+                                                    ? professor.name
+                                                    : codigoProfessor,
+                                                codigoProfessor,
+                                                dia: dia,
+                                                diaNome:
+                                                    daysOfWeek.find(
+                                                        (d) =>
+                                                            dayToNumber[
+                                                                d.id
+                                                            ] === parseInt(dia)
+                                                    )?.title || `Dia ${dia}`,
+                                                horario1: {
+                                                    ...h1,
+                                                    disciplinaNome:
+                                                        h1.disciplinaNome ||
+                                                        (disciplina1
+                                                            ? disciplina1.nome
+                                                            : "Disciplina não encontrada"),
+                                                    hora_inicio: hora1,
+                                                    ano_semestre: `${h1.ano}/${h1.semestre}`,
+                                                    tipo: h1.tipo || "salvo",
+                                                },
+                                                horario2: {
+                                                    ...h2,
+                                                    disciplinaNome:
+                                                        h2.disciplinaNome ||
+                                                        (disciplina2
+                                                            ? disciplina2.nome
+                                                            : "Disciplina não encontrada"),
+                                                    hora_inicio: hora2,
+                                                    ano_semestre: `${h2.ano}/${h2.semestre}`,
+                                                    tipo: h2.tipo || "salvo",
+                                                },
+                                            };
+
+                                            // Log removido
+                                            conflitos.push(novoConflito);
+                                        }
                                     }
                                 }
                             }
-                        }
-                    );
-                } catch (error) {
-                    console.error(
-                        `Erro ao verificar conflitos para professor ${codigoProfessor}:`,
-                        error
-                    );
+                        );
+                    } catch (error) {
+                        console.error(
+                            `Erro ao verificar conflitos para professor ${codigoProfessor}:`,
+                            error
+                        );
+                    }
                 }
             }
 
@@ -5116,7 +5194,6 @@ export default function Horarios() {
                         : [newEvents[selectedPhase][existingEventKey]];
 
                     const updatedEvents = eventArray.map((event) => {
-
                         if (event.id === eventData.id) {
                             const ano = selectedAnoSemestre.ano;
                             const semestre = selectedAnoSemestre.semestre;
@@ -5178,23 +5255,15 @@ export default function Horarios() {
                     newEvents[selectedPhase] = { ...newEvents[selectedPhase] };
 
                     if (updatedEvents.length === 1) {
-
-
                         // Criar nova referência do objeto para forçar re-render
                         newEvents[selectedPhase][existingEventKey] = {
                             ...updatedEvents[0],
                         };
-
-
                     } else {
-
                         // Criar novo array com novas referências dos objetos
                         newEvents[selectedPhase][existingEventKey] =
                             updatedEvents.map((event) => ({ ...event }));
-
-
                     }
-
                 } else {
                     // Para eventos novos
                     const newKey = `${eventData.dayId}-${eventData.startTime}`;
@@ -5248,7 +5317,6 @@ export default function Horarios() {
                 // Após salvar, verificar se há outras partes da mesma disciplina para atualizar cores
 
                 if (eventData.disciplinaId) {
-
                     updateRelatedDisciplinaColors(
                         newEvents,
                         selectedPhase,
