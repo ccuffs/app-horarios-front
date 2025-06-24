@@ -645,7 +645,10 @@ const EventModal = ({
                             }
 
                             // Verificar se algum dos eventos permite conflito
-                            if (horarioAtual.permitirConflito || outroHorario.permitirConflito) {
+                            if (
+                                horarioAtual.permitirConflito ||
+                                outroHorario.permitirConflito
+                            ) {
                                 return; // Pular se algum evento permitir conflito
                             }
 
@@ -1526,7 +1529,9 @@ const EventModal = ({
                         control={
                             <Checkbox
                                 checked={permitirConflito}
-                                onChange={(e) => setPermitirConflito(e.target.checked)}
+                                onChange={(e) =>
+                                    setPermitirConflito(e.target.checked)
+                                }
                                 color="warning"
                             />
                         }
@@ -1535,8 +1540,12 @@ const EventModal = ({
                                 <Typography variant="body2">
                                     Permitir conflito de horários
                                 </Typography>
-                                <Typography variant="caption" color="textSecondary">
-                                    Marque esta opção se este horário pode ter sobreposição com outros do mesmo professor
+                                <Typography
+                                    variant="caption"
+                                    color="textSecondary"
+                                >
+                                    Marque esta opção se este horário pode ter
+                                    sobreposição com outros do mesmo professor
                                 </Typography>
                             </Box>
                         }
@@ -1999,8 +2008,9 @@ const CalendarEvent = ({
         }
 
         // Remover duplicatas baseadas no código do professor
-        const uniqueProfessores = professoresList.filter((professor, index, self) =>
-            index === self.findIndex(p => p.codigo === professor.codigo)
+        const uniqueProfessores = professoresList.filter(
+            (professor, index, self) =>
+                index === self.findIndex((p) => p.codigo === professor.codigo)
         );
 
         return uniqueProfessores;
@@ -3796,7 +3806,9 @@ export default function Horarios() {
                                                         tipo: "temporario",
                                                         eventoId: event.id,
                                                         uniqueKey: `temp-${event.id}`,
-                                                        permitirConflito: event.permitirConflito || false,
+                                                        permitirConflito:
+                                                            event.permitirConflito ||
+                                                            false,
                                                     });
                                                 }
                                             }
@@ -4282,7 +4294,9 @@ export default function Horarios() {
                 // Se há múltiplos professores para o mesmo horário
                 if (grupo.length > 1) {
                     // Remover duplicatas de código_docente
-                    const uniqueProfessores = [...new Set(grupo.map((h) => h.codigo_docente))];
+                    const uniqueProfessores = [
+                        ...new Set(grupo.map((h) => h.codigo_docente)),
+                    ];
                     event.professoresIds = uniqueProfessores;
                     event.professorId = grupo[0].codigo_docente; // Compatibilidade
                 } else {
@@ -5241,7 +5255,9 @@ export default function Horarios() {
                         eventExists = true;
                         existingEventKey = key;
                         // Capturar disciplina original
-                        const originalEvent = eventArray.find(event => event.id === eventData.id);
+                        const originalEvent = eventArray.find(
+                            (event) => event.id === eventData.id
+                        );
                         if (originalEvent) {
                             originalDisciplinaId = originalEvent.disciplinaId;
                         }
@@ -5255,8 +5271,6 @@ export default function Horarios() {
                     )
                         ? newEvents[selectedPhase][existingEventKey]
                         : [newEvents[selectedPhase][existingEventKey]];
-
-
 
                     const updatedEvents = eventArray.map((event) => {
                         if (event.id === eventData.id) {
@@ -5277,7 +5291,8 @@ export default function Horarios() {
                                         eventData.professoresIds[0]) ||
                                     "",
                                 comentario: eventData.comentario || "",
-                                permitirConflito: eventData.permitirConflito || false,
+                                permitirConflito:
+                                    eventData.permitirConflito || false,
                                 startTime:
                                     eventData.startTime || event.startTime,
                                 duration: eventData.duration || event.duration,
@@ -5309,7 +5324,8 @@ export default function Horarios() {
                                     eventData.hora_inicio,
                                 duracao:
                                     eventData.duration || eventData.duracao,
-                                permitirConflito: eventData.permitirConflito || false,
+                                permitirConflito:
+                                    eventData.permitirConflito || false,
                             };
 
                             return updatedEvent;
@@ -5394,7 +5410,10 @@ export default function Horarios() {
 
                     // Sincronizar disciplina e professores em eventos relacionados da mesma oferta
                     // Usar disciplina original se evento existia (para sincronização), senão usar a atual
-                    const disciplinaParaSincronizar = (eventExists && originalDisciplinaId) ? originalDisciplinaId : eventData.disciplinaId;
+                    const disciplinaParaSincronizar =
+                        eventExists && originalDisciplinaId
+                            ? originalDisciplinaId
+                            : eventData.disciplinaId;
                     updateRelatedEvents(
                         newEvents,
                         selectedPhase,
@@ -5428,11 +5447,16 @@ export default function Horarios() {
         updatedEventData,
         protectedEventId = null
     ) => {
-        if (!events[phaseNumber] || !originalDisciplinaId || !updatedEventData) return;
+        if (!events[phaseNumber] || !originalDisciplinaId || !updatedEventData)
+            return;
 
         // Encontrar todos os eventos da disciplina original na mesma fase
-        for (const [eventKey, eventArray] of Object.entries(events[phaseNumber])) {
-            const eventsInSlot = Array.isArray(eventArray) ? eventArray : [eventArray];
+        for (const [eventKey, eventArray] of Object.entries(
+            events[phaseNumber]
+        )) {
+            const eventsInSlot = Array.isArray(eventArray)
+                ? eventArray
+                : [eventArray];
 
             const updatedEvents = eventsInSlot.map((event) => {
                 // Proteger o evento que acabou de ser atualizado
@@ -5450,9 +5474,19 @@ export default function Horarios() {
                         id_ccr: updatedEventData.disciplinaId,
 
                         // Sincronizar professores
-                        professoresIds: updatedEventData.professoresIds || [updatedEventData.professorId].filter(Boolean),
-                        professorId: updatedEventData.professorId || (updatedEventData.professoresIds && updatedEventData.professoresIds[0]) || "",
-                        codigo_docente: (updatedEventData.professoresIds && updatedEventData.professoresIds[0]) || updatedEventData.professorId || event.codigo_docente,
+                        professoresIds:
+                            updatedEventData.professoresIds ||
+                            [updatedEventData.professorId].filter(Boolean),
+                        professorId:
+                            updatedEventData.professorId ||
+                            (updatedEventData.professoresIds &&
+                                updatedEventData.professoresIds[0]) ||
+                            "",
+                        codigo_docente:
+                            (updatedEventData.professoresIds &&
+                                updatedEventData.professoresIds[0]) ||
+                            updatedEventData.professorId ||
+                            event.codigo_docente,
                     };
                 }
                 return event;
@@ -5602,165 +5636,242 @@ export default function Horarios() {
             <Box
                 sx={{
                     display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
+                    flexDirection: { xs: "column", lg: "row" },
+                    justifyContent: { xs: "center", lg: "space-between" },
+                    alignItems: { xs: "center", lg: "center" },
+                    gap: { xs: 3, lg: 0 },
                     mb: 4,
                 }}
             >
-                <Box>
-                    <Typography variant="h4">Grade de Horários</Typography>
-                    <Typography variant="caption" color="textSecondary">
+                {/* Seção do título - sempre no topo em mobile */}
+                <Box
+                    sx={{
+                        textAlign: { xs: "center", lg: "left" },
+                        order: { xs: 1, lg: 1 },
+                    }}
+                >
+                    <Typography
+                        variant="h4"
+                        sx={{
+                            fontSize: {
+                                xs: "1.75rem",
+                                sm: "2rem",
+                                lg: "2.125rem",
+                            },
+                        }}
+                    >
+                        Grade de Horários
+                    </Typography>
+                    <Typography
+                        variant="caption"
+                        color="textSecondary"
+                        sx={{
+                            fontSize: { xs: "0.7rem", sm: "0.75rem" },
+                            display: "block",
+                        }}
+                    >
                         Usuário: {getCurrentUserId()} • Mostrando apenas cursos
                         vinculados
                     </Typography>
                 </Box>
 
-                <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
-                    <Button
-                        variant="outlined"
-                        onClick={loadHorariosFromDatabase}
-                        disabled={loadingHorarios}
-                        sx={{ minWidth: "140px" }}
-                    >
-                        {loadingHorarios ? "Carregando..." : "Recarregar"}
-                    </Button>
-
-                    <Badge
-                        badgeContent={conflitosHorarios.length}
-                        color="error"
+                {/* Seção dos controles - empilha em mobile, linha em desktop */}
+                <Box
+                    sx={{
+                        display: "flex",
+                        flexDirection: { xs: "column", md: "row" },
+                        alignItems: "center",
+                        gap: { xs: 2, md: 2 },
+                        width: { xs: "100%", md: "auto" },
+                        order: { xs: 2, lg: 2 },
+                    }}
+                >
+                    {/* Primeira linha de botões em mobile, inline em desktop */}
+                    <Box
+                        sx={{
+                            display: "flex",
+                            flexDirection: { xs: "column", sm: "row" },
+                            alignItems: "center",
+                            gap: 2,
+                            width: { xs: "100%", sm: "auto" },
+                        }}
                     >
                         <Button
-                            variant={
-                                conflitosHorarios.length > 0
-                                    ? "contained"
-                                    : "outlined"
-                            }
-                            color={
-                                conflitosHorarios.length > 0
-                                    ? "warning"
-                                    : "primary"
-                            }
-                            onClick={() => setShowConflitos(true)}
-                            startIcon={<WarningIcon />}
-                            sx={{ minWidth: "140px" }}
+                            variant="outlined"
+                            onClick={loadHorariosFromDatabase}
+                            disabled={loadingHorarios}
+                            sx={{
+                                minWidth: { xs: "200px", sm: "140px" },
+                                width: { xs: "100%", sm: "auto" },
+                            }}
                         >
-                            {conflitosHorarios.length > 0
-                                ? "Ver Conflitos"
-                                : "Sem Conflitos"}
+                            {loadingHorarios ? "Carregando..." : "Recarregar"}
                         </Button>
-                    </Badge>
 
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={saveAllHorariosToDatabase}
-                        disabled={savingHorarios || !hasPendingChanges()}
-                        startIcon={
-                            savingHorarios ? (
-                                <CircularProgress size={20} />
-                            ) : (
-                                <SaveIcon />
-                            )
-                        }
-                        sx={{ minWidth: "180px" }}
+                        <Badge
+                            badgeContent={conflitosHorarios.length}
+                            color="error"
+                        >
+                            <Button
+                                variant={
+                                    conflitosHorarios.length > 0
+                                        ? "contained"
+                                        : "outlined"
+                                }
+                                color={
+                                    conflitosHorarios.length > 0
+                                        ? "warning"
+                                        : "primary"
+                                }
+                                onClick={() => setShowConflitos(true)}
+                                startIcon={<WarningIcon />}
+                                sx={{
+                                    minWidth: { xs: "200px", sm: "140px" },
+                                    width: { xs: "100%", sm: "auto" },
+                                }}
+                            >
+                                {conflitosHorarios.length > 0
+                                    ? "Ver Conflitos"
+                                    : "Sem Conflitos"}
+                            </Button>
+                        </Badge>
+
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={saveAllHorariosToDatabase}
+                            disabled={savingHorarios || !hasPendingChanges()}
+                            startIcon={
+                                savingHorarios ? (
+                                    <CircularProgress size={20} />
+                                ) : (
+                                    <SaveIcon />
+                                )
+                            }
+                            sx={{
+                                minWidth: { xs: "200px", sm: "180px" },
+                                width: { xs: "100%", sm: "auto" },
+                            }}
+                        >
+                            {(() => {
+                                if (savingHorarios) {
+                                    return "Salvando...";
+                                }
+
+                                const changes = getChangesCount();
+                                if (changes.total > 0) {
+                                    return `Sincronizar Mudanças (${changes.total})`;
+                                }
+
+                                return "Nenhuma Mudança";
+                            })()}
+                        </Button>
+                    </Box>
+
+                    {/* Segunda linha de seletores em mobile, inline em desktop */}
+                    <Box
+                        sx={{
+                            display: "flex",
+                            flexDirection: { xs: "column", sm: "row" },
+                            alignItems: "center",
+                            gap: 2,
+                            width: { xs: "100%", sm: "auto" },
+                        }}
                     >
-                        {(() => {
-                            if (savingHorarios) {
-                                return "Salvando...";
-                            }
-
-                            const changes = getChangesCount();
-                            if (changes.total > 0) {
-                                return `Sincronizar Mudanças (${changes.total})`;
-                            }
-
-                            return "Nenhuma Mudança";
-                        })()}
-                    </Button>
-
-                    <FormControl sx={{ minWidth: 180 }}>
-                        <InputLabel>Curso</InputLabel>
-                        <Select
-                            value={selectedCurso ? selectedCurso.id : ""}
-                            onChange={(e) => {
-                                const curso = cursos.find(
-                                    (c) => c.id === e.target.value
-                                );
-                                setSelectedCurso(curso);
+                        <FormControl
+                            sx={{
+                                minWidth: { xs: "100%", sm: 180 },
+                                width: { xs: "100%", sm: "auto" },
                             }}
-                            label="Curso"
-                            disabled={loadingCursos || cursos.length === 0}
-                            startAdornment={
-                                loadingCursos && (
-                                    <CircularProgress
-                                        size={16}
-                                        sx={{ mr: 1 }}
-                                    />
-                                )
-                            }
                         >
-                            {cursos.map((curso) => (
-                                <MenuItem key={curso.id} value={curso.id}>
-                                    {curso.nome} ({curso.codigo})
-                                </MenuItem>
-                            ))}
-                            {cursos.length === 0 && !loadingCursos && (
-                                <MenuItem disabled>
-                                    Nenhum curso vinculado ao usuário
-                                </MenuItem>
-                            )}
-                        </Select>
-                    </FormControl>
-
-                    <FormControl sx={{ minWidth: 200 }}>
-                        <InputLabel>Ano/Semestre</InputLabel>
-                        <Select
-                            value={
-                                anosSemestres.length > 0
-                                    ? `${selectedAnoSemestre.ano}-${selectedAnoSemestre.semestre}`
-                                    : ""
-                            }
-                            onChange={(e) => {
-                                const [ano, semestre] =
-                                    e.target.value.split("-");
-                                setSelectedAnoSemestre({
-                                    ano: parseInt(ano),
-                                    semestre: parseInt(semestre),
-                                });
-                            }}
-                            label="Ano/Semestre"
-                            disabled={
-                                loadingAnosSemestres ||
-                                anosSemestres.length === 0 ||
-                                loadingHorarios ||
-                                !selectedCurso
-                            }
-                            startAdornment={
-                                loadingHorarios && (
-                                    <CircularProgress
-                                        size={16}
-                                        sx={{ mr: 1 }}
-                                    />
-                                )
-                            }
-                        >
-                            {anosSemestres.map((anoSemestre) => (
-                                <MenuItem
-                                    key={`${anoSemestre.ano}-${anoSemestre.semestre}`}
-                                    value={`${anoSemestre.ano}-${anoSemestre.semestre}`}
-                                >
-                                    {anoSemestre.ano}/{anoSemestre.semestre}º
-                                    Semestre
-                                </MenuItem>
-                            ))}
-                            {anosSemestres.length === 0 &&
-                                !loadingAnosSemestres && (
+                            <InputLabel>Curso</InputLabel>
+                            <Select
+                                value={selectedCurso ? selectedCurso.id : ""}
+                                onChange={(e) => {
+                                    const curso = cursos.find(
+                                        (c) => c.id === e.target.value
+                                    );
+                                    setSelectedCurso(curso);
+                                }}
+                                label="Curso"
+                                disabled={loadingCursos || cursos.length === 0}
+                                startAdornment={
+                                    loadingCursos && (
+                                        <CircularProgress
+                                            size={16}
+                                            sx={{ mr: 1 }}
+                                        />
+                                    )
+                                }
+                            >
+                                {cursos.map((curso) => (
+                                    <MenuItem key={curso.id} value={curso.id}>
+                                        {curso.nome} ({curso.codigo})
+                                    </MenuItem>
+                                ))}
+                                {cursos.length === 0 && !loadingCursos && (
                                     <MenuItem disabled>
-                                        Nenhum ano/semestre cadastrado
+                                        Nenhum curso vinculado ao usuário
                                     </MenuItem>
                                 )}
-                        </Select>
-                    </FormControl>
+                            </Select>
+                        </FormControl>
+
+                        <FormControl
+                            sx={{
+                                minWidth: { xs: "100%", sm: 200 },
+                                width: { xs: "100%", sm: "auto" },
+                            }}
+                        >
+                            <InputLabel>Ano/Semestre</InputLabel>
+                            <Select
+                                value={
+                                    anosSemestres.length > 0
+                                        ? `${selectedAnoSemestre.ano}-${selectedAnoSemestre.semestre}`
+                                        : ""
+                                }
+                                onChange={(e) => {
+                                    const [ano, semestre] =
+                                        e.target.value.split("-");
+                                    setSelectedAnoSemestre({
+                                        ano: parseInt(ano),
+                                        semestre: parseInt(semestre),
+                                    });
+                                }}
+                                label="Ano/Semestre"
+                                disabled={
+                                    loadingAnosSemestres ||
+                                    anosSemestres.length === 0 ||
+                                    loadingHorarios ||
+                                    !selectedCurso
+                                }
+                                startAdornment={
+                                    loadingHorarios && (
+                                        <CircularProgress
+                                            size={16}
+                                            sx={{ mr: 1 }}
+                                        />
+                                    )
+                                }
+                            >
+                                {anosSemestres.map((anoSemestre) => (
+                                    <MenuItem
+                                        key={`${anoSemestre.ano}-${anoSemestre.semestre}`}
+                                        value={`${anoSemestre.ano}-${anoSemestre.semestre}`}
+                                    >
+                                        {anoSemestre.ano}/{anoSemestre.semestre}
+                                        º Semestre
+                                    </MenuItem>
+                                ))}
+                                {anosSemestres.length === 0 &&
+                                    !loadingAnosSemestres && (
+                                        <MenuItem disabled>
+                                            Nenhum ano/semestre cadastrado
+                                        </MenuItem>
+                                    )}
+                            </Select>
+                        </FormControl>
+                    </Box>
                 </Box>
             </Box>
 
@@ -6021,6 +6132,111 @@ export default function Horarios() {
                         }
                         return null;
                     })()}
+
+                    {/* Campo de datas do ano/semestre selecionado */}
+                    {selectedCurso &&
+                        !loadingAnosSemestres &&
+                        anosSemestres.length > 0 &&
+                        (() => {
+                            const anoSemestreAtual = anosSemestres.find(
+                                (as) =>
+                                    as.ano === selectedAnoSemestre.ano &&
+                                    as.semestre === selectedAnoSemestre.semestre
+                            );
+
+                            if (
+                                anoSemestreAtual &&
+                                (anoSemestreAtual.inicio ||
+                                    anoSemestreAtual.fim)
+                            ) {
+                                const formatarData = (data) => {
+                                    if (!data) return "Não definida";
+                                    try {
+                                        return new Date(
+                                            data
+                                        ).toLocaleDateString("pt-BR", {
+                                            day: "2-digit",
+                                            month: "2-digit",
+                                            year: "numeric",
+                                        });
+                                    } catch (error) {
+                                        return "Data inválida";
+                                    }
+                                };
+
+                                return (
+                                    <Box
+                                        sx={{
+                                            mb: 3,
+                                            p: 2,
+                                            bgcolor: "background.paper",
+                                            borderRadius: 1,
+                                            border: "1px solid",
+                                            borderColor: "divider",
+                                        }}
+                                    >
+                                        <Typography
+                                            variant="h6"
+                                            sx={{ mb: 1, fontWeight: "medium" }}
+                                        >
+                                            Período Letivo:{" "}
+                                            {selectedAnoSemestre.ano}/
+                                            {selectedAnoSemestre.semestre}º
+                                            Semestre
+                                        </Typography>
+                                        <Box
+                                            sx={{
+                                                display: "flex",
+                                                gap: 4,
+                                                flexWrap: "wrap",
+                                            }}
+                                        >
+                                            <Box
+                                                sx={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: 1,
+                                                }}
+                                            >
+                                                <Typography
+                                                    variant="body2"
+                                                    color="text.secondary"
+                                                    fontWeight="medium"
+                                                >
+                                                    Início:
+                                                </Typography>
+                                                <Typography variant="body2">
+                                                    {formatarData(
+                                                        anoSemestreAtual.inicio
+                                                    )}
+                                                </Typography>
+                                            </Box>
+                                            <Box
+                                                sx={{
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: 1,
+                                                }}
+                                            >
+                                                <Typography
+                                                    variant="body2"
+                                                    color="text.secondary"
+                                                    fontWeight="medium"
+                                                >
+                                                    Fim:
+                                                </Typography>
+                                                <Typography variant="body2">
+                                                    {formatarData(
+                                                        anoSemestreAtual.fim
+                                                    )}
+                                                </Typography>
+                                            </Box>
+                                        </Box>
+                                    </Box>
+                                );
+                            }
+                            return null;
+                        })()}
 
                     {selectedCurso &&
                         getFasesDisponiveis().map((phaseNumber) => {
