@@ -30,6 +30,7 @@ import {
     Divider,
     Badge,
     Snackbar,
+    useTheme,
 } from "@mui/material";
 import {
     Close as CloseIcon,
@@ -2533,6 +2534,7 @@ const TimeSlot = ({
     obterConflitosDoEvento,
     sx, // Propriedade de estilo adicional
 }) => {
+    const theme = useTheme();
     const eventKey = `${dayId}-${time}`;
     const eventData = events[eventKey];
     const eventsArray = eventData
@@ -2567,16 +2569,18 @@ const TimeSlot = ({
         <Box
             sx={{
                 height: "30px",
-                border: "1px solid #e0e0e0",
+                border: `1px solid ${theme.palette.divider}`,
                 position: "relative",
-                backgroundColor: isDragOver ? "#e3f2fd" : "transparent",
+                backgroundColor: isDragOver ?
+                    (theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.16)' : '#e3f2fd') :
+                    "transparent",
                 "&:hover": {
                     backgroundColor: isDragOver
-                        ? "#e3f2fd"
+                        ? (theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.16)' : '#e3f2fd')
                         : timeSlotsNoturno.includes(time) &&
                           !isValidStartTimeNoturno(time)
-                        ? "#f0f0f0"
-                        : "#f5f5f5",
+                        ? (theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#f0f0f0')
+                        : (theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : '#f5f5f5'),
                 },
                 transition: "background-color 0.2s ease",
                 display: "flex",
@@ -2647,6 +2651,7 @@ const PhaseGrid = ({
     hasTurnoEspecifico, // Para verificar se fase tem turno específico
     getTurnosOferta, // Função para obter turnos da oferta
 }) => {
+    const theme = useTheme();
     // Verificar se a fase tem múltiplos turnos
     const temMultiplosTurnos = hasMultiplosTurnos(phaseNumber);
 
@@ -2773,7 +2778,7 @@ const PhaseGrid = ({
                 className="time-grid"
                 sx={{
                     display: "flex",
-                    border: "1px solid #ddd",
+                    border: `1px solid ${theme.palette.divider}`,
                     borderRadius: 1,
                     overflow: "hidden",
                 }}
@@ -2782,18 +2787,22 @@ const PhaseGrid = ({
                 <Box
                     sx={{
                         width: "80px",
-                        borderRight: "1px solid #ddd",
-                        backgroundColor: "#fafafa",
+                        borderRight: `1px solid ${theme.palette.divider}`,
+                        backgroundColor: theme.palette.mode === 'dark'
+                            ? 'rgba(255, 255, 255, 0.05)'
+                            : '#fafafa',
                     }}
                 >
                     <Box
                         sx={{
                             height: "40px",
-                            borderBottom: "1px solid #ddd",
+                            borderBottom: `1px solid ${theme.palette.divider}`,
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            backgroundColor: "#f0f0f0",
+                            backgroundColor: theme.palette.mode === 'dark'
+                                ? 'rgba(255, 255, 255, 0.08)'
+                                : '#f0f0f0',
                         }}
                     >
                         <Typography variant="caption" fontWeight="bold">
@@ -2813,19 +2822,19 @@ const PhaseGrid = ({
                                 key={time}
                                 sx={{
                                     height: "30px",
-                                    borderBottom: "1px solid #e0e0e0",
+                                    borderBottom: `1px solid ${theme.palette.divider}`,
                                     borderTop:
                                         isFirstVespertino || isFirstNoturno
-                                            ? "2px dashed #bbb"
+                                            ? `2px dashed ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : '#bbb'}`
                                             : "none",
                                     display: "flex",
                                     alignItems: "center",
                                     justifyContent: "center",
                                     fontSize: "0.75rem",
-                                    color: "#666",
+                                    color: theme.palette.text.secondary,
                                     backgroundColor:
                                         isFirstVespertino || isFirstNoturno
-                                            ? "#f5f5f5"
+                                            ? (theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f5f5f5')
                                             : "transparent",
                                 }}
                             >
@@ -2839,16 +2848,18 @@ const PhaseGrid = ({
                 {daysOfWeek.map((day) => (
                     <Box
                         key={day.id}
-                        sx={{ flex: 1, borderRight: "1px solid #ddd" }}
+                        sx={{ flex: 1, borderRight: `1px solid ${theme.palette.divider}` }}
                     >
                         <Box
                             sx={{
                                 height: "40px",
-                                borderBottom: "1px solid #ddd",
+                                borderBottom: `1px solid ${theme.palette.divider}`,
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                backgroundColor: "#f5f5f5",
+                                backgroundColor: theme.palette.mode === 'dark'
+                                    ? 'rgba(255, 255, 255, 0.05)'
+                                    : '#f5f5f5',
                             }}
                         >
                             <Typography variant="subtitle2" fontWeight="bold">
@@ -2906,8 +2917,8 @@ const PhaseGrid = ({
                                     sx={
                                         isFirstVespertino || isFirstNoturno
                                             ? {
-                                                  borderTop: "2px dashed #bbb",
-                                                  backgroundColor: "#f5f5f5",
+                                                  borderTop: `2px dashed ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : '#bbb'}`,
+                                                  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f5f5f5',
                                               }
                                             : {}
                                     }
