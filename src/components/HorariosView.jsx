@@ -11,6 +11,7 @@ import {
     MenuItem,
     Chip,
     Tooltip,
+    useTheme,
 } from "@mui/material";
 import axios from "axios";
 import { customColors } from "./CustomThemeProvider";
@@ -260,6 +261,7 @@ const getEndTime = (startTime, duration, timeSlots) => {
 
 // Componente para exibir evento (apenas visualização)
 const CalendarEventView = ({ event, timeSlots, professores, disciplinas, isMultiple, multipleIndex, multipleTotal }) => {
+    const theme = useTheme();
     // Buscar nomes dos professores
     const getProfessoresInfo = () => {
         if (event.professoresIds && Array.isArray(event.professoresIds)) {
@@ -316,7 +318,7 @@ const CalendarEventView = ({ event, timeSlots, professores, disciplinas, isMulti
         <Paper
             sx={{
                 ...calculateMultipleEventStyles(),
-                backgroundColor: event.disciplinaId ? event.color : "#9e9e9e", // Cinza se não tem disciplina
+                backgroundColor: event.disciplinaId ? event.color : theme.palette.grey[500], // Cinza do tema se não tem disciplina
                 color: "white",
                 padding: isMultiple ? "2px 4px" : 1, // Padding mais compacto para múltiplos
                 cursor: "default", // Cursor padrão para visualização
@@ -324,12 +326,12 @@ const CalendarEventView = ({ event, timeSlots, professores, disciplinas, isMulti
                 minHeight: "30px",
                 overflow: "hidden",
                 zIndex: 1,
-                boxShadow: "0 1px 3px rgba(0,0,0,0.2)",
+                boxShadow: theme.shadows[2],
                 transition: "all 0.2s ease",
                 border: !event.disciplinaId ? "2px dashed #fff" : "none", // Borda tracejada se incompleto
                 opacity: !event.disciplinaId ? 0.7 : 1, // Reduzir opacidade se incompleto
                 "&:hover": {
-                    boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+                    boxShadow: theme.shadows[4],
                 },
             }}
         >
@@ -529,6 +531,7 @@ const CalendarEventView = ({ event, timeSlots, professores, disciplinas, isMulti
 
 // Componente para slot de tempo (apenas visualização)
 const TimeSlotView = ({ time, dayId, events, timeSlots, professores, disciplinas, sx }) => {
+    const theme = useTheme();
     const eventKey = `${dayId}-${time}`;
     const eventData = events[eventKey];
     const eventsArray = eventData
@@ -541,11 +544,16 @@ const TimeSlotView = ({ time, dayId, events, timeSlots, professores, disciplinas
         <Box
             sx={{
                 height: "30px",
-                border: "1px solid #e0e0e0",
+                border: `1px solid ${theme.palette.divider}`,
                 position: "relative",
                 backgroundColor: "transparent",
+                "&:hover": {
+                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : '#f5f5f5',
+                },
+                transition: "background-color 0.2s ease",
                 display: "flex",
                 gap: eventsArray.length > 1 ? "1px" : "0",
+                cursor: "default",
                 ...(sx || {}),
             }}
         >
@@ -567,6 +575,7 @@ const TimeSlotView = ({ time, dayId, events, timeSlots, professores, disciplinas
 
 // Componente para grid de uma fase (apenas visualização)
 const PhaseGridView = ({ phaseNumber, events, professores, disciplinas, getTurnosOferta, hasMultiplosTurnos }) => {
+    const theme = useTheme();
     const temMultiplosTurnos = hasMultiplosTurnos(phaseNumber);
 
     let timeSlots;
@@ -682,7 +691,7 @@ const PhaseGridView = ({ phaseNumber, events, professores, disciplinas, getTurno
                 className="time-grid"
                 sx={{
                     display: "flex",
-                    border: "1px solid #ddd",
+                    border: `1px solid ${theme.palette.divider}`,
                     borderRadius: 1,
                     overflow: "hidden",
                 }}
@@ -691,18 +700,22 @@ const PhaseGridView = ({ phaseNumber, events, professores, disciplinas, getTurno
                 <Box
                     sx={{
                         width: "80px",
-                        borderRight: "1px solid #ddd",
-                        backgroundColor: "#fafafa",
+                        borderRight: `1px solid ${theme.palette.divider}`,
+                        backgroundColor: theme.palette.mode === 'dark'
+                            ? 'rgba(255, 255, 255, 0.05)'
+                            : '#fafafa',
                     }}
                 >
                     <Box
                         sx={{
                             height: "40px",
-                            borderBottom: "1px solid #ddd",
+                            borderBottom: `1px solid ${theme.palette.divider}`,
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            backgroundColor: "#f0f0f0",
+                            backgroundColor: theme.palette.mode === 'dark'
+                                ? 'rgba(255, 255, 255, 0.08)'
+                                : '#f0f0f0',
                         }}
                     >
                         <Typography variant="caption" fontWeight="bold">
@@ -719,14 +732,20 @@ const PhaseGridView = ({ phaseNumber, events, professores, disciplinas, getTurno
                                 key={time}
                                 sx={{
                                     height: "30px",
-                                    borderBottom: "1px solid #e0e0e0",
-                                    borderTop: (isFirstVespertino || isFirstNoturno) ? "2px dashed #bbb" : "none",
+                                    borderBottom: `1px solid ${theme.palette.divider}`,
+                                    borderTop:
+                                        isFirstVespertino || isFirstNoturno
+                                            ? `2px dashed ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : '#bbb'}`
+                                            : "none",
                                     display: "flex",
                                     alignItems: "center",
                                     justifyContent: "center",
                                     fontSize: "0.75rem",
-                                    color: "#666",
-                                    backgroundColor: (isFirstVespertino || isFirstNoturno) ? "#f5f5f5" : "transparent",
+                                    color: theme.palette.text.secondary,
+                                    backgroundColor:
+                                        isFirstVespertino || isFirstNoturno
+                                            ? (theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f5f5f5')
+                                            : "transparent",
                                 }}
                             >
                                 {formatTimeForDisplay(time)}
@@ -739,16 +758,18 @@ const PhaseGridView = ({ phaseNumber, events, professores, disciplinas, getTurno
                 {daysOfWeek.map((day) => (
                     <Box
                         key={day.id}
-                        sx={{ flex: 1, borderRight: "1px solid #ddd" }}
+                        sx={{ flex: 1, borderRight: `1px solid ${theme.palette.divider}` }}
                     >
                         <Box
                             sx={{
                                 height: "40px",
-                                borderBottom: "1px solid #ddd",
+                                borderBottom: `1px solid ${theme.palette.divider}`,
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                backgroundColor: "#f5f5f5",
+                                backgroundColor: theme.palette.mode === 'dark'
+                                    ? 'rgba(255, 255, 255, 0.05)'
+                                    : '#f5f5f5',
                             }}
                         >
                             <Typography variant="subtitle2" fontWeight="bold">
@@ -770,7 +791,14 @@ const PhaseGridView = ({ phaseNumber, events, professores, disciplinas, getTurno
                                     timeSlots={timeSlots}
                                     professores={professores}
                                     disciplinas={disciplinas}
-                                    sx={(isFirstVespertino || isFirstNoturno) ? { borderTop: "2px dashed #bbb", backgroundColor: "#f5f5f5" } : {}}
+                                    sx={
+                                        isFirstVespertino || isFirstNoturno
+                                            ? {
+                                                  borderTop: `2px dashed ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : '#bbb'}`,
+                                                  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f5f5f5',
+                                              }
+                                            : {}
+                                    }
                                 />
                             );
                         })}
@@ -1280,3 +1308,7 @@ export default function HorariosView() {
         </Box>
     );
 }
+
+// Este componente foi adaptado do Horarios.jsx para ter a mesma visualização de horários,
+// mas sem as funcionalidades de edição, salvamento e regras de negócio.
+// É usado apenas para consulta e visualização dos horários cadastrados.
