@@ -5477,7 +5477,7 @@ export default function Horarios() {
                         eventData.id // Passar o ID do evento recém-atualizado para protegê-lo
                     );
 
-                    // Sincronizar disciplina e professores em eventos relacionados da mesma oferta
+                    // Sincronizar disciplina, professores e comentários em eventos relacionados da mesma oferta
                     // Usar disciplina original se evento existia (para sincronização), senão usar a atual
                     const disciplinaParaSincronizar =
                         eventExists && originalDisciplinaId
@@ -5508,7 +5508,7 @@ export default function Horarios() {
         ]
     );
 
-    // Função para sincronizar disciplina e professores em eventos relacionados da mesma oferta
+    // Função para sincronizar disciplina, professores e comentários em eventos relacionados da mesma oferta
     const updateRelatedEvents = (
         events,
         phaseNumber,
@@ -5556,6 +5556,9 @@ export default function Horarios() {
                                 updatedEventData.professoresIds[0]) ||
                             updatedEventData.professorId ||
                             event.codigo_docente,
+
+                        // Sincronizar comentários
+                        comentario: updatedEventData.comentario || "",
                     };
                 }
                 return event;
