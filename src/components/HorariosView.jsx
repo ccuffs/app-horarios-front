@@ -138,37 +138,66 @@ const numberToDay = {
     6: "saturday",
 };
 
-// Função para buscar cor de disciplina no primeiro período cronológico (prioridade: matutino primeiro, depois vespertino primeiro, depois noturno primeiro)
+// Função para buscar cor de disciplina baseada no primeiro dia da semana onde aparece
 const getDisciplinaColorFromFirstPeriod = (disciplinaId, phaseNumber, events) => {
     if (!disciplinaId || !events[phaseNumber]) return null;
 
-    // Buscar nos primeiros turnos usando as constantes globais
+    // Buscar a cor do primeiro período desta disciplina em QUALQUER dia da semana
+    // Isso garante que eventos no segundo período mantenham a cor consistente
 
-    // PRIORIDADE 1: Buscar no primeiro turno matutino (cronologicamente primeiro)
-    for (const [, eventArray] of Object.entries(events[phaseNumber])) {
-        const eventsInSlot = Array.isArray(eventArray) ? eventArray : [eventArray];
-        for (const event of eventsInSlot) {
-            if (event.disciplinaId === disciplinaId && firstMatutinoSlots.includes(event.startTime)) {
-                return event.color;
+    const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+    const allFirstSlots = [...firstMatutinoSlots, ...firstVespertinoSlots, ...firstNoturnoSlots];
+
+    // PRIORIDADE 1: Buscar nos primeiros períodos ordenados por dia da semana
+    // (segunda tem prioridade sobre terça, etc.)
+    for (const dayId of dayOrder) {
+        for (const [, eventArray] of Object.entries(events[phaseNumber])) {
+            const eventsInSlot = Array.isArray(eventArray)
+                ? eventArray
+                : [eventArray];
+            for (const event of eventsInSlot) {
+                if (
+                    event.disciplinaId === disciplinaId &&
+                    event.dayId === dayId &&
+                    allFirstSlots.includes(event.startTime)
+                ) {
+                    // Retornar cor baseada no dia da semana do primeiro evento encontrado
+                    return getColorByDay(dayId);
+                }
             }
         }
     }
 
-    // PRIORIDADE 2: Buscar no primeiro turno vespertino (cronologicamente segundo)
-    for (const [, eventArray] of Object.entries(events[phaseNumber])) {
-        const eventsInSlot = Array.isArray(eventArray) ? eventArray : [eventArray];
-        for (const event of eventsInSlot) {
-            if (event.disciplinaId === disciplinaId && firstVespertinoSlots.includes(event.startTime)) {
-                return event.color;
+    // PRIORIDADE 2: Se não encontrou nos primeiros períodos, buscar nos segundos períodos
+    // ordenados por dia da semana (segunda tem prioridade sobre terça, etc.)
+    const allSecondSlots = [...secondMatutinoSlots, ...secondVespertinoSlots, ...secondNoturnoSlots];
+
+    for (const dayId of dayOrder) {
+        for (const [, eventArray] of Object.entries(events[phaseNumber])) {
+            const eventsInSlot = Array.isArray(eventArray)
+                ? eventArray
+                : [eventArray];
+            for (const event of eventsInSlot) {
+                if (
+                    event.disciplinaId === disciplinaId &&
+                    event.dayId === dayId &&
+                    allSecondSlots.includes(event.startTime)
+                ) {
+                    // Retornar cor baseada no dia da semana do primeiro evento encontrado
+                    return getColorByDay(dayId);
+                }
             }
         }
     }
 
-    // PRIORIDADE 3: Buscar no primeiro turno noturno (cronologicamente terceiro)
+    // PRIORIDADE 3: Se não encontrou nem nos primeiros nem nos segundos períodos,
+    // buscar qualquer evento existente da mesma disciplina para manter consistência
     for (const [, eventArray] of Object.entries(events[phaseNumber])) {
-        const eventsInSlot = Array.isArray(eventArray) ? eventArray : [eventArray];
+        const eventsInSlot = Array.isArray(eventArray)
+            ? eventArray
+            : [eventArray];
         for (const event of eventsInSlot) {
-            if (event.disciplinaId === disciplinaId && firstNoturnoSlots.includes(event.startTime)) {
+            if (event.disciplinaId === disciplinaId && event.color) {
                 return event.color;
             }
         }
@@ -198,33 +227,20 @@ const fixEventColorsAfterLoading = (eventsFormatted) => {
                     eventsFormatted
                 );
 
-                // Aplicar lógica de cores usando constantes globais
+                // Aplicar lógica de cores dos turnos
 
-                if (event.startTime && firstMatutinoSlots.includes(event.startTime)) {
-                    // Primeiro turno matutino - usar cor do dia
-                    event.color = getColorByDay(event.dayId);
-                } else if (event.startTime && secondMatutinoSlots.includes(event.startTime)) {
-                    // Segundo turno matutino - seguir cor do primeiro período
+                const allFirstSlots = [...firstMatutinoSlots, ...firstVespertinoSlots, ...firstNoturnoSlots];
+                const allSecondSlots = [...secondMatutinoSlots, ...secondVespertinoSlots, ...secondNoturnoSlots];
+
+                if (event.startTime && allFirstSlots.includes(event.startTime)) {
+                    // Primeiro período - usar cor do primeiro dia da semana onde a disciplina aparece
                     if (firstPeriodColor) {
                         event.color = firstPeriodColor;
                     } else {
                         event.color = getColorByDay(event.dayId);
                     }
-                } else if (event.startTime && firstVespertinoSlots.includes(event.startTime)) {
-                    // Primeiro turno vespertino - usar cor do dia
-                    event.color = getColorByDay(event.dayId);
-                } else if (event.startTime && secondVespertinoSlots.includes(event.startTime)) {
-                    // Segundo turno vespertino - seguir cor do primeiro período
-                    if (firstPeriodColor) {
-                        event.color = firstPeriodColor;
-                    } else {
-                        event.color = getColorByDay(event.dayId);
-                    }
-                } else if (event.startTime && firstNoturnoSlots.includes(event.startTime)) {
-                    // Primeiro turno noturno - usar cor do dia
-                    event.color = getColorByDay(event.dayId);
-                } else if (event.startTime && secondNoturnoSlots.includes(event.startTime)) {
-                    // Segundo turno noturno - seguir cor do primeiro período
+                } else if (event.startTime && allSecondSlots.includes(event.startTime)) {
+                    // Segundo período - seguir cor do primeiro período
                     if (firstPeriodColor) {
                         event.color = firstPeriodColor;
                     } else {
