@@ -79,6 +79,14 @@ const timeSlotsNoturno = [
     "22:30:00",
 ];
 
+// Definições dos turnos para lógica de cores
+const firstMatutinoSlots = ["07:30:00", "08:00:00", "08:30:00", "09:00:00", "09:30:00"];
+const secondMatutinoSlots = ["10:00:00", "10:30:00", "11:00:00", "11:30:00"];
+const firstVespertinoSlots = ["13:30:00", "14:00:00", "14:30:00", "15:00:00", "15:30:00"];
+const secondVespertinoSlots = ["16:00:00", "16:30:00", "17:00:00", "17:30:00"];
+const firstNoturnoSlots = ["19:00:00", "19:30:00", "20:00:00", "20:30:00"];
+const secondNoturnoSlots = ["21:00:00", "21:30:00", "22:00:00", "22:30:00"];
+
 // Função utilitária para converter HH:MM:SS para HH:MM para exibição
 const formatTimeForDisplay = (timeString) => {
     if (!timeString || typeof timeString !== "string") return "";
@@ -281,7 +289,7 @@ const getDisciplinaProfessoresFromOtherPeriod = (
     if (!disciplinaId || !events[phaseNumber]) return [];
 
     // Buscar a disciplina no período da manhã vespertina (13:30-15:30)
-    const morningSlots = [
+    const startSlots = [
         "13:30:00",
         "14:00:00",
         "14:30:00",
@@ -297,7 +305,7 @@ const getDisciplinaProfessoresFromOtherPeriod = (
         for (const event of eventsInSlot) {
             if (
                 event.disciplinaId === disciplinaId &&
-                morningSlots.includes(event.startTime)
+                startSlots.includes(event.startTime)
             ) {
                 // Retornar array de professores
                 if (
@@ -4406,10 +4414,13 @@ export default function Horarios() {
 
     // Função para contar mudanças desde a última sincronização
     const getChangesCount = () => {
-        // Se ainda não carregou os dados originais, não há mudanças
-        if (!originalHorarios || originalHorarios.length === 0) {
+        // Se ainda não carregou os dados originais (null/undefined), não calcular mudanças
+        if (originalHorarios === null || originalHorarios === undefined) {
             return { added: 0, modified: 0, removed: 0, total: 0 };
         }
+
+        // Se originalHorarios é array vazio [], significa que carregou mas não tinha horários
+        // Neste caso, todos os eventos atuais são novos (added)
 
         // Converter eventos atuais para formato comparável
         const currentHorarios = [];
@@ -4747,32 +4758,55 @@ export default function Horarios() {
         }
     }, [conflitosHorarios]);
 
-    // Função para buscar cor de disciplina existente no período 13:30-15:30
-    const getDisciplinaColorFromMorningPeriod = (
+        // Função para buscar cor de disciplina no primeiro período cronológico (prioridade: matutino primeiro, depois vespertino primeiro, depois noturno primeiro)
+    const getDisciplinaColorFromFirstPeriod = (
         disciplinaId,
         phaseNumber,
         events
     ) => {
         if (!disciplinaId || !events[phaseNumber]) return null;
 
-        // Buscar a disciplina no período da manhã vespertina (13:30-15:30)
-        const morningSlots = [
-            "13:30:00",
-            "14:00:00",
-            "14:30:00",
-            "15:00:00",
-            "15:30:00",
-        ];
+                  // Definir primeiro turno de cada período
 
+        // PRIORIDADE 1: Buscar no primeiro turno matutino (cronologicamente primeiro)
         for (const [, eventArray] of Object.entries(events[phaseNumber])) {
-            // eventArray agora é um array de eventos
             const eventsInSlot = Array.isArray(eventArray)
                 ? eventArray
                 : [eventArray];
             for (const event of eventsInSlot) {
                 if (
                     event.disciplinaId === disciplinaId &&
-                    morningSlots.includes(event.startTime)
+                    firstMatutinoSlots.includes(event.startTime)
+                ) {
+                    return event.color;
+                }
+            }
+        }
+
+        // PRIORIDADE 2: Buscar no primeiro turno vespertino (cronologicamente segundo)
+        for (const [, eventArray] of Object.entries(events[phaseNumber])) {
+            const eventsInSlot = Array.isArray(eventArray)
+                ? eventArray
+                : [eventArray];
+            for (const event of eventsInSlot) {
+                if (
+                    event.disciplinaId === disciplinaId &&
+                    firstVespertinoSlots.includes(event.startTime)
+                ) {
+                    return event.color;
+                }
+            }
+        }
+
+        // PRIORIDADE 3: Buscar no primeiro turno noturno (cronologicamente terceiro)
+        for (const [, eventArray] of Object.entries(events[phaseNumber])) {
+            const eventsInSlot = Array.isArray(eventArray)
+                ? eventArray
+                : [eventArray];
+            for (const event of eventsInSlot) {
+                if (
+                    event.disciplinaId === disciplinaId &&
+                    firstNoturnoSlots.includes(event.startTime)
                 ) {
                     return event.color;
                 }
@@ -4796,36 +4830,47 @@ export default function Horarios() {
 
                 // Para cada evento no slot
                 eventsInSlot.forEach((event) => {
-                    if (
-                        event.startTime &&
-                        timeSlotsVespertino.includes(event.startTime)
-                    ) {
-                        const timeIndex = timeSlotsVespertino.indexOf(
-                            event.startTime
-                        );
+                    // Buscar cor do primeiro período cronológico para esta disciplina
+                    const firstPeriodColor = getDisciplinaColorFromFirstPeriod(
+                        event.disciplinaId,
+                        phase,
+                        eventsFormatted
+                    );
 
-                        // Se é período da tarde (16:00-18:00)
-                        if (timeIndex >= 5) {
-                            // Buscar cor da mesma disciplina no período da manhã
-                            const morningColor =
-                                getDisciplinaColorFromMorningPeriod(
-                                    event.disciplinaId,
-                                    phase,
-                                    eventsFormatted
-                                );
+                    // Aplicar lógica de cores dos turnos
 
-                            if (morningColor) {
-                                event.color = morningColor;
-                            } else {
-                                // Se não tem cor da manhã, usar cor padrão do dia
-                                event.color = getColorByDay(event.dayId);
-                            }
+                    if (event.startTime && firstMatutinoSlots.includes(event.startTime)) {
+                        // Primeiro turno matutino - usar cor do dia
+                        event.color = getColorByDay(event.dayId);
+                    } else if (event.startTime && secondMatutinoSlots.includes(event.startTime)) {
+                        // Segundo turno matutino - seguir cor do primeiro período
+                        if (firstPeriodColor) {
+                            event.color = firstPeriodColor;
                         } else {
-                            // Período da manhã - garantir que usa cor do dia
+                            event.color = getColorByDay(event.dayId);
+                        }
+                    } else if (event.startTime && firstVespertinoSlots.includes(event.startTime)) {
+                        // Primeiro turno vespertino - usar cor do dia
+                        event.color = getColorByDay(event.dayId);
+                    } else if (event.startTime && secondVespertinoSlots.includes(event.startTime)) {
+                        // Segundo turno vespertino - seguir cor do primeiro período
+                        if (firstPeriodColor) {
+                            event.color = firstPeriodColor;
+                        } else {
+                            event.color = getColorByDay(event.dayId);
+                        }
+                    } else if (event.startTime && firstNoturnoSlots.includes(event.startTime)) {
+                        // Primeiro turno noturno - usar cor do dia
+                        event.color = getColorByDay(event.dayId);
+                    } else if (event.startTime && secondNoturnoSlots.includes(event.startTime)) {
+                        // Segundo turno noturno - seguir cor do primeiro período
+                        if (firstPeriodColor) {
+                            event.color = firstPeriodColor;
+                        } else {
                             event.color = getColorByDay(event.dayId);
                         }
                     } else {
-                        // Período noturno - usar cor do dia
+                        // Outros horários - usar cor do dia
                         event.color = getColorByDay(event.dayId);
                     }
                 });
@@ -4835,25 +4880,41 @@ export default function Horarios() {
         return eventsFormatted;
     };
 
-    // Função modificada para obter cor baseada no dia e contexto
+        // Função modificada para obter cor baseada no dia e contexto
     const getEventColor = useCallback(
         (dayId, time, disciplinaId, phaseNumber, events) => {
-            const isVespertino = timeSlotsVespertino.includes(time);
+            // Aplicar lógica de cores baseada nos turnos
 
-            if (isVespertino) {
-                const timeIndex = timeSlotsVespertino.indexOf(time);
+            // Buscar cor do primeiro período cronológico para esta disciplina
+            const firstPeriodColor = getDisciplinaColorFromFirstPeriod(
+                disciplinaId,
+                phaseNumber,
+                events
+            );
 
-                // Se é período da tarde vespertina (16:00-18:00)
-                if (timeIndex >= 5) {
-                    // Buscar cor da mesma disciplina no período da manhã
-                    const existingColor = getDisciplinaColorFromMorningPeriod(
-                        disciplinaId,
-                        phaseNumber,
-                        events
-                    );
-                    if (existingColor) {
-                        return existingColor;
-                    }
+            if (firstMatutinoSlots.includes(time)) {
+                // Primeiro turno matutino - usar cor do dia
+                return getColorByDay(dayId);
+            } else if (secondMatutinoSlots.includes(time)) {
+                // Segundo turno matutino - seguir cor do primeiro período
+                if (firstPeriodColor) {
+                    return firstPeriodColor;
+                }
+            } else if (firstVespertinoSlots.includes(time)) {
+                // Primeiro turno vespertino - usar cor do dia
+                return getColorByDay(dayId);
+            } else if (secondVespertinoSlots.includes(time)) {
+                // Segundo turno vespertino - seguir cor do primeiro período
+                if (firstPeriodColor) {
+                    return firstPeriodColor;
+                }
+            } else if (firstNoturnoSlots.includes(time)) {
+                // Primeiro turno noturno - usar cor do dia
+                return getColorByDay(dayId);
+            } else if (secondNoturnoSlots.includes(time)) {
+                // Segundo turno noturno - seguir cor do primeiro período
+                if (firstPeriodColor) {
+                    return firstPeriodColor;
                 }
             }
 
@@ -5521,61 +5582,67 @@ export default function Horarios() {
     ) => {
         if (!events[phaseNumber] || !disciplinaId) return;
 
-        const morningSlots = [
-            "13:30:00",
-            "14:00:00",
-            "14:30:00",
-            "15:00:00",
-            "15:30:00",
-        ];
-        let morningColor = null;
+        // Buscar cor do primeiro período cronológico usando as constantes globais
 
-        // Encontrar cor da disciplina no período da manhã
+        // Buscar cor do primeiro período cronológico
+        let firstPeriodColor = null;
+
+        // PRIORIDADE 1: Buscar no primeiro turno matutino
         for (const [, eventArray] of Object.entries(events[phaseNumber])) {
-            const eventsInSlot = Array.isArray(eventArray)
-                ? eventArray
-                : [eventArray];
+            const eventsInSlot = Array.isArray(eventArray) ? eventArray : [eventArray];
             for (const event of eventsInSlot) {
-                if (
-                    event.disciplinaId === disciplinaId &&
-                    morningSlots.includes(event.startTime)
-                ) {
-                    morningColor = event.color;
+                if (event.disciplinaId === disciplinaId && firstMatutinoSlots.includes(event.startTime)) {
+                    firstPeriodColor = event.color;
                     break;
                 }
             }
-            if (morningColor) break;
+            if (firstPeriodColor) break;
         }
 
-        // Se encontrou cor da manhã, aplicar nas partes da tarde
-        if (morningColor) {
-            const afternoonSlots = [
-                "16:00:00",
-                "16:30:00",
-                "17:00:00",
-                "17:30:00",
-            ];
+        // PRIORIDADE 2: Se não encontrou no matutino, buscar no primeiro turno vespertino
+        if (!firstPeriodColor) {
+            for (const [, eventArray] of Object.entries(events[phaseNumber])) {
+                const eventsInSlot = Array.isArray(eventArray) ? eventArray : [eventArray];
+                for (const event of eventsInSlot) {
+                    if (event.disciplinaId === disciplinaId && firstVespertinoSlots.includes(event.startTime)) {
+                        firstPeriodColor = event.color;
+                        break;
+                    }
+                }
+                if (firstPeriodColor) break;
+            }
+        }
 
-            for (const [eventKey, eventArray] of Object.entries(
-                events[phaseNumber]
-            )) {
-                const eventsInSlot = Array.isArray(eventArray)
-                    ? eventArray
-                    : [eventArray];
+        // PRIORIDADE 3: Se não encontrou no vespertino, buscar no primeiro turno noturno
+        if (!firstPeriodColor) {
+            for (const [, eventArray] of Object.entries(events[phaseNumber])) {
+                const eventsInSlot = Array.isArray(eventArray) ? eventArray : [eventArray];
+                for (const event of eventsInSlot) {
+                    if (event.disciplinaId === disciplinaId && firstNoturnoSlots.includes(event.startTime)) {
+                        firstPeriodColor = event.color;
+                        break;
+                    }
+                }
+                if (firstPeriodColor) break;
+            }
+        }
+
+        // Se encontrou cor do primeiro período, aplicar nos segundos períodos
+        if (firstPeriodColor) {
+            const targetSlots = [...secondMatutinoSlots, ...secondVespertinoSlots, ...secondNoturnoSlots];
+
+            for (const [eventKey, eventArray] of Object.entries(events[phaseNumber])) {
+                const eventsInSlot = Array.isArray(eventArray) ? eventArray : [eventArray];
                 const updatedEvents = eventsInSlot.map((event) => {
-                    // 🛡️ PROTEÇÃO GLOBAL: Proteger qualquer evento com o ID protegido, independente do horário
+                    // 🛡️ PROTEÇÃO GLOBAL: Proteger qualquer evento com o ID protegido
                     if (protectedEventId && event.id === protectedEventId) {
-                        return event; // Manter exatamente como está, incluindo comentário
+                        return event; // Manter exatamente como está
                     }
 
-                    if (
-                        event.disciplinaId === disciplinaId &&
-                        afternoonSlots.includes(event.startTime)
-                    ) {
-                        // CORREÇÃO: Preservar TODOS os dados do evento, incluindo comentários
+                    if (event.disciplinaId === disciplinaId && targetSlots.includes(event.startTime)) {
                         return {
                             ...event,
-                            color: morningColor,
+                            color: firstPeriodColor,
                         };
                     }
                     return event;
@@ -5882,9 +5949,104 @@ export default function Horarios() {
                                     )}
                             </Select>
                         </FormControl>
+
+                        {/* Controle de Publicação */}
+                        {selectedCurso && selectedAnoSemestre.ano && selectedAnoSemestre.semestre && (
+                            <FormControl
+                                sx={{
+                                    minWidth: { xs: "100%", sm: 160 },
+                                    width: { xs: "100%", sm: "auto" },
+                                }}
+                            >
+                                <InputLabel>Status</InputLabel>
+                                <Select
+                                    value={(() => {
+                                        const anoSemestreAtual = anosSemestres.find(
+                                            (as) =>
+                                                as.ano === selectedAnoSemestre.ano &&
+                                                as.semestre === selectedAnoSemestre.semestre
+                                        );
+                                        return anoSemestreAtual ? (anoSemestreAtual.publicado ? "publicado" : "rascunho") : "rascunho";
+                                    })()}
+                                    onChange={async (e) => {
+                                        const novoStatus = e.target.value;
+                                        const publicado = novoStatus === "publicado";
+
+                                        try {
+                                            await axios.patch(
+                                                `http://localhost:3010/api/ano-semestre/${selectedAnoSemestre.ano}/${selectedAnoSemestre.semestre}/publicacao`,
+                                                { publicado }
+                                            );
+
+                                            // Atualizar estado local dos anos/semestres
+                                            setAnosSemestres(prev =>
+                                                prev.map(as =>
+                                                    as.ano === selectedAnoSemestre.ano && as.semestre === selectedAnoSemestre.semestre
+                                                        ? { ...as, publicado }
+                                                        : as
+                                                )
+                                            );
+
+                                            setSaveSuccess(true);
+                                            setTimeout(() => setSaveSuccess(false), 4000);
+                                        } catch (error) {
+                                            console.error("Erro ao alterar status de publicação:", error);
+                                            setSaveError("Erro ao alterar status de publicação: " + (error.response?.data?.message || error.message));
+                                            setTimeout(() => setSaveError(null), 6000);
+                                        }
+                                    }}
+                                    label="Status"
+                                    disabled={loadingAnosSemestres || !selectedCurso}
+                                >
+                                    <MenuItem value="rascunho">
+                                        📝 Rascunho
+                                    </MenuItem>
+                                    <MenuItem value="publicado">
+                                        🌐 Publicado
+                                    </MenuItem>
+                                </Select>
+                            </FormControl>
+                        )}
                     </Box>
                 </Box>
             </Box>
+
+            {/* Indicador de Status de Publicação */}
+            {selectedCurso && selectedAnoSemestre.ano && selectedAnoSemestre.semestre && anosSemestres.length > 0 && (
+                (() => {
+                    const anoSemestreAtual = anosSemestres.find(
+                        (as) =>
+                            as.ano === selectedAnoSemestre.ano &&
+                            as.semestre === selectedAnoSemestre.semestre
+                    );
+
+                    if (anoSemestreAtual) {
+                        return (
+                            <Alert
+                                severity={anoSemestreAtual.publicado ? "success" : "info"}
+                                sx={{
+                                    mb: 2,
+                                    borderLeft: `4px solid ${anoSemestreAtual.publicado ? '#4caf50' : '#2196f3'}`,
+                                }}
+                                icon={anoSemestreAtual.publicado ? '🌐' : '📝'}
+                            >
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Typography variant="body2" fontWeight="bold">
+                                        Status dos Horários: {anoSemestreAtual.publicado ? 'PUBLICADOS' : 'RASCUNHO'}
+                                    </Typography>
+                                </Box>
+                                                                <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+                                    {anoSemestreAtual.publicado
+                                        ? 'Os horários salvos ficam visíveis na interface pública de visualização.'
+                                        : 'Os horários salvos ficam apenas na interface de construção (não são visíveis publicamente).'
+                                    }
+                                </Typography>
+                            </Alert>
+                        );
+                    }
+                    return null;
+                })()
+            )}
 
             {/* Alerts de feedback para salvamento */}
             {saveSuccess && (
@@ -6302,13 +6464,21 @@ export default function Horarios() {
                                 const changes = getChangesCount();
                                 const fasesCount = getFasesDisponiveis().length;
 
+                                // Obter status de publicação
+                                const anoSemestreAtual = anosSemestres.find(
+                                    (as) =>
+                                        as.ano === selectedAnoSemestre.ano &&
+                                        as.semestre === selectedAnoSemestre.semestre
+                                );
+                                const statusPublicacao = anoSemestreAtual?.publicado ? "Publicado" : "Rascunho";
+
                                 let statusText = `Status (${
                                     selectedCurso
                                         ? `${selectedCurso.nome} - `
                                         : ""
                                 }${selectedAnoSemestre.ano}/${
                                     selectedAnoSemestre.semestre
-                                }º semestre): ${validCount} horários completos`;
+                                }º semestre - ${statusPublicacao}): ${validCount} horários completos`;
 
                                 if (changes.total > 0) {
                                     const changeDetails = [];
@@ -6405,3 +6575,4 @@ export default function Horarios() {
         </Box>
     );
 }
+
