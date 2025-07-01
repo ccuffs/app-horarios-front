@@ -4862,12 +4862,8 @@ export default function Horarios() {
                     const allSecondSlots = [...secondMatutinoSlots, ...secondVespertinoSlots, ...secondNoturnoSlots];
 
                     if (event.startTime && allFirstSlots.includes(event.startTime)) {
-                        // Primeiro período - usar cor do primeiro dia da semana onde a disciplina aparece
-                        if (firstPeriodColor) {
-                            event.color = firstPeriodColor;
-                        } else {
-                            event.color = getColorByDay(event.dayId);
-                        }
+                        // Primeiro período - usar cor do próprio dia
+                        event.color = getColorByDay(event.dayId);
                     } else if (event.startTime && allSecondSlots.includes(event.startTime)) {
                         // Segundo período - seguir cor do primeiro período
                         if (firstPeriodColor) {
@@ -4902,10 +4898,7 @@ export default function Horarios() {
             const allSecondSlots = [...secondMatutinoSlots, ...secondVespertinoSlots, ...secondNoturnoSlots];
 
             if (allFirstSlots.includes(time)) {
-                // Primeiro período - usar cor do primeiro dia da semana onde a disciplina aparece
-                if (firstPeriodColor) {
-                    return firstPeriodColor;
-                }
+                // Primeiro período - usar cor do próprio dia
                 return getColorByDay(dayId);
             } else if (allSecondSlots.includes(time)) {
                 // Segundo período - seguir cor do primeiro período
@@ -5636,9 +5629,10 @@ export default function Horarios() {
             }
         }
 
-        // Se encontrou cor do primeiro período (ou dos segundos períodos), aplicar nos segundos períodos
+        // Se encontrou cor do primeiro período (ou dos segundos períodos), aplicar em ambos os períodos
         if (firstPeriodColor) {
-            const targetSlots = [...secondMatutinoSlots, ...secondVespertinoSlots, ...secondNoturnoSlots];
+            const secondSlots = [...secondMatutinoSlots, ...secondVespertinoSlots, ...secondNoturnoSlots];
+            const firstSlots = [...firstMatutinoSlots, ...firstVespertinoSlots, ...firstNoturnoSlots];
 
             for (const [eventKey, eventArray] of Object.entries(events[phaseNumber])) {
                 const eventsInSlot = Array.isArray(eventArray) ? eventArray : [eventArray];
@@ -5648,12 +5642,22 @@ export default function Horarios() {
                         return event; // Manter exatamente como está
                     }
 
-                    if (event.disciplinaId === disciplinaId && targetSlots.includes(event.startTime)) {
+                    // Atualizar segundos períodos com a cor do primeiro período
+                    if (event.disciplinaId === disciplinaId && secondSlots.includes(event.startTime)) {
                         return {
                             ...event,
                             color: firstPeriodColor,
                         };
                     }
+
+                    // Atualizar primeiros períodos para manter consistência (usar cor baseada no dia)
+                    if (event.disciplinaId === disciplinaId && firstSlots.includes(event.startTime)) {
+                        return {
+                            ...event,
+                            color: getColorByDay(event.dayId),
+                        };
+                    }
+
                     return event;
                 });
 
