@@ -3235,11 +3235,16 @@ export default function Horarios() {
         }
 
         // Verifica se há sobreposição REAL (não apenas toque)
-        // Dois horários se sobrepõem se um começa antes do outro terminar
-        // E não consideramos "toque" (um termina exatamente quando outro começa) como conflito
+        // Dois horários se sobrepõem APENAS se há sobreposição temporal real
+        // NÃO consideramos "toque" (quando um termina exatamente quando outro começa) como conflito
+        // Exemplo: 19:00-21:00 e 21:00-23:00 NÃO devem ser considerados conflito
         const hasOverlap = inicio1 < fim2 && inicio2 < fim1;
 
-        // Debug removido para produção
+        // Verificação adicional para garantir que eventos adjacentes não sejam considerados conflitos
+        // Se um evento termina exatamente quando outro começa, não há conflito
+        if (fim1 === inicio2 || fim2 === inicio1) {
+            return false;
+        }
 
         return hasOverlap;
     };
