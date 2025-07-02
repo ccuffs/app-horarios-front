@@ -54,9 +54,21 @@ const timeSlotsNoturno = [
 ];
 
 // Definições dos turnos para lógica de cores
-const firstMatutinoSlots = ["07:30:00", "08:00:00", "08:30:00", "09:00:00", "09:30:00"];
+const firstMatutinoSlots = [
+    "07:30:00",
+    "08:00:00",
+    "08:30:00",
+    "09:00:00",
+    "09:30:00",
+];
 const secondMatutinoSlots = ["10:00:00", "10:30:00", "11:00:00", "11:30:00"];
-const firstVespertinoSlots = ["13:30:00", "14:00:00", "14:30:00", "15:00:00", "15:30:00"];
+const firstVespertinoSlots = [
+    "13:30:00",
+    "14:00:00",
+    "14:30:00",
+    "15:00:00",
+    "15:30:00",
+];
 const secondVespertinoSlots = ["16:00:00", "16:30:00", "17:00:00", "17:30:00"];
 const firstNoturnoSlots = ["19:00:00", "19:30:00", "20:00:00", "20:30:00"];
 const secondNoturnoSlots = ["21:00:00", "21:30:00", "22:00:00", "22:30:00"];
@@ -86,10 +98,10 @@ const getColorByDay = (dayId) => {
 
 // Função utilitária para converter HH:MM:SS para HH:MM para exibição
 const formatTimeForDisplay = (timeString) => {
-    if (!timeString || typeof timeString !== 'string') return '';
+    if (!timeString || typeof timeString !== "string") return "";
 
-    if (timeString.includes(':')) {
-        const parts = timeString.split(':');
+    if (timeString.includes(":")) {
+        const parts = timeString.split(":");
         if (parts.length >= 2) {
             return `${parts[0]}:${parts[1]}`;
         }
@@ -99,16 +111,16 @@ const formatTimeForDisplay = (timeString) => {
 
 // Função utilitária para normalizar horários vindos do banco
 const normalizeTimeFromDB = (timeFromDB) => {
-    if (!timeFromDB) return '';
+    if (!timeFromDB) return "";
 
     let timeString = timeFromDB;
 
-    if (typeof timeFromDB === 'object' && timeFromDB !== null) {
+    if (typeof timeFromDB === "object" && timeFromDB !== null) {
         timeString = timeFromDB.toString();
     }
 
-    if (typeof timeString === 'string') {
-        const parts = timeString.split(':');
+    if (typeof timeString === "string") {
+        const parts = timeString.split(":");
         if (parts.length === 2) {
             return `${parts[0]}:${parts[1]}:00`;
         } else if (parts.length >= 3) {
@@ -139,14 +151,29 @@ const numberToDay = {
 };
 
 // Função para buscar cor de disciplina baseada no primeiro dia da semana onde aparece
-const getDisciplinaColorFromFirstPeriod = (disciplinaId, phaseNumber, events) => {
+const getDisciplinaColorFromFirstPeriod = (
+    disciplinaId,
+    phaseNumber,
+    events
+) => {
     if (!disciplinaId || !events[phaseNumber]) return null;
 
     // Buscar a cor do primeiro período desta disciplina em QUALQUER dia da semana
     // Isso garante que eventos no segundo período mantenham a cor consistente
 
-    const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    const allFirstSlots = [...firstMatutinoSlots, ...firstVespertinoSlots, ...firstNoturnoSlots];
+    const dayOrder = [
+        "monday",
+        "tuesday",
+        "wednesday",
+        "thursday",
+        "friday",
+        "saturday",
+    ];
+    const allFirstSlots = [
+        ...firstMatutinoSlots,
+        ...firstVespertinoSlots,
+        ...firstNoturnoSlots,
+    ];
 
     // PRIORIDADE 1: Buscar nos primeiros períodos ordenados por dia da semana
     // (segunda tem prioridade sobre terça, etc.)
@@ -170,7 +197,11 @@ const getDisciplinaColorFromFirstPeriod = (disciplinaId, phaseNumber, events) =>
 
     // PRIORIDADE 2: Se não encontrou nos primeiros períodos, buscar nos segundos períodos
     // ordenados por dia da semana (segunda tem prioridade sobre terça, etc.)
-    const allSecondSlots = [...secondMatutinoSlots, ...secondVespertinoSlots, ...secondNoturnoSlots];
+    const allSecondSlots = [
+        ...secondMatutinoSlots,
+        ...secondVespertinoSlots,
+        ...secondNoturnoSlots,
+    ];
 
     for (const dayId of dayOrder) {
         for (const [, eventArray] of Object.entries(events[phaseNumber])) {
@@ -209,17 +240,17 @@ const getDisciplinaColorFromFirstPeriod = (disciplinaId, phaseNumber, events) =>
 // Função para corrigir cores após carregamento dos dados
 const fixEventColorsAfterLoading = (eventsFormatted) => {
     // Para cada fase
-    Object.keys(eventsFormatted).forEach(phase => {
+    Object.keys(eventsFormatted).forEach((phase) => {
         const phaseEvents = eventsFormatted[phase];
 
         // Para cada slot de eventos
-        Object.keys(phaseEvents).forEach(slotKey => {
+        Object.keys(phaseEvents).forEach((slotKey) => {
             const eventsInSlot = Array.isArray(phaseEvents[slotKey])
                 ? phaseEvents[slotKey]
                 : [phaseEvents[slotKey]];
 
             // Para cada evento no slot
-            eventsInSlot.forEach(event => {
+            eventsInSlot.forEach((event) => {
                 // Buscar cor do primeiro período cronológico para esta disciplina
                 const firstPeriodColor = getDisciplinaColorFromFirstPeriod(
                     event.disciplinaId,
@@ -229,17 +260,31 @@ const fixEventColorsAfterLoading = (eventsFormatted) => {
 
                 // Aplicar lógica de cores dos turnos
 
-                const allFirstSlots = [...firstMatutinoSlots, ...firstVespertinoSlots, ...firstNoturnoSlots];
-                const allSecondSlots = [...secondMatutinoSlots, ...secondVespertinoSlots, ...secondNoturnoSlots];
+                const allFirstSlots = [
+                    ...firstMatutinoSlots,
+                    ...firstVespertinoSlots,
+                    ...firstNoturnoSlots,
+                ];
+                const allSecondSlots = [
+                    ...secondMatutinoSlots,
+                    ...secondVespertinoSlots,
+                    ...secondNoturnoSlots,
+                ];
 
-                if (event.startTime && allFirstSlots.includes(event.startTime)) {
+                if (
+                    event.startTime &&
+                    allFirstSlots.includes(event.startTime)
+                ) {
                     // Primeiro período - usar cor do primeiro dia da semana onde a disciplina aparece
                     if (firstPeriodColor) {
                         event.color = firstPeriodColor;
                     } else {
                         event.color = getColorByDay(event.dayId);
                     }
-                } else if (event.startTime && allSecondSlots.includes(event.startTime)) {
+                } else if (
+                    event.startTime &&
+                    allSecondSlots.includes(event.startTime)
+                ) {
                     // Segundo período - seguir cor do primeiro período, ou se não há first slots, usar cor do primeiro dia em second slots
                     if (firstPeriodColor) {
                         event.color = firstPeriodColor;
@@ -315,7 +360,15 @@ const getEndTime = (startTime, duration, timeSlots) => {
 };
 
 // Componente para exibir evento (apenas visualização)
-const CalendarEventView = ({ event, timeSlots, professores, disciplinas, isMultiple, multipleIndex, multipleTotal }) => {
+const CalendarEventView = ({
+    event,
+    timeSlots,
+    professores,
+    disciplinas,
+    isMultiple,
+    multipleIndex,
+    multipleTotal,
+}) => {
     const theme = useTheme();
     // Buscar nomes dos professores
     const getProfessoresInfo = () => {
@@ -373,7 +426,9 @@ const CalendarEventView = ({ event, timeSlots, professores, disciplinas, isMulti
         <Paper
             sx={{
                 ...calculateMultipleEventStyles(),
-                backgroundColor: event.disciplinaId ? event.color : theme.palette.grey[500], // Cinza do tema se não tem disciplina
+                backgroundColor: event.disciplinaId
+                    ? event.color
+                    : theme.palette.grey[500], // Cinza do tema se não tem disciplina
                 color: "white",
                 padding: isMultiple ? "2px 4px" : 1, // Padding mais compacto para múltiplos
                 cursor: "default", // Cursor padrão para visualização
@@ -402,30 +457,38 @@ const CalendarEventView = ({ event, timeSlots, professores, disciplinas, isMulti
             >
                 {isMultiple
                     ? event.title
-                        ? (event.title.length > 12 ? event.title.substring(0, 12) + "..." : event.title)
+                        ? event.title.length > 12
+                            ? event.title.substring(0, 12) + "..."
+                            : event.title
                         : "Incompleto"
                     : event.title || "Horário incompleto"}
             </Typography>
 
             {professoresInfo.length > 0 && (
                 <Box sx={{ marginBottom: isMultiple ? 0.1 : 0.5 }}>
-                    {professoresInfo.slice(0, isMultiple ? 2 : professoresInfo.length).map((professor, index) => (
-                        <Typography
-                            key={professor.codigo}
-                            variant="caption"
-                            sx={{
-                                fontSize: isMultiple ? "0.55rem" : "0.65rem",
-                                opacity: 0.8,
-                                display: "block",
-                                lineHeight: isMultiple ? 1.1 : 1.2,
-                            }}
-                        >
-                            {isMultiple
-                                ? (professor.nome.length > 10 ? professor.nome.substring(0, 10) + "..." : professor.nome)
-                                : professor.nome
-                            }
-                        </Typography>
-                    ))}
+                    {professoresInfo
+                        .slice(0, isMultiple ? 2 : professoresInfo.length)
+                        .map((professor, index) => (
+                            <Typography
+                                key={professor.codigo}
+                                variant="caption"
+                                sx={{
+                                    fontSize: isMultiple
+                                        ? "0.55rem"
+                                        : "0.65rem",
+                                    opacity: 0.8,
+                                    display: "block",
+                                    lineHeight: isMultiple ? 1.1 : 1.2,
+                                }}
+                            >
+                                {isMultiple
+                                    ? professor.nome.length > 10
+                                        ? professor.nome.substring(0, 10) +
+                                          "..."
+                                        : professor.nome
+                                    : professor.nome}
+                            </Typography>
+                        ))}
                     {/* Indicador se há mais professores */}
                     {isMultiple && professoresInfo.length > 2 && (
                         <Typography
@@ -433,7 +496,7 @@ const CalendarEventView = ({ event, timeSlots, professores, disciplinas, isMulti
                             sx={{
                                 fontSize: "0.5rem",
                                 opacity: 0.7,
-                                fontStyle: 'italic',
+                                fontStyle: "italic",
                                 lineHeight: 1.1,
                             }}
                         >
@@ -451,13 +514,24 @@ const CalendarEventView = ({ event, timeSlots, professores, disciplinas, isMulti
                     opacity: 0.9,
                     display: "block",
                     lineHeight: 1.1,
-                    marginBottom: isMultiple ? (event.comentario ? 0.05 : 0.1) : 0,
+                    marginBottom: isMultiple
+                        ? event.comentario
+                            ? 0.05
+                            : 0.1
+                        : 0,
                 }}
             >
                 {isMultiple
-                    ? `${formatTimeForDisplay(event.startTime)}-${formatTimeForDisplay(getEndTime(event.startTime, event.duration, timeSlots))}`
-                    : `${formatTimeForDisplay(event.startTime)} - ${formatTimeForDisplay(getEndTime(event.startTime, event.duration, timeSlots))}`
-                }
+                    ? `${formatTimeForDisplay(
+                          event.startTime
+                      )}-${formatTimeForDisplay(
+                          getEndTime(event.startTime, event.duration, timeSlots)
+                      )}`
+                    : `${formatTimeForDisplay(
+                          event.startTime
+                      )} - ${formatTimeForDisplay(
+                          getEndTime(event.startTime, event.duration, timeSlots)
+                      )}`}
             </Typography>
 
             {/* Mostrar comentário se existir - SEMPRE mostrar quando há comentário */}
@@ -467,26 +541,34 @@ const CalendarEventView = ({ event, timeSlots, professores, disciplinas, isMulti
                     sx={{
                         fontSize: isMultiple ? "0.45rem" : "0.6rem",
                         opacity: isMultiple ? 0.9 : 0.8,
-                        fontStyle: 'italic',
-                        fontWeight: isMultiple ? 'bold' : 'normal',
+                        fontStyle: "italic",
+                        fontWeight: isMultiple ? "bold" : "normal",
                         display: "block",
                         lineHeight: isMultiple ? 1.1 : 1.2,
                         mt: isMultiple ? 0.05 : 0.5,
-                        backgroundColor: isMultiple ? "rgba(255,255,255,0.2)" : "rgba(255,255,255,0.15)",
+                        backgroundColor: isMultiple
+                            ? "rgba(255,255,255,0.2)"
+                            : "rgba(255,255,255,0.15)",
                         padding: isMultiple ? "1px 3px" : "2px 4px",
                         borderRadius: "2px",
-                        border: isMultiple ? "1px solid rgba(255,255,255,0.3)" : "none",
+                        border: isMultiple
+                            ? "1px solid rgba(255,255,255,0.3)"
+                            : "none",
                         maxWidth: "100%",
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
-                        boxShadow: isMultiple ? "0 1px 2px rgba(0,0,0,0.1)" : "none",
+                        boxShadow: isMultiple
+                            ? "0 1px 2px rgba(0,0,0,0.1)"
+                            : "none",
                     }}
                 >
-                    💬 {isMultiple
-                        ? (event.comentario.length > 12 ? event.comentario.substring(0, 12) + "..." : event.comentario)
-                        : event.comentario
-                    }
+                    💬{" "}
+                    {isMultiple
+                        ? event.comentario.length > 12
+                            ? event.comentario.substring(0, 12) + "..."
+                            : event.comentario
+                        : event.comentario}
                 </Typography>
             )}
         </Paper>
@@ -508,7 +590,11 @@ const CalendarEventView = ({ event, timeSlots, professores, disciplinas, isMulti
 
             {professoresInfo.length > 0 && (
                 <Box sx={{ mb: 1 }}>
-                    <Typography variant="caption" display="block" sx={{ fontWeight: 'bold', mb: 0.5 }}>
+                    <Typography
+                        variant="caption"
+                        display="block"
+                        sx={{ fontWeight: "bold", mb: 0.5 }}
+                    >
                         Professor{professoresInfo.length > 1 ? "es" : ""}:
                     </Typography>
                     {professoresInfo.map((professor) => (
@@ -525,50 +611,89 @@ const CalendarEventView = ({ event, timeSlots, professores, disciplinas, isMulti
             )}
 
             <Typography variant="caption" display="block" sx={{ mb: 1 }}>
-                <strong>Horário:</strong> {formatTimeForDisplay(event.startTime)} -{" "}
-                {formatTimeForDisplay(getEndTime(event.startTime, event.duration, timeSlots))}
+                <strong>Horário:</strong>{" "}
+                {formatTimeForDisplay(event.startTime)} -{" "}
+                {formatTimeForDisplay(
+                    getEndTime(event.startTime, event.duration, timeSlots)
+                )}
             </Typography>
 
             <Typography variant="caption" display="block" sx={{ mb: 1 }}>
-                <strong>Duração:</strong> {event.duration * 30} minutos ({event.duration} períodos)
+                <strong>Duração:</strong> {event.duration * 30} minutos (
+                {event.duration} períodos)
             </Typography>
 
             {/* Mostrar ementa da disciplina se disponível */}
-            {disciplinaInfo && disciplinaInfo.ementa && disciplinaInfo.ementa.trim() !== "" && (
-                <Box sx={{ mt: 1, p: 1, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 1 }}>
-                    <Typography variant="caption" display="block" sx={{ fontWeight: 'bold', mb: 0.5 }}>
-                        Ementa:
-                    </Typography>
-                    <Typography
-                        variant="caption"
-                        display="block"
+            {disciplinaInfo &&
+                disciplinaInfo.ementa &&
+                disciplinaInfo.ementa.trim() !== "" && (
+                    <Box
                         sx={{
-                            lineHeight: 1.3,
-                            maxWidth: "300px",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            display: "-webkit-box",
-                            WebkitLineClamp: 4,
-                            WebkitBoxOrient: "vertical",
+                            mt: 1,
+                            p: 1,
+                            backgroundColor: "rgba(255,255,255,0.1)",
+                            borderRadius: 1,
                         }}
                     >
-                        {disciplinaInfo.ementa}
-                    </Typography>
-                </Box>
-            )}
+                        <Typography
+                            variant="caption"
+                            display="block"
+                            sx={{ fontWeight: "bold", mb: 0.5 }}
+                        >
+                            Ementa:
+                        </Typography>
+                        <Typography
+                            variant="caption"
+                            display="block"
+                            sx={{
+                                lineHeight: 1.3,
+                                maxWidth: "300px",
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                display: "-webkit-box",
+                                WebkitLineClamp: 4,
+                                WebkitBoxOrient: "vertical",
+                            }}
+                        >
+                            {disciplinaInfo.ementa}
+                        </Typography>
+                    </Box>
+                )}
 
             {/* Mostrar comentário no tooltip se existir */}
             {event.comentario && (
-                <Box sx={{ mt: 1, p: 1, backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 1 }}>
-                    <Typography variant="caption" display="block" sx={{ fontStyle: 'italic' }}>
+                <Box
+                    sx={{
+                        mt: 1,
+                        p: 1,
+                        backgroundColor: "rgba(255,255,255,0.1)",
+                        borderRadius: 1,
+                    }}
+                >
+                    <Typography
+                        variant="caption"
+                        display="block"
+                        sx={{ fontStyle: "italic" }}
+                    >
                         <strong>💬 Observação:</strong> {event.comentario}
                     </Typography>
                 </Box>
             )}
 
             {!event.disciplinaId && (
-                <Box sx={{ mt: 1, p: 1, backgroundColor: "rgba(158,158,158,0.2)", borderRadius: 1 }}>
-                    <Typography variant="caption" display="block" sx={{ color: "#666", fontStyle: 'italic' }}>
+                <Box
+                    sx={{
+                        mt: 1,
+                        p: 1,
+                        backgroundColor: "rgba(158,158,158,0.2)",
+                        borderRadius: 1,
+                    }}
+                >
+                    <Typography
+                        variant="caption"
+                        display="block"
+                        sx={{ color: "#666", fontStyle: "italic" }}
+                    >
                         ⚠️ Horário incompleto - adicione disciplina e professor
                     </Typography>
                 </Box>
@@ -585,7 +710,15 @@ const CalendarEventView = ({ event, timeSlots, professores, disciplinas, isMulti
 };
 
 // Componente para slot de tempo (apenas visualização)
-const TimeSlotView = ({ time, dayId, events, timeSlots, professores, disciplinas, sx }) => {
+const TimeSlotView = ({
+    time,
+    dayId,
+    events,
+    timeSlots,
+    professores,
+    disciplinas,
+    sx,
+}) => {
     const theme = useTheme();
     const eventKey = `${dayId}-${time}`;
     const eventData = events[eventKey];
@@ -603,7 +736,10 @@ const TimeSlotView = ({ time, dayId, events, timeSlots, professores, disciplinas
                 position: "relative",
                 backgroundColor: "transparent",
                 "&:hover": {
-                    backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : '#f5f5f5',
+                    backgroundColor:
+                        theme.palette.mode === "dark"
+                            ? "rgba(255, 255, 255, 0.12)"
+                            : "#f5f5f5",
                 },
                 transition: "background-color 0.2s ease",
                 display: "flex",
@@ -629,7 +765,14 @@ const TimeSlotView = ({ time, dayId, events, timeSlots, professores, disciplinas
 };
 
 // Componente para grid de uma fase (apenas visualização)
-const PhaseGridView = ({ phaseNumber, events, professores, disciplinas, getTurnosOferta, hasMultiplosTurnos }) => {
+const PhaseGridView = ({
+    phaseNumber,
+    events,
+    professores,
+    disciplinas,
+    getTurnosOferta,
+    hasMultiplosTurnos,
+}) => {
     const theme = useTheme();
     const temMultiplosTurnos = hasMultiplosTurnos(phaseNumber);
 
@@ -638,13 +781,13 @@ const PhaseGridView = ({ phaseNumber, events, professores, disciplinas, getTurno
         const turnos = getTurnosOferta(phaseNumber);
         timeSlots = [];
 
-        if (turnos.includes('matutino')) {
+        if (turnos.includes("matutino")) {
             timeSlots = [...timeSlots, ...timeSlotsMatutino];
         }
-        if (turnos.includes('vespertino')) {
+        if (turnos.includes("vespertino")) {
             timeSlots = [...timeSlots, ...timeSlotsVespertino];
         }
-        if (turnos.includes('noturno')) {
+        if (turnos.includes("noturno")) {
             timeSlots = [...timeSlots, ...timeSlotsNoturno];
         }
     } else {
@@ -665,13 +808,13 @@ const PhaseGridView = ({ phaseNumber, events, professores, disciplinas, getTurno
     let periodLabels = [];
     if (temMultiplosTurnos) {
         const turnos = getTurnosOferta(phaseNumber);
-        if (turnos.includes('matutino')) {
+        if (turnos.includes("matutino")) {
             periodLabels.push({ label: "Matutino", color: "success" });
         }
-        if (turnos.includes('vespertino')) {
+        if (turnos.includes("vespertino")) {
             periodLabels.push({ label: "Vespertino", color: "warning" });
         }
-        if (turnos.includes('noturno')) {
+        if (turnos.includes("noturno")) {
             periodLabels.push({ label: "Noturno", color: "primary" });
         }
     } else {
@@ -709,31 +852,40 @@ const PhaseGridView = ({ phaseNumber, events, professores, disciplinas, getTurno
                         variant="caption"
                         sx={{
                             ml: 1,
-                            fontStyle: 'italic',
-                            color: 'text.secondary'
+                            fontStyle: "italic",
+                            color: "text.secondary",
                         }}
                     >
                         {(() => {
                             const turnos = getTurnosOferta(phaseNumber);
-                            let inicio = '', fim = '';
+                            let inicio = "",
+                                fim = "";
 
-                            if (turnos.includes('matutino')) {
-                                inicio = '07:30';
+                            if (turnos.includes("matutino")) {
+                                inicio = "07:30";
                             }
 
-                            if (turnos.includes('noturno')) {
-                                fim = '22:30';
-                            } else if (turnos.includes('vespertino')) {
-                                fim = '18:00';
-                            } else if (turnos.includes('matutino') && !turnos.includes('vespertino') && !turnos.includes('noturno')) {
-                                fim = '12:00';
+                            if (turnos.includes("noturno")) {
+                                fim = "22:30";
+                            } else if (turnos.includes("vespertino")) {
+                                fim = "18:00";
+                            } else if (
+                                turnos.includes("matutino") &&
+                                !turnos.includes("vespertino") &&
+                                !turnos.includes("noturno")
+                            ) {
+                                fim = "12:00";
                             }
 
-                            if (!inicio && turnos.includes('vespertino')) {
-                                inicio = '13:30';
+                            if (!inicio && turnos.includes("vespertino")) {
+                                inicio = "13:30";
                             }
-                            if (!inicio && turnos.includes('noturno') && !turnos.includes('vespertino')) {
-                                inicio = '19:00';
+                            if (
+                                !inicio &&
+                                turnos.includes("noturno") &&
+                                !turnos.includes("vespertino")
+                            ) {
+                                inicio = "19:00";
                             }
 
                             return `(${inicio} às ${fim})`;
@@ -756,9 +908,10 @@ const PhaseGridView = ({ phaseNumber, events, professores, disciplinas, getTurno
                     sx={{
                         width: "80px",
                         borderRight: `1px solid ${theme.palette.divider}`,
-                        backgroundColor: theme.palette.mode === 'dark'
-                            ? 'rgba(255, 255, 255, 0.05)'
-                            : '#fafafa',
+                        backgroundColor:
+                            theme.palette.mode === "dark"
+                                ? "rgba(255, 255, 255, 0.05)"
+                                : "#fafafa",
                     }}
                 >
                     <Box
@@ -768,9 +921,10 @@ const PhaseGridView = ({ phaseNumber, events, professores, disciplinas, getTurno
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            backgroundColor: theme.palette.mode === 'dark'
-                                ? 'rgba(255, 255, 255, 0.08)'
-                                : '#f0f0f0',
+                            backgroundColor:
+                                theme.palette.mode === "dark"
+                                    ? "rgba(255, 255, 255, 0.08)"
+                                    : "#f0f0f0",
                         }}
                     >
                         <Typography variant="caption" fontWeight="bold">
@@ -779,8 +933,11 @@ const PhaseGridView = ({ phaseNumber, events, professores, disciplinas, getTurno
                     </Box>
                     {timeSlots.map((time, index) => {
                         // Adicionar separador visual entre turnos
-                        const isFirstVespertino = temMultiplosTurnos && time === timeSlotsVespertino[0];
-                        const isFirstNoturno = temMultiplosTurnos && time === timeSlotsNoturno[0];
+                        const isFirstVespertino =
+                            temMultiplosTurnos &&
+                            time === timeSlotsVespertino[0];
+                        const isFirstNoturno =
+                            temMultiplosTurnos && time === timeSlotsNoturno[0];
 
                         return (
                             <Box
@@ -790,7 +947,11 @@ const PhaseGridView = ({ phaseNumber, events, professores, disciplinas, getTurno
                                     borderBottom: `1px solid ${theme.palette.divider}`,
                                     borderTop:
                                         isFirstVespertino || isFirstNoturno
-                                            ? `2px dashed ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : '#bbb'}`
+                                            ? `2px dashed ${
+                                                  theme.palette.mode === "dark"
+                                                      ? "rgba(255, 255, 255, 0.3)"
+                                                      : "#bbb"
+                                              }`
                                             : "none",
                                     display: "flex",
                                     alignItems: "center",
@@ -799,7 +960,9 @@ const PhaseGridView = ({ phaseNumber, events, professores, disciplinas, getTurno
                                     color: theme.palette.text.secondary,
                                     backgroundColor:
                                         isFirstVespertino || isFirstNoturno
-                                            ? (theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f5f5f5')
+                                            ? theme.palette.mode === "dark"
+                                                ? "rgba(255, 255, 255, 0.05)"
+                                                : "#f5f5f5"
                                             : "transparent",
                                 }}
                             >
@@ -813,7 +976,10 @@ const PhaseGridView = ({ phaseNumber, events, professores, disciplinas, getTurno
                 {daysOfWeek.map((day) => (
                     <Box
                         key={day.id}
-                        sx={{ flex: 1, borderRight: `1px solid ${theme.palette.divider}` }}
+                        sx={{
+                            flex: 1,
+                            borderRight: `1px solid ${theme.palette.divider}`,
+                        }}
                     >
                         <Box
                             sx={{
@@ -822,9 +988,10 @@ const PhaseGridView = ({ phaseNumber, events, professores, disciplinas, getTurno
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                backgroundColor: theme.palette.mode === 'dark'
-                                    ? 'rgba(255, 255, 255, 0.05)'
-                                    : '#f5f5f5',
+                                backgroundColor:
+                                    theme.palette.mode === "dark"
+                                        ? "rgba(255, 255, 255, 0.05)"
+                                        : "#f5f5f5",
                             }}
                         >
                             <Typography variant="subtitle2" fontWeight="bold">
@@ -834,8 +1001,12 @@ const PhaseGridView = ({ phaseNumber, events, professores, disciplinas, getTurno
 
                         {timeSlots.map((time, index) => {
                             // Adicionar separador visual entre turnos
-                            const isFirstVespertino = temMultiplosTurnos && time === timeSlotsVespertino[0];
-                            const isFirstNoturno = temMultiplosTurnos && time === timeSlotsNoturno[0];
+                            const isFirstVespertino =
+                                temMultiplosTurnos &&
+                                time === timeSlotsVespertino[0];
+                            const isFirstNoturno =
+                                temMultiplosTurnos &&
+                                time === timeSlotsNoturno[0];
 
                             return (
                                 <TimeSlotView
@@ -849,8 +1020,17 @@ const PhaseGridView = ({ phaseNumber, events, professores, disciplinas, getTurno
                                     sx={
                                         isFirstVespertino || isFirstNoturno
                                             ? {
-                                                  borderTop: `2px dashed ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : '#bbb'}`,
-                                                  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f5f5f5',
+                                                  borderTop: `2px dashed ${
+                                                      theme.palette.mode ===
+                                                      "dark"
+                                                          ? "rgba(255, 255, 255, 0.3)"
+                                                          : "#bbb"
+                                                  }`,
+                                                  backgroundColor:
+                                                      theme.palette.mode ===
+                                                      "dark"
+                                                          ? "rgba(255, 255, 255, 0.05)"
+                                                          : "#f5f5f5",
                                               }
                                             : {}
                                     }
@@ -867,7 +1047,7 @@ const PhaseGridView = ({ phaseNumber, events, professores, disciplinas, getTurno
 export default function HorariosView() {
     const [selectedAnoSemestre, setSelectedAnoSemestre] = useState({
         ano: new Date().getFullYear(),
-        semestre: 1
+        semestre: 1,
     });
     const [selectedCurso, setSelectedCurso] = useState(null);
     const [cursos, setCursos] = useState([]);
@@ -890,7 +1070,9 @@ export default function HorariosView() {
         try {
             setLoadingCursos(true);
             setErrorCursos(null);
-            const response = await axios.get("http://localhost:3010/api/cursos");
+            const response = await axios.get(
+                "http://localhost:3010/api/cursos"
+            );
             const cursosData = response.data.cursos || [];
             setCursos(cursosData);
 
@@ -910,20 +1092,24 @@ export default function HorariosView() {
     const fetchAnosSemestres = async () => {
         try {
             setLoadingAnosSemestres(true);
-            const response = await axios.get("http://localhost:3010/api/ano-semestre");
+            const response = await axios.get(
+                "http://localhost:3010/api/ano-semestre"
+            );
             const anosSemestresData = response.data.anosSemestres || [];
             setAnosSemestres(anosSemestresData);
 
             if (anosSemestresData.length > 0) {
-                const anoSemestreExiste = anosSemestresData.some(as =>
-                    as.ano === selectedAnoSemestre.ano && as.semestre === selectedAnoSemestre.semestre
+                const anoSemestreExiste = anosSemestresData.some(
+                    (as) =>
+                        as.ano === selectedAnoSemestre.ano &&
+                        as.semestre === selectedAnoSemestre.semestre
                 );
 
                 if (!anoSemestreExiste) {
                     const maisRecente = anosSemestresData[0];
                     setSelectedAnoSemestre({
                         ano: maisRecente.ano,
-                        semestre: maisRecente.semestre
+                        semestre: maisRecente.semestre,
                     });
                 }
             }
@@ -939,13 +1125,17 @@ export default function HorariosView() {
     const fetchProfessores = async () => {
         try {
             setLoadingProfessores(true);
-            const response = await axios.get("http://localhost:3010/api/docentes");
-            const professoresFormatados = response.data.docentes.map((prof) => ({
-                id: prof.codigo,
-                codigo: prof.codigo,
-                nome: prof.nome,
-                email: prof.email,
-            }));
+            const response = await axios.get(
+                "http://localhost:3010/api/docentes"
+            );
+            const professoresFormatados = response.data.docentes.map(
+                (prof) => ({
+                    id: prof.codigo,
+                    codigo: prof.codigo,
+                    nome: prof.nome,
+                    email: prof.email,
+                })
+            );
             setProfessores(professoresFormatados);
         } catch (error) {
             console.error("Erro ao buscar professores:", error);
@@ -975,7 +1165,11 @@ export default function HorariosView() {
         try {
             setLoadingOfertas(true);
             const params = {};
-            if (selectedAnoSemestre.ano && selectedAnoSemestre.semestre && selectedCurso?.id) {
+            if (
+                selectedAnoSemestre.ano &&
+                selectedAnoSemestre.semestre &&
+                selectedCurso?.id
+            ) {
                 params.ano = selectedAnoSemestre.ano;
                 params.semestre = selectedAnoSemestre.semestre;
                 params.id_curso = selectedCurso.id;
@@ -983,7 +1177,10 @@ export default function HorariosView() {
                 params.id_curso = selectedCurso.id;
             }
 
-            const response = await axios.get("http://localhost:3010/api/ofertas", { params });
+            const response = await axios.get(
+                "http://localhost:3010/api/ofertas",
+                { params }
+            );
             const ofertasData = response.data.ofertas || [];
             setOfertas(ofertasData);
         } catch (error) {
@@ -1000,14 +1197,17 @@ export default function HorariosView() {
         setLoadError(null);
 
         try {
-            const response = await axios.get("http://localhost:3010/api/horarios", {
-                params: {
-                    ano: selectedAnoSemestre.ano,
-                    semestre: selectedAnoSemestre.semestre,
-                    id_curso: selectedCurso?.id || 1,
-                    apenas_publicados: 'true', // Só mostrar horários publicados na visualização
-                },
-            });
+            const response = await axios.get(
+                "http://localhost:3010/api/horarios",
+                {
+                    params: {
+                        ano: selectedAnoSemestre.ano,
+                        semestre: selectedAnoSemestre.semestre,
+                        id_curso: selectedCurso?.id || 1,
+                        apenas_publicados: "true", // Só mostrar horários publicados na visualização
+                    },
+                }
+            );
 
             const horariosFromDb = response.data.horarios || [];
 
@@ -1050,7 +1250,11 @@ export default function HorariosView() {
                     return;
                 }
 
-                const event = dbToEventFormat(baseHorario, disciplinas, professores);
+                const event = dbToEventFormat(
+                    baseHorario,
+                    disciplinas,
+                    professores
+                );
 
                 // Validar apenas se conversão básica foi bem sucedida
                 if (!event.dayId) {
@@ -1096,12 +1300,15 @@ export default function HorariosView() {
             });
 
             // Corrigir cores após carregamento dos dados
-            const eventsFormattedFixed = fixEventColorsAfterLoading(eventsFormatted);
+            const eventsFormattedFixed =
+                fixEventColorsAfterLoading(eventsFormatted);
 
             setEvents(eventsFormattedFixed);
         } catch (error) {
             if (error.response?.status === 404) {
-                setLoadError("Nenhum horário encontrado para este curso/período");
+                setLoadError(
+                    "Nenhum horário encontrado para este curso/período"
+                );
             } else {
                 setLoadError("Erro ao carregar horários");
             }
@@ -1117,32 +1324,38 @@ export default function HorariosView() {
             return ["vespertino"];
         }
 
-        const ofertasFase = ofertas.filter(o =>
-            o.ano === selectedAnoSemestre.ano &&
-            o.semestre === selectedAnoSemestre.semestre &&
-            o.fase === phaseNumber &&
-            o.id_curso === (selectedCurso?.id || 1)
+        const ofertasFase = ofertas.filter(
+            (o) =>
+                o.ano === selectedAnoSemestre.ano &&
+                o.semestre === selectedAnoSemestre.semestre &&
+                o.fase === phaseNumber &&
+                o.id_curso === (selectedCurso?.id || 1)
         );
 
         if (ofertasFase.length === 0) {
             return ["vespertino"];
         }
 
-        const turnos = ofertasFase.map(oferta => {
-            if (oferta && oferta.turno) {
-                const turnoValue = oferta.turno.toString().toLowerCase();
-                if (turnoValue === 'm' || turnoValue === 'matutino') {
-                    return "matutino";
-                } else if (turnoValue === 'v' || turnoValue === 'vespertino') {
-                    return "vespertino";
-                } else if (turnoValue === 'n' || turnoValue === 'noturno') {
-                    return "noturno";
-                } else {
-                    return turnoValue;
+        const turnos = ofertasFase
+            .map((oferta) => {
+                if (oferta && oferta.turno) {
+                    const turnoValue = oferta.turno.toString().toLowerCase();
+                    if (turnoValue === "m" || turnoValue === "matutino") {
+                        return "matutino";
+                    } else if (
+                        turnoValue === "v" ||
+                        turnoValue === "vespertino"
+                    ) {
+                        return "vespertino";
+                    } else if (turnoValue === "n" || turnoValue === "noturno") {
+                        return "noturno";
+                    } else {
+                        return turnoValue;
+                    }
                 }
-            }
-            return null;
-        }).filter(Boolean);
+                return null;
+            })
+            .filter(Boolean);
 
         return [...new Set(turnos)];
     };
@@ -1159,17 +1372,18 @@ export default function HorariosView() {
             return [];
         }
 
-        const ofertasAtuais = ofertas.filter(o =>
-            o.ano === selectedAnoSemestre.ano &&
-            o.semestre === selectedAnoSemestre.semestre &&
-            o.id_curso === (selectedCurso?.id || 1)
+        const ofertasAtuais = ofertas.filter(
+            (o) =>
+                o.ano === selectedAnoSemestre.ano &&
+                o.semestre === selectedAnoSemestre.semestre &&
+                o.id_curso === (selectedCurso?.id || 1)
         );
 
         if (ofertasAtuais.length === 0) {
             return [];
         }
 
-        const fases = ofertasAtuais.map(o => o.fase).sort((a, b) => a - b);
+        const fases = ofertasAtuais.map((o) => o.fase).sort((a, b) => a - b);
         return [...new Set(fases)];
     };
 
@@ -1183,7 +1397,13 @@ export default function HorariosView() {
 
     // Carregar horários quando dados estiverem prontos
     useEffect(() => {
-        if (disciplinas.length > 0 && professores.length > 0 && selectedCurso && selectedAnoSemestre.ano && selectedAnoSemestre.semestre) {
+        if (
+            disciplinas.length > 0 &&
+            professores.length > 0 &&
+            selectedCurso &&
+            selectedAnoSemestre.ano &&
+            selectedAnoSemestre.semestre
+        ) {
             setEvents({});
             loadHorariosFromDatabase();
         }
@@ -1191,12 +1411,22 @@ export default function HorariosView() {
 
     // Recarregar ofertas quando ano/semestre ou curso mudar
     useEffect(() => {
-        if (selectedCurso && selectedAnoSemestre.ano && selectedAnoSemestre.semestre) {
+        if (
+            selectedCurso &&
+            selectedAnoSemestre.ano &&
+            selectedAnoSemestre.semestre
+        ) {
             fetchOfertas();
         }
     }, [selectedCurso, selectedAnoSemestre]);
 
-    const isLoading = loadingCursos || loadingProfessores || loadingDisciplinas || loadingHorarios || loadingAnosSemestres || loadingOfertas;
+    const isLoading =
+        loadingCursos ||
+        loadingProfessores ||
+        loadingDisciplinas ||
+        loadingHorarios ||
+        loadingAnosSemestres ||
+        loadingOfertas;
 
     return (
         <Box sx={{ padding: 2 }}>
@@ -1209,7 +1439,9 @@ export default function HorariosView() {
                 }}
             >
                 <Box>
-                    <Typography variant="h4">Visualização de Horários</Typography>
+                    <Typography variant="h4">
+                        Visualização de Horários
+                    </Typography>
                     <Typography variant="caption" color="textSecondary">
                         Consulta de horários por curso e período
                     </Typography>
@@ -1221,7 +1453,9 @@ export default function HorariosView() {
                         <Select
                             value={selectedCurso ? selectedCurso.id : ""}
                             onChange={(e) => {
-                                const curso = cursos.find(c => c.id === e.target.value);
+                                const curso = cursos.find(
+                                    (c) => c.id === e.target.value
+                                );
                                 setSelectedCurso(curso);
                             }}
                             label="Curso"
@@ -1243,23 +1477,33 @@ export default function HorariosView() {
                     <FormControl sx={{ minWidth: 200 }}>
                         <InputLabel>Ano/Semestre</InputLabel>
                         <Select
-                            value={anosSemestres.length > 0 ? `${selectedAnoSemestre.ano}-${selectedAnoSemestre.semestre}` : ""}
+                            value={
+                                anosSemestres.length > 0
+                                    ? `${selectedAnoSemestre.ano}-${selectedAnoSemestre.semestre}`
+                                    : ""
+                            }
                             onChange={(e) => {
-                                const [ano, semestre] = e.target.value.split('-');
+                                const [ano, semestre] =
+                                    e.target.value.split("-");
                                 setSelectedAnoSemestre({
                                     ano: parseInt(ano),
-                                    semestre: parseInt(semestre)
+                                    semestre: parseInt(semestre),
                                 });
                             }}
                             label="Ano/Semestre"
-                            disabled={loadingAnosSemestres || anosSemestres.length === 0 || !selectedCurso}
+                            disabled={
+                                loadingAnosSemestres ||
+                                anosSemestres.length === 0 ||
+                                !selectedCurso
+                            }
                         >
                             {anosSemestres.map((anoSemestre) => (
                                 <MenuItem
                                     key={`${anoSemestre.ano}-${anoSemestre.semestre}`}
                                     value={`${anoSemestre.ano}-${anoSemestre.semestre}`}
                                 >
-                                    {anoSemestre.ano}/{anoSemestre.semestre}º Semestre
+                                    {anoSemestre.ano}/{anoSemestre.semestre}º
+                                    Semestre
                                 </MenuItem>
                             ))}
                         </Select>
@@ -1320,42 +1564,65 @@ export default function HorariosView() {
                 </Box>
             ) : (
                 <>
-                    {selectedCurso && Object.keys(events).length === 0 && !loadError && (
-                        <Alert severity="info" sx={{ mb: 2 }}>
-                            Nenhum horário cadastrado para {selectedCurso.nome} no período {selectedAnoSemestre.ano}/{selectedAnoSemestre.semestre}º semestre.
-                        </Alert>
-                    )}
+                    {selectedCurso &&
+                        Object.keys(events).length === 0 &&
+                        !loadError && (
+                            <Alert severity="info" sx={{ mb: 2 }}>
+                                Nenhum horário cadastrado para{" "}
+                                {selectedCurso.nome} no período{" "}
+                                {selectedAnoSemestre.ano}/
+                                {selectedAnoSemestre.semestre}º semestre.
+                            </Alert>
+                        )}
 
-                    {selectedCurso && getFasesDisponiveis().length === 0 && Object.keys(events).length === 0 && (
-                        <Alert severity="warning" sx={{ mb: 2 }}>
-                            Nenhuma oferta de fase cadastrada para este curso no período selecionado.
-                        </Alert>
-                    )}
+                    {selectedCurso &&
+                        getFasesDisponiveis().length === 0 &&
+                        Object.keys(events).length === 0 && (
+                            <Alert severity="warning" sx={{ mb: 2 }}>
+                                Nenhuma oferta de fase cadastrada para este
+                                curso no período selecionado.
+                            </Alert>
+                        )}
 
-                    {selectedCurso && getFasesDisponiveis().map((phaseNumber) => {
-                        const phaseEvents = events[phaseNumber] || {};
-                        return (
-                            <PhaseGridView
-                                key={phaseNumber}
-                                phaseNumber={phaseNumber}
-                                events={phaseEvents}
-                                professores={professores}
-                                disciplinas={disciplinas}
-                                getTurnosOferta={getTurnosOferta}
-                                hasMultiplosTurnos={hasMultiplosTurnos}
-                            />
-                        );
-                    })}
+                    {selectedCurso &&
+                        getFasesDisponiveis().map((phaseNumber) => {
+                            const phaseEvents = events[phaseNumber] || {};
+                            return (
+                                <PhaseGridView
+                                    key={phaseNumber}
+                                    phaseNumber={phaseNumber}
+                                    events={phaseEvents}
+                                    professores={professores}
+                                    disciplinas={disciplinas}
+                                    getTurnosOferta={getTurnosOferta}
+                                    hasMultiplosTurnos={hasMultiplosTurnos}
+                                />
+                            );
+                        })}
 
                     {selectedCurso && Object.keys(events).length > 0 && (
                         <Box sx={{ mt: 3, textAlign: "center" }}>
-                            <Typography variant="caption" color="textSecondary" display="block">
-                                Exibindo horários de {selectedCurso.nome} - {selectedAnoSemestre.ano}/{selectedAnoSemestre.semestre}º semestre
+                            <Typography
+                                variant="caption"
+                                color="textSecondary"
+                                display="block"
+                            >
+                                Exibindo horários de {selectedCurso.nome} -{" "}
+                                {selectedAnoSemestre.ano}/
+                                {selectedAnoSemestre.semestre}º semestre
                             </Typography>
-                            <Typography variant="caption" color="primary" fontWeight="bold">
+                            <Typography
+                                variant="caption"
+                                color="primary"
+                                fontWeight="bold"
+                            >
                                 {getFasesDisponiveis().length} fase(s) •
-                                {Object.values(events).reduce((total, phaseEvents) =>
-                                    total + Object.keys(phaseEvents).length, 0)} horário(s) cadastrado(s)
+                                {Object.values(events).reduce(
+                                    (total, phaseEvents) =>
+                                        total + Object.keys(phaseEvents).length,
+                                    0
+                                )}{" "}
+                                horário(s) cadastrado(s)
                             </Typography>
                         </Box>
                     )}

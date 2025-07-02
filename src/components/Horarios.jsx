@@ -80,9 +80,21 @@ const timeSlotsNoturno = [
 ];
 
 // Definições dos turnos para lógica de cores
-const firstMatutinoSlots = ["07:30:00", "08:00:00", "08:30:00", "09:00:00", "09:30:00"];
+const firstMatutinoSlots = [
+    "07:30:00",
+    "08:00:00",
+    "08:30:00",
+    "09:00:00",
+    "09:30:00",
+];
 const secondMatutinoSlots = ["10:00:00", "10:30:00", "11:00:00", "11:30:00"];
-const firstVespertinoSlots = ["13:30:00", "14:00:00", "14:30:00", "15:00:00", "15:30:00"];
+const firstVespertinoSlots = [
+    "13:30:00",
+    "14:00:00",
+    "14:30:00",
+    "15:00:00",
+    "15:30:00",
+];
 const secondVespertinoSlots = ["16:00:00", "16:30:00", "17:00:00", "17:30:00"];
 const firstNoturnoSlots = ["19:00:00", "19:30:00", "20:00:00", "20:30:00"];
 const secondNoturnoSlots = ["21:00:00", "21:30:00", "22:00:00", "22:30:00"];
@@ -2579,16 +2591,24 @@ const TimeSlot = ({
                 height: "30px",
                 border: `1px solid ${theme.palette.divider}`,
                 position: "relative",
-                backgroundColor: isDragOver ?
-                    (theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.16)' : '#e3f2fd') :
-                    "transparent",
+                backgroundColor: isDragOver
+                    ? theme.palette.mode === "dark"
+                        ? "rgba(144, 202, 249, 0.16)"
+                        : "#e3f2fd"
+                    : "transparent",
                 "&:hover": {
                     backgroundColor: isDragOver
-                        ? (theme.palette.mode === 'dark' ? 'rgba(144, 202, 249, 0.16)' : '#e3f2fd')
+                        ? theme.palette.mode === "dark"
+                            ? "rgba(144, 202, 249, 0.16)"
+                            : "#e3f2fd"
                         : timeSlotsNoturno.includes(time) &&
                           !isValidStartTimeNoturno(time)
-                        ? (theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.08)' : '#f0f0f0')
-                        : (theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.12)' : '#f5f5f5'),
+                        ? theme.palette.mode === "dark"
+                            ? "rgba(255, 255, 255, 0.08)"
+                            : "#f0f0f0"
+                        : theme.palette.mode === "dark"
+                        ? "rgba(255, 255, 255, 0.12)"
+                        : "#f5f5f5",
                 },
                 transition: "background-color 0.2s ease",
                 display: "flex",
@@ -2796,9 +2816,10 @@ const PhaseGrid = ({
                     sx={{
                         width: "80px",
                         borderRight: `1px solid ${theme.palette.divider}`,
-                        backgroundColor: theme.palette.mode === 'dark'
-                            ? 'rgba(255, 255, 255, 0.05)'
-                            : '#fafafa',
+                        backgroundColor:
+                            theme.palette.mode === "dark"
+                                ? "rgba(255, 255, 255, 0.05)"
+                                : "#fafafa",
                     }}
                 >
                     <Box
@@ -2808,9 +2829,10 @@ const PhaseGrid = ({
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
-                            backgroundColor: theme.palette.mode === 'dark'
-                                ? 'rgba(255, 255, 255, 0.08)'
-                                : '#f0f0f0',
+                            backgroundColor:
+                                theme.palette.mode === "dark"
+                                    ? "rgba(255, 255, 255, 0.08)"
+                                    : "#f0f0f0",
                         }}
                     >
                         <Typography variant="caption" fontWeight="bold">
@@ -2833,7 +2855,11 @@ const PhaseGrid = ({
                                     borderBottom: `1px solid ${theme.palette.divider}`,
                                     borderTop:
                                         isFirstVespertino || isFirstNoturno
-                                            ? `2px dashed ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : '#bbb'}`
+                                            ? `2px dashed ${
+                                                  theme.palette.mode === "dark"
+                                                      ? "rgba(255, 255, 255, 0.3)"
+                                                      : "#bbb"
+                                              }`
                                             : "none",
                                     display: "flex",
                                     alignItems: "center",
@@ -2842,7 +2868,9 @@ const PhaseGrid = ({
                                     color: theme.palette.text.secondary,
                                     backgroundColor:
                                         isFirstVespertino || isFirstNoturno
-                                            ? (theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f5f5f5')
+                                            ? theme.palette.mode === "dark"
+                                                ? "rgba(255, 255, 255, 0.05)"
+                                                : "#f5f5f5"
                                             : "transparent",
                                 }}
                             >
@@ -2856,7 +2884,10 @@ const PhaseGrid = ({
                 {daysOfWeek.map((day) => (
                     <Box
                         key={day.id}
-                        sx={{ flex: 1, borderRight: `1px solid ${theme.palette.divider}` }}
+                        sx={{
+                            flex: 1,
+                            borderRight: `1px solid ${theme.palette.divider}`,
+                        }}
                     >
                         <Box
                             sx={{
@@ -2865,9 +2896,10 @@ const PhaseGrid = ({
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                backgroundColor: theme.palette.mode === 'dark'
-                                    ? 'rgba(255, 255, 255, 0.05)'
-                                    : '#f5f5f5',
+                                backgroundColor:
+                                    theme.palette.mode === "dark"
+                                        ? "rgba(255, 255, 255, 0.05)"
+                                        : "#f5f5f5",
                             }}
                         >
                             <Typography variant="subtitle2" fontWeight="bold">
@@ -2925,8 +2957,17 @@ const PhaseGrid = ({
                                     sx={
                                         isFirstVespertino || isFirstNoturno
                                             ? {
-                                                  borderTop: `2px dashed ${theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.3)' : '#bbb'}`,
-                                                  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(255, 255, 255, 0.05)' : '#f5f5f5',
+                                                  borderTop: `2px dashed ${
+                                                      theme.palette.mode ===
+                                                      "dark"
+                                                          ? "rgba(255, 255, 255, 0.3)"
+                                                          : "#bbb"
+                                                  }`,
+                                                  backgroundColor:
+                                                      theme.palette.mode ===
+                                                      "dark"
+                                                          ? "rgba(255, 255, 255, 0.05)"
+                                                          : "#f5f5f5",
                                               }
                                             : {}
                                     }
@@ -4407,7 +4448,11 @@ export default function Horarios() {
             if (error.response?.status === 404) {
                 setLoadError("API não está disponível");
             } else if (error.message?.includes("ofertas")) {
-                setLoadError("Erro ao carregar ofertas. " + (error.response?.data?.message || "Verifique a conexão."));
+                setLoadError(
+                    "Erro ao carregar ofertas. " +
+                        (error.response?.data?.message ||
+                            "Verifique a conexão.")
+                );
             } else {
                 setLoadError(
                     error.response?.data?.message ||
@@ -4800,8 +4845,8 @@ export default function Horarios() {
         }
     }, [conflitosHorarios]);
 
-        // Função para buscar cor de disciplina no primeiro período cronológico (prioridade: matutino primeiro, depois vespertino primeiro, depois noturno primeiro)
-        const getDisciplinaColorFromFirstPeriod = (
+    // Função para buscar cor de disciplina no primeiro período cronológico (prioridade: matutino primeiro, depois vespertino primeiro, depois noturno primeiro)
+    const getDisciplinaColorFromFirstPeriod = (
         disciplinaId,
         phaseNumber,
         events
@@ -4811,8 +4856,19 @@ export default function Horarios() {
         // Buscar a cor do primeiro período desta disciplina em QUALQUER dia da semana
         // Isso garante que eventos no segundo período mantenham a cor consistente
 
-        const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-        const allFirstSlots = [...firstMatutinoSlots, ...firstVespertinoSlots, ...firstNoturnoSlots];
+        const dayOrder = [
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday",
+            "saturday",
+        ];
+        const allFirstSlots = [
+            ...firstMatutinoSlots,
+            ...firstVespertinoSlots,
+            ...firstNoturnoSlots,
+        ];
 
         // PRIORIDADE 1: Buscar nos primeiros períodos ordenados por dia da semana
         // (segunda tem prioridade sobre terça, etc.)
@@ -4836,7 +4892,11 @@ export default function Horarios() {
 
         // PRIORIDADE 2: Se não encontrou nos primeiros períodos, buscar nos segundos períodos
         // ordenados por dia da semana (segunda tem prioridade sobre terça, etc.)
-        const allSecondSlots = [...secondMatutinoSlots, ...secondVespertinoSlots, ...secondNoturnoSlots];
+        const allSecondSlots = [
+            ...secondMatutinoSlots,
+            ...secondVespertinoSlots,
+            ...secondNoturnoSlots,
+        ];
 
         for (const dayId of dayOrder) {
             for (const [, eventArray] of Object.entries(events[phaseNumber])) {
@@ -4895,17 +4955,31 @@ export default function Horarios() {
 
                     // Aplicar lógica de cores dos turnos
 
-                    const allFirstSlots = [...firstMatutinoSlots, ...firstVespertinoSlots, ...firstNoturnoSlots];
-                    const allSecondSlots = [...secondMatutinoSlots, ...secondVespertinoSlots, ...secondNoturnoSlots];
+                    const allFirstSlots = [
+                        ...firstMatutinoSlots,
+                        ...firstVespertinoSlots,
+                        ...firstNoturnoSlots,
+                    ];
+                    const allSecondSlots = [
+                        ...secondMatutinoSlots,
+                        ...secondVespertinoSlots,
+                        ...secondNoturnoSlots,
+                    ];
 
-                    if (event.startTime && allFirstSlots.includes(event.startTime)) {
+                    if (
+                        event.startTime &&
+                        allFirstSlots.includes(event.startTime)
+                    ) {
                         // Primeiro período - usar cor do primeiro dia da semana onde a disciplina aparece
                         if (firstPeriodColor) {
                             event.color = firstPeriodColor;
                         } else {
                             event.color = getColorByDay(event.dayId);
                         }
-                    } else if (event.startTime && allSecondSlots.includes(event.startTime)) {
+                    } else if (
+                        event.startTime &&
+                        allSecondSlots.includes(event.startTime)
+                    ) {
                         // Segundo período - seguir cor do primeiro período, ou se não há first slots, usar cor do primeiro dia em second slots
                         if (firstPeriodColor) {
                             event.color = firstPeriodColor;
@@ -4923,7 +4997,7 @@ export default function Horarios() {
         return eventsFormatted;
     };
 
-        // Função modificada para obter cor baseada no dia e contexto
+    // Função modificada para obter cor baseada no dia e contexto
     const getEventColor = useCallback(
         (dayId, time, disciplinaId, phaseNumber, events) => {
             // Aplicar lógica de cores baseada nos turnos
@@ -4935,8 +5009,16 @@ export default function Horarios() {
                 events
             );
 
-            const allFirstSlots = [...firstMatutinoSlots, ...firstVespertinoSlots, ...firstNoturnoSlots];
-            const allSecondSlots = [...secondMatutinoSlots, ...secondVespertinoSlots, ...secondNoturnoSlots];
+            const allFirstSlots = [
+                ...firstMatutinoSlots,
+                ...firstVespertinoSlots,
+                ...firstNoturnoSlots,
+            ];
+            const allSecondSlots = [
+                ...secondMatutinoSlots,
+                ...secondVespertinoSlots,
+                ...secondNoturnoSlots,
+            ];
 
             if (allFirstSlots.includes(time)) {
                 // Primeiro período - usar cor do primeiro dia da semana onde a disciplina aparece
@@ -5610,17 +5692,30 @@ export default function Horarios() {
 
         // Buscar cor do primeiro período cronológico usando as constantes globais
 
-                // Buscar cor do primeiro período cronológico
+        // Buscar cor do primeiro período cronológico
         let firstPeriodColor = null;
 
-        const dayOrder = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-        const allFirstSlots = [...firstMatutinoSlots, ...firstVespertinoSlots, ...firstNoturnoSlots];
+        const dayOrder = [
+            "monday",
+            "tuesday",
+            "wednesday",
+            "thursday",
+            "friday",
+            "saturday",
+        ];
+        const allFirstSlots = [
+            ...firstMatutinoSlots,
+            ...firstVespertinoSlots,
+            ...firstNoturnoSlots,
+        ];
 
         // PRIORIDADE 1: Buscar nos primeiros períodos ordenados por dia da semana
         // (segunda tem prioridade sobre terça, etc.)
         for (const dayId of dayOrder) {
             for (const [, eventArray] of Object.entries(events[phaseNumber])) {
-                const eventsInSlot = Array.isArray(eventArray) ? eventArray : [eventArray];
+                const eventsInSlot = Array.isArray(eventArray)
+                    ? eventArray
+                    : [eventArray];
                 for (const event of eventsInSlot) {
                     if (
                         event.disciplinaId === disciplinaId &&
@@ -5640,11 +5735,19 @@ export default function Horarios() {
         // PRIORIDADE 2: Se não encontrou nos primeiros períodos, buscar nos segundos períodos
         // ordenados por dia da semana (segunda tem prioridade sobre terça, etc.)
         if (!firstPeriodColor) {
-            const allSecondSlots = [...secondMatutinoSlots, ...secondVespertinoSlots, ...secondNoturnoSlots];
+            const allSecondSlots = [
+                ...secondMatutinoSlots,
+                ...secondVespertinoSlots,
+                ...secondNoturnoSlots,
+            ];
 
             for (const dayId of dayOrder) {
-                for (const [, eventArray] of Object.entries(events[phaseNumber])) {
-                    const eventsInSlot = Array.isArray(eventArray) ? eventArray : [eventArray];
+                for (const [, eventArray] of Object.entries(
+                    events[phaseNumber]
+                )) {
+                    const eventsInSlot = Array.isArray(eventArray)
+                        ? eventArray
+                        : [eventArray];
                     for (const event of eventsInSlot) {
                         if (
                             event.disciplinaId === disciplinaId &&
@@ -5664,11 +5767,23 @@ export default function Horarios() {
 
         // Se encontrou cor do primeiro período (ou dos segundos períodos), aplicar em ambos os períodos
         if (firstPeriodColor) {
-            const secondSlots = [...secondMatutinoSlots, ...secondVespertinoSlots, ...secondNoturnoSlots];
-            const firstSlots = [...firstMatutinoSlots, ...firstVespertinoSlots, ...firstNoturnoSlots];
+            const secondSlots = [
+                ...secondMatutinoSlots,
+                ...secondVespertinoSlots,
+                ...secondNoturnoSlots,
+            ];
+            const firstSlots = [
+                ...firstMatutinoSlots,
+                ...firstVespertinoSlots,
+                ...firstNoturnoSlots,
+            ];
 
-            for (const [eventKey, eventArray] of Object.entries(events[phaseNumber])) {
-                const eventsInSlot = Array.isArray(eventArray) ? eventArray : [eventArray];
+            for (const [eventKey, eventArray] of Object.entries(
+                events[phaseNumber]
+            )) {
+                const eventsInSlot = Array.isArray(eventArray)
+                    ? eventArray
+                    : [eventArray];
                 const updatedEvents = eventsInSlot.map((event) => {
                     // 🛡️ PROTEÇÃO GLOBAL: Proteger qualquer evento com o ID protegido
                     if (protectedEventId && event.id === protectedEventId) {
@@ -5676,7 +5791,10 @@ export default function Horarios() {
                     }
 
                     // Atualizar segundos períodos com a cor do primeiro período
-                    if (event.disciplinaId === disciplinaId && secondSlots.includes(event.startTime)) {
+                    if (
+                        event.disciplinaId === disciplinaId &&
+                        secondSlots.includes(event.startTime)
+                    ) {
                         return {
                             ...event,
                             color: firstPeriodColor,
@@ -5684,7 +5802,10 @@ export default function Horarios() {
                     }
 
                     // Atualizar primeiros períodos para manter consistência (usar cor do primeiro dia da semana)
-                    if (event.disciplinaId === disciplinaId && firstSlots.includes(event.startTime)) {
+                    if (
+                        event.disciplinaId === disciplinaId &&
+                        firstSlots.includes(event.startTime)
+                    ) {
                         return {
                             ...event,
                             color: firstPeriodColor,
@@ -5820,24 +5941,32 @@ export default function Horarios() {
                             width: { xs: "100%", sm: "auto" },
                         }}
                     >
-                                                <Tooltip
-                            title={hasPendingChanges()
-                                ? `Há ${getChangesCount().total} mudança(s) não sincronizada(s). Clique para ver opções.`
-                                : "Recarregar dados do banco de dados"
+                        <Tooltip
+                            title={
+                                hasPendingChanges()
+                                    ? `Há ${
+                                          getChangesCount().total
+                                      } mudança(s) não sincronizada(s). Clique para ver opções.`
+                                    : "Recarregar dados do banco de dados"
                             }
                         >
                             <Button
                                 variant="outlined"
                                 onClick={handleReloadClick}
                                 disabled={loadingHorarios}
-                                color={hasPendingChanges() ? "warning" : "primary"}
+                                color={
+                                    hasPendingChanges() ? "warning" : "primary"
+                                }
                                 sx={{
                                     minWidth: { xs: "200px", sm: "140px" },
                                     width: { xs: "100%", sm: "auto" },
                                 }}
                             >
-                                {loadingHorarios ? "Carregando..." :
-                                 hasPendingChanges() ? "Recarregar*" : "Recarregar"}
+                                {loadingHorarios
+                                    ? "Carregando..."
+                                    : hasPendingChanges()
+                                    ? "Recarregar*"
+                                    : "Recarregar"}
                             </Button>
                         </Tooltip>
 
@@ -6006,68 +6135,104 @@ export default function Horarios() {
                         </FormControl>
 
                         {/* Controle de Publicação */}
-                        {selectedCurso && selectedAnoSemestre.ano && selectedAnoSemestre.semestre && (
-                            <FormControl
-                                sx={{
-                                    minWidth: { xs: "100%", sm: 160 },
-                                    width: { xs: "100%", sm: "auto" },
-                                }}
-                            >
-                                <InputLabel>Status</InputLabel>
-                                <Select
-                                    value={(() => {
-                                        const anoSemestreAtual = anosSemestres.find(
-                                            (as) =>
-                                                as.ano === selectedAnoSemestre.ano &&
-                                                as.semestre === selectedAnoSemestre.semestre
-                                        );
-                                        return anoSemestreAtual ? (anoSemestreAtual.publicado ? "publicado" : "rascunho") : "rascunho";
-                                    })()}
-                                    onChange={async (e) => {
-                                        const novoStatus = e.target.value;
-                                        const publicado = novoStatus === "publicado";
-
-                                        try {
-                                            await axios.patch(
-                                                `http://localhost:3010/api/ano-semestre/${selectedAnoSemestre.ano}/${selectedAnoSemestre.semestre}/publicacao`,
-                                                { publicado }
-                                            );
-
-                                            // Atualizar estado local dos anos/semestres
-                                            setAnosSemestres(prev =>
-                                                prev.map(as =>
-                                                    as.ano === selectedAnoSemestre.ano && as.semestre === selectedAnoSemestre.semestre
-                                                        ? { ...as, publicado }
-                                                        : as
-                                                )
-                                            );
-
-                                            setSaveSuccess(true);
-                                            setTimeout(() => setSaveSuccess(false), 4000);
-                                        } catch (error) {
-                                            console.error("Erro ao alterar status de publicação:", error);
-                                            setSaveError("Erro ao alterar status de publicação: " + (error.response?.data?.message || error.message));
-                                            setTimeout(() => setSaveError(null), 6000);
-                                        }
+                        {selectedCurso &&
+                            selectedAnoSemestre.ano &&
+                            selectedAnoSemestre.semestre && (
+                                <FormControl
+                                    sx={{
+                                        minWidth: { xs: "100%", sm: 160 },
+                                        width: { xs: "100%", sm: "auto" },
                                     }}
-                                    label="Status"
-                                    disabled={loadingAnosSemestres || !selectedCurso}
                                 >
-                                    <MenuItem value="rascunho">
-                                        📝 Rascunho
-                                    </MenuItem>
-                                    <MenuItem value="publicado">
-                                        🌐 Publicado
-                                    </MenuItem>
-                                </Select>
-                            </FormControl>
-                        )}
+                                    <InputLabel>Status</InputLabel>
+                                    <Select
+                                        value={(() => {
+                                            const anoSemestreAtual =
+                                                anosSemestres.find(
+                                                    (as) =>
+                                                        as.ano ===
+                                                            selectedAnoSemestre.ano &&
+                                                        as.semestre ===
+                                                            selectedAnoSemestre.semestre
+                                                );
+                                            return anoSemestreAtual
+                                                ? anoSemestreAtual.publicado
+                                                    ? "publicado"
+                                                    : "rascunho"
+                                                : "rascunho";
+                                        })()}
+                                        onChange={async (e) => {
+                                            const novoStatus = e.target.value;
+                                            const publicado =
+                                                novoStatus === "publicado";
+
+                                            try {
+                                                await axios.patch(
+                                                    `http://localhost:3010/api/ano-semestre/${selectedAnoSemestre.ano}/${selectedAnoSemestre.semestre}/publicacao`,
+                                                    { publicado }
+                                                );
+
+                                                // Atualizar estado local dos anos/semestres
+                                                setAnosSemestres((prev) =>
+                                                    prev.map((as) =>
+                                                        as.ano ===
+                                                            selectedAnoSemestre.ano &&
+                                                        as.semestre ===
+                                                            selectedAnoSemestre.semestre
+                                                            ? {
+                                                                  ...as,
+                                                                  publicado,
+                                                              }
+                                                            : as
+                                                    )
+                                                );
+
+                                                setSaveSuccess(true);
+                                                setTimeout(
+                                                    () => setSaveSuccess(false),
+                                                    4000
+                                                );
+                                            } catch (error) {
+                                                console.error(
+                                                    "Erro ao alterar status de publicação:",
+                                                    error
+                                                );
+                                                setSaveError(
+                                                    "Erro ao alterar status de publicação: " +
+                                                        (error.response?.data
+                                                            ?.message ||
+                                                            error.message)
+                                                );
+                                                setTimeout(
+                                                    () => setSaveError(null),
+                                                    6000
+                                                );
+                                            }
+                                        }}
+                                        label="Status"
+                                        disabled={
+                                            loadingAnosSemestres ||
+                                            !selectedCurso
+                                        }
+                                    >
+                                        <MenuItem value="rascunho">
+                                            📝 Rascunho
+                                        </MenuItem>
+                                        <MenuItem value="publicado">
+                                            🌐 Publicado
+                                        </MenuItem>
+                                    </Select>
+                                </FormControl>
+                            )}
                     </Box>
                 </Box>
             </Box>
 
             {/* Indicador de Status de Publicação */}
-            {selectedCurso && selectedAnoSemestre.ano && selectedAnoSemestre.semestre && anosSemestres.length > 0 && (
+            {selectedCurso &&
+                selectedAnoSemestre.ano &&
+                selectedAnoSemestre.semestre &&
+                anosSemestres.length > 0 &&
                 (() => {
                     const anoSemestreAtual = anosSemestres.find(
                         (as) =>
@@ -6078,30 +6243,52 @@ export default function Horarios() {
                     if (anoSemestreAtual) {
                         return (
                             <Alert
-                                severity={anoSemestreAtual.publicado ? "success" : "info"}
+                                severity={
+                                    anoSemestreAtual.publicado
+                                        ? "success"
+                                        : "info"
+                                }
                                 sx={{
                                     mb: 2,
-                                    borderLeft: `4px solid ${anoSemestreAtual.publicado ? '#4caf50' : '#2196f3'}`,
+                                    borderLeft: `4px solid ${
+                                        anoSemestreAtual.publicado
+                                            ? "#4caf50"
+                                            : "#2196f3"
+                                    }`,
                                 }}
-                                icon={anoSemestreAtual.publicado ? '🌐' : '📝'}
+                                icon={anoSemestreAtual.publicado ? "🌐" : "📝"}
                             >
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <Typography variant="body2" fontWeight="bold">
-                                        Status dos Horários: {anoSemestreAtual.publicado ? 'PUBLICADOS' : 'RASCUNHO'}
+                                <Box
+                                    sx={{
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 1,
+                                    }}
+                                >
+                                    <Typography
+                                        variant="body2"
+                                        fontWeight="bold"
+                                    >
+                                        Status dos Horários:{" "}
+                                        {anoSemestreAtual.publicado
+                                            ? "PUBLICADOS"
+                                            : "RASCUNHO"}
                                     </Typography>
                                 </Box>
-                                                                <Typography variant="caption" display="block" sx={{ mt: 0.5 }}>
+                                <Typography
+                                    variant="caption"
+                                    display="block"
+                                    sx={{ mt: 0.5 }}
+                                >
                                     {anoSemestreAtual.publicado
-                                        ? 'Os horários salvos ficam visíveis na interface pública de visualização.'
-                                        : 'Os horários salvos ficam apenas na interface de construção (não são visíveis publicamente).'
-                                    }
+                                        ? "Os horários salvos ficam visíveis na interface pública de visualização."
+                                        : "Os horários salvos ficam apenas na interface de construção (não são visíveis publicamente)."}
                                 </Typography>
                             </Alert>
                         );
                     }
                     return null;
-                })()
-            )}
+                })()}
 
             {/* Alerts de feedback para salvamento */}
             {saveSuccess && (
@@ -6523,9 +6710,13 @@ export default function Horarios() {
                                 const anoSemestreAtual = anosSemestres.find(
                                     (as) =>
                                         as.ano === selectedAnoSemestre.ano &&
-                                        as.semestre === selectedAnoSemestre.semestre
+                                        as.semestre ===
+                                            selectedAnoSemestre.semestre
                                 );
-                                const statusPublicacao = anoSemestreAtual?.publicado ? "Publicado" : "Rascunho";
+                                const statusPublicacao =
+                                    anoSemestreAtual?.publicado
+                                        ? "Publicado"
+                                        : "Rascunho";
 
                                 let statusText = `Status (${
                                     selectedCurso
@@ -6613,19 +6804,26 @@ export default function Horarios() {
                 fullWidth
             >
                 <DialogTitle>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                         <WarningIcon color="warning" />
                         Recarregar Dados do Banco
                     </Box>
                 </DialogTitle>
                 <DialogContent>
                     <Typography variant="body1" sx={{ mb: 2 }}>
-                        Você possui <strong>{getChangesCount().total} mudança(s)</strong> que ainda não foram sincronizadas com o banco de dados.
+                        Você possui{" "}
+                        <strong>{getChangesCount().total} mudança(s)</strong>{" "}
+                        que ainda não foram sincronizadas com o banco de dados.
                     </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        Ao recarregar, todas as mudanças locais serão perdidas e os dados serão substituídos pelos do banco.
+                    <Typography
+                        variant="body2"
+                        color="text.secondary"
+                        sx={{ mb: 2 }}
+                    >
+                        Ao recarregar, todas as mudanças locais serão perdidas e
+                        os dados serão substituídos pelos do banco.
                     </Typography>
-                    <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                    <Typography variant="body2" sx={{ fontWeight: "medium" }}>
                         O que deseja fazer?
                     </Typography>
                 </DialogContent>
@@ -6654,7 +6852,9 @@ export default function Horarios() {
                         startIcon={<SaveIcon />}
                         disabled={savingHorarios}
                     >
-                        {savingHorarios ? 'Sincronizando...' : 'Sincronizar e Recarregar'}
+                        {savingHorarios
+                            ? "Sincronizando..."
+                            : "Sincronizar e Recarregar"}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -6684,4 +6884,3 @@ export default function Horarios() {
         </Box>
     );
 }
-
