@@ -4862,8 +4862,12 @@ export default function Horarios() {
                     const allSecondSlots = [...secondMatutinoSlots, ...secondVespertinoSlots, ...secondNoturnoSlots];
 
                     if (event.startTime && allFirstSlots.includes(event.startTime)) {
-                        // Primeiro período - usar cor do próprio dia
-                        event.color = getColorByDay(event.dayId);
+                        // Primeiro período - usar cor do primeiro dia da semana onde a disciplina aparece
+                        if (firstPeriodColor) {
+                            event.color = firstPeriodColor;
+                        } else {
+                            event.color = getColorByDay(event.dayId);
+                        }
                     } else if (event.startTime && allSecondSlots.includes(event.startTime)) {
                         // Segundo período - seguir cor do primeiro período
                         if (firstPeriodColor) {
@@ -4898,7 +4902,10 @@ export default function Horarios() {
             const allSecondSlots = [...secondMatutinoSlots, ...secondVespertinoSlots, ...secondNoturnoSlots];
 
             if (allFirstSlots.includes(time)) {
-                // Primeiro período - usar cor do próprio dia
+                // Primeiro período - usar cor do primeiro dia da semana onde a disciplina aparece
+                if (firstPeriodColor) {
+                    return firstPeriodColor;
+                }
                 return getColorByDay(dayId);
             } else if (allSecondSlots.includes(time)) {
                 // Segundo período - seguir cor do primeiro período
@@ -5650,11 +5657,11 @@ export default function Horarios() {
                         };
                     }
 
-                    // Atualizar primeiros períodos para manter consistência (usar cor baseada no dia)
+                    // Atualizar primeiros períodos para manter consistência (usar cor do primeiro dia da semana)
                     if (event.disciplinaId === disciplinaId && firstSlots.includes(event.startTime)) {
                         return {
                             ...event,
-                            color: getColorByDay(event.dayId),
+                            color: firstPeriodColor,
                         };
                     }
 
