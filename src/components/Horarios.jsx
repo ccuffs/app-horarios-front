@@ -3002,6 +3002,7 @@ export default function Horarios() {
     const [errorOfertas, setErrorOfertas] = useState(null);
     const [snackbarMessage, setSnackbarMessage] = useState("");
     const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [showReloadConfirmation, setShowReloadConfirmation] = useState(false);
 
     // Helper para verificar se o semestre é par (para compatibilidade)
     const isEvenSemester = selectedAnoSemestre.semestre === 2;
@@ -4246,6 +4247,33 @@ export default function Horarios() {
     const getInitialPhaseFromDatabase = (dbEvent) => {
         // Usar a fase do banco para posicionamento inicial, mas depois será controlada pela interface
         return dbEvent.fase || 1; // Fase padrão se não especificada
+    };
+
+    // Função para lidar com o clique do botão recarregar
+    // Verifica se há mudanças pendentes e solicita confirmação se necessário
+    const handleReloadClick = () => {
+        if (hasPendingChanges()) {
+            setShowReloadConfirmation(true);
+        } else {
+            loadHorariosFromDatabase();
+        }
+    };
+
+    // Função para sincronizar mudanças e depois recarregar
+    const handleSyncAndReload = async () => {
+        try {
+            await saveAllHorariosToDatabase();
+            setShowReloadConfirmation(false);
+            // Aguardar um pouco para garantir que a sincronização foi processada
+            setTimeout(() => {
+                loadHorariosFromDatabase();
+            }, 500);
+        } catch (error) {
+            console.error("Erro ao sincronizar antes de recarregar:", error);
+            setSnackbarMessage("Erro ao sincronizar. Tente novamente.");
+            setSnackbarOpen(true);
+            setShowReloadConfirmation(false);
+        }
     };
 
     // Função para recarregar dados do banco de dados
@@ -5792,17 +5820,26 @@ export default function Horarios() {
                             width: { xs: "100%", sm: "auto" },
                         }}
                     >
-                        <Button
-                            variant="outlined"
-                            onClick={loadHorariosFromDatabase}
-                            disabled={loadingHorarios}
-                            sx={{
-                                minWidth: { xs: "200px", sm: "140px" },
-                                width: { xs: "100%", sm: "auto" },
-                            }}
+                                                <Tooltip
+                            title={hasPendingChanges()
+                                ? `Há ${getChangesCount().total} mudança(s) não sincronizada(s). Clique para ver opções.`
+                                : "Recarregar dados do banco de dados"
+                            }
                         >
-                            {loadingHorarios ? "Carregando..." : "Recarregar"}
-                        </Button>
+                            <Button
+                                variant="outlined"
+                                onClick={handleReloadClick}
+                                disabled={loadingHorarios}
+                                color={hasPendingChanges() ? "warning" : "primary"}
+                                sx={{
+                                    minWidth: { xs: "200px", sm: "140px" },
+                                    width: { xs: "100%", sm: "auto" },
+                                }}
+                            >
+                                {loadingHorarios ? "Carregando..." :
+                                 hasPendingChanges() ? "Recarregar*" : "Recarregar"}
+                            </Button>
+                        </Tooltip>
 
                         <Badge
                             badgeContent={conflitosHorarios.length}
@@ -6567,6 +6604,60 @@ export default function Horarios() {
                 dayToNumber={dayToNumber}
                 daysOfWeek={daysOfWeek}
             />
+
+            {/* Modal de Confirmação para Recarregar */}
+            <Dialog
+                open={showReloadConfirmation}
+                onClose={() => setShowReloadConfirmation(false)}
+                maxWidth="sm"
+                fullWidth
+            >
+                <DialogTitle>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <WarningIcon color="warning" />
+                        Recarregar Dados do Banco
+                    </Box>
+                </DialogTitle>
+                <DialogContent>
+                    <Typography variant="body1" sx={{ mb: 2 }}>
+                        Você possui <strong>{getChangesCount().total} mudança(s)</strong> que ainda não foram sincronizadas com o banco de dados.
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        Ao recarregar, todas as mudanças locais serão perdidas e os dados serão substituídos pelos do banco.
+                    </Typography>
+                    <Typography variant="body2" sx={{ fontWeight: 'medium' }}>
+                        O que deseja fazer?
+                    </Typography>
+                </DialogContent>
+                <DialogActions sx={{ p: 2, gap: 1 }}>
+                    <Button
+                        onClick={() => setShowReloadConfirmation(false)}
+                        variant="outlined"
+                    >
+                        Cancelar
+                    </Button>
+                    <Button
+                        onClick={() => {
+                            setShowReloadConfirmation(false);
+                            loadHorariosFromDatabase();
+                        }}
+                        variant="outlined"
+                        color="error"
+                        startIcon={<DeleteIcon />}
+                    >
+                        Descartar e Recarregar
+                    </Button>
+                    <Button
+                        onClick={handleSyncAndReload}
+                        variant="contained"
+                        color="primary"
+                        startIcon={<SaveIcon />}
+                        disabled={savingHorarios}
+                    >
+                        {savingHorarios ? 'Sincronizando...' : 'Sincronizar e Recarregar'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
 
             <ConflitosModal
                 open={showConflitos}
