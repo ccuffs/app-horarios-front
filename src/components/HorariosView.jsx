@@ -240,7 +240,7 @@ const fixEventColorsAfterLoading = (eventsFormatted) => {
                         event.color = getColorByDay(event.dayId);
                     }
                 } else if (event.startTime && allSecondSlots.includes(event.startTime)) {
-                    // Segundo período - seguir cor do primeiro período
+                    // Segundo período - seguir cor do primeiro período, ou se não há first slots, usar cor do primeiro dia em second slots
                     if (firstPeriodColor) {
                         event.color = firstPeriodColor;
                     } else {

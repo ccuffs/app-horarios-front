@@ -4869,7 +4869,7 @@ export default function Horarios() {
                             event.color = getColorByDay(event.dayId);
                         }
                     } else if (event.startTime && allSecondSlots.includes(event.startTime)) {
-                        // Segundo período - seguir cor do primeiro período
+                        // Segundo período - seguir cor do primeiro período, ou se não há first slots, usar cor do primeiro dia em second slots
                         if (firstPeriodColor) {
                             event.color = firstPeriodColor;
                         } else {
@@ -5006,8 +5006,8 @@ export default function Horarios() {
                     updateRelatedDisciplinaColors(
                         newEvents,
                         phaseNumber,
-                        eventData.disciplinaId,
-                        eventData.id // Proteger o evento movido
+                        eventData.disciplinaId
+                        // Não proteger o evento para permitir recálculo completo das cores
                     );
                 }
 
@@ -5300,14 +5300,7 @@ export default function Horarios() {
                     newEvents[selectedPhase] = {};
                 }
 
-                // Determinar a cor correta baseada no contexto
-                const finalColor = getEventColor(
-                    eventData.dayId,
-                    eventData.startTime,
-                    eventData.disciplinaId,
-                    selectedPhase,
-                    newEvents
-                );
+                // A cor será determinada depois que o evento for adicionado à estrutura
 
                 // Verificar se o evento já existe na estrutura atual
                 let eventExists = false;
@@ -5367,12 +5360,8 @@ export default function Horarios() {
                                 duration: eventData.duration || event.duration,
                                 dayId: eventData.dayId || event.dayId,
 
-                                // Manter cor original se não mudou de disciplina
-                                color:
-                                    event.disciplinaId ===
-                                    eventData.disciplinaId
-                                        ? event.color
-                                        : finalColor,
+                                // A cor será atualizada posteriormente pela função updateRelatedDisciplinaColors
+                                color: event.color,
 
                                 // Sincronizar campos do banco
                                 id_ccr:
@@ -5424,7 +5413,7 @@ export default function Horarios() {
 
                     const newEvent = {
                         ...eventData,
-                        color: finalColor, // Usar cor determinada pela lógica
+                        color: getColorByDay(eventData.dayId), // Cor temporária, será atualizada posteriormente
                         duration: eventData.duration || 2,
 
                         // Sincronizar campos do banco
@@ -5473,8 +5462,8 @@ export default function Horarios() {
                     updateRelatedDisciplinaColors(
                         newEvents,
                         selectedPhase,
-                        eventData.disciplinaId,
-                        eventData.id // Passar o ID do evento recém-atualizado para protegê-lo
+                        eventData.disciplinaId
+                        // Não proteger o evento para permitir recálculo completo das cores
                     );
 
                     // Sincronizar disciplina, professores e comentários em eventos relacionados da mesma oferta
