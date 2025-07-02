@@ -4248,12 +4248,17 @@ export default function Horarios() {
         return dbEvent.fase || 1; // Fase padrão se não especificada
     };
 
-    // Função para carregar horários do banco de dados
+    // Função para recarregar dados do banco de dados
+    // Recarrega tanto as ofertas (que definem o grid) quanto os horários salvos
     const loadHorariosFromDatabase = async () => {
         setLoadingHorarios(true);
         setLoadError(null);
 
         try {
+            // Primeiro recarregar as ofertas para garantir que o grid esteja atualizado
+            // Isso é importante pois as ofertas definem quais fases serão exibidas
+            await fetchOfertas();
+
             const response = await axios.get(
                 "http://localhost:3010/api/horarios",
                 {
@@ -4369,12 +4374,16 @@ export default function Horarios() {
             setEvents(eventsWithFixedColors);
             setOriginalHorarios(horariosOriginais);
         } catch (error) {
+            console.error("Erro ao recarregar dados:", error);
+
             if (error.response?.status === 404) {
-                setLoadError("API de horários não está disponível");
+                setLoadError("API não está disponível");
+            } else if (error.message?.includes("ofertas")) {
+                setLoadError("Erro ao carregar ofertas. " + (error.response?.data?.message || "Verifique a conexão."));
             } else {
                 setLoadError(
                     error.response?.data?.message ||
-                        "Erro ao carregar horários do banco"
+                        "Erro ao carregar dados do banco"
                 );
             }
             setEvents({});
