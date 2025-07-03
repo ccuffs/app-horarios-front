@@ -99,6 +99,60 @@ const secondVespertinoSlots = ["16:00:00", "16:30:00", "17:00:00", "17:30:00"];
 const firstNoturnoSlots = ["19:00:00", "19:30:00", "20:00:00", "20:30:00"];
 const secondNoturnoSlots = ["21:00:00", "21:30:00", "22:00:00", "22:30:00"];
 
+// NOVA LÓGICA: Identificar todos os slots noturnos para terceiro evento
+const allNoturnoSlots = [...firstNoturnoSlots, ...secondNoturnoSlots];
+const allMatutinoVespertinoSlots = [
+    ...firstMatutinoSlots,
+    ...secondMatutinoSlots,
+    ...firstVespertinoSlots,
+    ...secondVespertinoSlots,
+];
+
+// Função para verificar se um horário é noturno
+const isHorarioNoturno = (startTime) => {
+    return allNoturnoSlots.includes(startTime);
+};
+
+// Função para verificar se um horário é matutino ou vespertino
+const isHorarioMatutinoOuVespertino = (startTime) => {
+    return allMatutinoVespertinoSlots.includes(startTime);
+};
+
+// Função para contar eventos de uma disciplina por turno
+const countEventosPorTurno = (disciplinaId, phaseNumber, events) => {
+    if (!disciplinaId || !events[phaseNumber]) return { matutino: 0, vespertino: 0, noturno: 0 };
+
+    let contadores = { matutino: 0, vespertino: 0, noturno: 0 };
+
+    for (const [, eventArray] of Object.entries(events[phaseNumber])) {
+        const eventsInSlot = Array.isArray(eventArray) ? eventArray : [eventArray];
+        for (const event of eventsInSlot) {
+            if (event.disciplinaId === disciplinaId) {
+                if ([...firstMatutinoSlots, ...secondMatutinoSlots].includes(event.startTime)) {
+                    contadores.matutino++;
+                } else if ([...firstVespertinoSlots, ...secondVespertinoSlots].includes(event.startTime)) {
+                    contadores.vespertino++;
+                } else if (allNoturnoSlots.includes(event.startTime)) {
+                    contadores.noturno++;
+                }
+            }
+        }
+    }
+
+    return contadores;
+};
+
+// Função para verificar se uma disciplina tem terceiro evento noturno separado
+const hasThirdEventNoturnoSeparado = (disciplinaId, phaseNumber, events) => {
+    const contadores = countEventosPorTurno(disciplinaId, phaseNumber, events);
+
+    // Se há eventos noturnos E eventos matutinos/vespertinos, o noturno é considerado separado
+    const hasMatutinoOuVespertino = contadores.matutino > 0 || contadores.vespertino > 0;
+    const hasNoturno = contadores.noturno > 0;
+
+    return hasMatutinoOuVespertino && hasNoturno;
+};
+
 // Função utilitária para converter HH:MM:SS para HH:MM para exibição
 const formatTimeForDisplay = (timeString) => {
     if (!timeString || typeof timeString !== "string") return "";
@@ -339,13 +393,46 @@ const getDisciplinaProfessoresFromOtherPeriod = (
 const getDisciplinaProfessoresFromSamePhase = (
     disciplinaId,
     phaseNumber,
-    events
+    events,
+    currentEventStartTime = null // NOVO: para considerar contexto de terceiro evento noturno
 ) => {
     if (!disciplinaId || !events || !events[phaseNumber]) return [];
 
     const phaseEvents = events[phaseNumber];
 
-    // Buscar em todos os eventos da mesma fase
+    // NOVA LÓGICA: Verificar se há terceiro evento noturno separado
+    const hasThirdNoturnoSeparado = hasThirdEventNoturnoSeparado(disciplinaId, phaseNumber, events);
+
+    // Se há terceiro evento noturno separado e temos contexto do evento atual
+    if (hasThirdNoturnoSeparado && currentEventStartTime) {
+        const isCurrentNoturno = isHorarioNoturno(currentEventStartTime);
+
+        // Buscar professores apenas no mesmo contexto
+        for (const [, eventArray] of Object.entries(phaseEvents)) {
+            const eventsInSlot = Array.isArray(eventArray) ? eventArray : [eventArray];
+            for (const event of eventsInSlot) {
+                if (event.disciplinaId === disciplinaId) {
+                    const isEventNoturno = isHorarioNoturno(event.startTime);
+
+                    // Só considerar eventos do mesmo contexto
+                    if (isCurrentNoturno === isEventNoturno) {
+                        if (
+                            event.professoresIds &&
+                            Array.isArray(event.professoresIds) &&
+                            event.professoresIds.length > 0
+                        ) {
+                            return event.professoresIds;
+                        } else if (event.professorId) {
+                            return [event.professorId];
+                        }
+                    }
+                }
+            }
+        }
+        return [];
+    }
+
+    // LÓGICA ORIGINAL: Buscar em todos os eventos da mesma fase
     for (const [, eventArray] of Object.entries(phaseEvents)) {
         // eventArray agora é um array de eventos
         const eventsInSlot = Array.isArray(eventArray)
@@ -388,12 +475,14 @@ const getDisciplinaProfessorFromOtherPeriod = (
 const getDisciplinaProfessorFromSamePhase = (
     disciplinaId,
     phaseNumber,
-    events
+    events,
+    currentEventStartTime = null // NOVO: para manter compatibilidade com nova lógica
 ) => {
     const professoresIds = getDisciplinaProfessoresFromSamePhase(
         disciplinaId,
         phaseNumber,
-        events
+        events,
+        currentEventStartTime // NOVO: passar o contexto
     );
     return professoresIds.length > 0 ? professoresIds[0] : null;
 };
@@ -4296,7 +4385,30 @@ export default function Horarios() {
         if (hasPendingChanges()) {
             setShowReloadConfirmation(true);
         } else {
-            loadHorariosFromDatabase();
+            reloadAllData();
+        }
+    };
+
+    // Função para recarregar todos os dados (professores, disciplinas, ofertas e horários)
+    const reloadAllData = async () => {
+        try {
+            setLoadingHorarios(true);
+            setLoadError(null);
+
+            // Recarregar todos os dados em paralelo
+            await Promise.all([
+                fetchProfessores(),
+                fetchDisciplinas(),
+                fetchOfertas()
+            ]);
+
+            // Depois recarregar os horários
+            await loadHorariosFromDatabase();
+        } catch (error) {
+            console.error("Erro ao recarregar todos os dados:", error);
+            setLoadError("Erro ao recarregar dados. Tente novamente.");
+        } finally {
+            setLoadingHorarios(false);
         }
     };
 
@@ -4307,7 +4419,7 @@ export default function Horarios() {
             setShowReloadConfirmation(false);
             // Aguardar um pouco para garantir que a sincronização foi processada
             setTimeout(() => {
-                loadHorariosFromDatabase();
+                reloadAllData(); // Recarregar todos os dados
             }, 500);
         } catch (error) {
             console.error("Erro ao sincronizar antes de recarregar:", error);
@@ -4318,14 +4430,14 @@ export default function Horarios() {
     };
 
     // Função para recarregar dados do banco de dados
-    // Recarrega tanto as ofertas (que definem o grid) quanto os horários salvos
+    // Recarrega ofertas e horários salvos
     const loadHorariosFromDatabase = async () => {
         setLoadingHorarios(true);
         setLoadError(null);
 
         try {
-            // Primeiro recarregar as ofertas para garantir que o grid esteja atualizado
-            // Isso é importante pois as ofertas definem quais fases serão exibidas
+            // Recarregar apenas ofertas, pois professores e disciplinas
+            // já são carregados no useEffect inicial
             await fetchOfertas();
 
             const response = await axios.get(
@@ -4846,14 +4958,137 @@ export default function Horarios() {
     }, [conflitosHorarios]);
 
     // Função para buscar cor de disciplina no primeiro período cronológico (prioridade: matutino primeiro, depois vespertino primeiro, depois noturno primeiro)
+    // NOVA FUNÇÃO: Buscar cor apenas entre eventos noturnos
+    const getDisciplinaColorFromNoturnoOnly = (disciplinaId, phaseNumber, events) => {
+        if (!disciplinaId || !events[phaseNumber]) return null;
+
+        const dayOrder = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+
+        // PRIORIDADE 1: Buscar nos primeiros períodos noturnos
+        for (const dayId of dayOrder) {
+            for (const [, eventArray] of Object.entries(events[phaseNumber])) {
+                const eventsInSlot = Array.isArray(eventArray) ? eventArray : [eventArray];
+                for (const event of eventsInSlot) {
+                    if (
+                        event.disciplinaId === disciplinaId &&
+                        event.dayId === dayId &&
+                        firstNoturnoSlots.includes(event.startTime)
+                    ) {
+                        return getColorByDay(dayId);
+                    }
+                }
+            }
+        }
+
+        // PRIORIDADE 2: Buscar nos segundos períodos noturnos
+        for (const dayId of dayOrder) {
+            for (const [, eventArray] of Object.entries(events[phaseNumber])) {
+                const eventsInSlot = Array.isArray(eventArray) ? eventArray : [eventArray];
+                for (const event of eventsInSlot) {
+                    if (
+                        event.disciplinaId === disciplinaId &&
+                        event.dayId === dayId &&
+                        secondNoturnoSlots.includes(event.startTime)
+                    ) {
+                        return getColorByDay(dayId);
+                    }
+                }
+            }
+        }
+
+        // PRIORIDADE 3: Qualquer evento noturno da disciplina
+        for (const [, eventArray] of Object.entries(events[phaseNumber])) {
+            const eventsInSlot = Array.isArray(eventArray) ? eventArray : [eventArray];
+            for (const event of eventsInSlot) {
+                if (event.disciplinaId === disciplinaId &&
+                    allNoturnoSlots.includes(event.startTime) &&
+                    event.color) {
+                    return event.color;
+                }
+            }
+        }
+
+        return null;
+    };
+
+    // NOVA FUNÇÃO: Buscar cor apenas entre eventos matutinos/vespertinos
+    const getDisciplinaColorFromMatutinoVespertinoOnly = (disciplinaId, phaseNumber, events) => {
+        if (!disciplinaId || !events[phaseNumber]) return null;
+
+        const dayOrder = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday"];
+        const allFirstMatutinoVespertinoSlots = [...firstMatutinoSlots, ...firstVespertinoSlots];
+
+        // PRIORIDADE 1: Buscar nos primeiros períodos matutinos/vespertinos
+        for (const dayId of dayOrder) {
+            for (const [, eventArray] of Object.entries(events[phaseNumber])) {
+                const eventsInSlot = Array.isArray(eventArray) ? eventArray : [eventArray];
+                for (const event of eventsInSlot) {
+                    if (
+                        event.disciplinaId === disciplinaId &&
+                        event.dayId === dayId &&
+                        allFirstMatutinoVespertinoSlots.includes(event.startTime)
+                    ) {
+                        return getColorByDay(dayId);
+                    }
+                }
+            }
+        }
+
+        // PRIORIDADE 2: Buscar nos segundos períodos matutinos/vespertinos
+        const allSecondMatutinoVespertinoSlots = [...secondMatutinoSlots, ...secondVespertinoSlots];
+        for (const dayId of dayOrder) {
+            for (const [, eventArray] of Object.entries(events[phaseNumber])) {
+                const eventsInSlot = Array.isArray(eventArray) ? eventArray : [eventArray];
+                for (const event of eventsInSlot) {
+                    if (
+                        event.disciplinaId === disciplinaId &&
+                        event.dayId === dayId &&
+                        allSecondMatutinoVespertinoSlots.includes(event.startTime)
+                    ) {
+                        return getColorByDay(dayId);
+                    }
+                }
+            }
+        }
+
+        // PRIORIDADE 3: Qualquer evento matutino/vespertino da disciplina
+        for (const [, eventArray] of Object.entries(events[phaseNumber])) {
+            const eventsInSlot = Array.isArray(eventArray) ? eventArray : [eventArray];
+            for (const event of eventsInSlot) {
+                if (event.disciplinaId === disciplinaId &&
+                    allMatutinoVespertinoSlots.includes(event.startTime) &&
+                    event.color) {
+                    return event.color;
+                }
+            }
+        }
+
+        return null;
+    };
+
     const getDisciplinaColorFromFirstPeriod = (
         disciplinaId,
         phaseNumber,
-        events
+        events,
+        currentEventStartTime = null // NOVO: horário do evento atual para determinar contexto
     ) => {
         if (!disciplinaId || !events[phaseNumber]) return null;
 
-        // Buscar a cor do primeiro período desta disciplina em QUALQUER dia da semana
+        // NOVA LÓGICA: Verificar se há terceiro evento noturno separado
+        const hasThirdNoturnoSeparado = hasThirdEventNoturnoSeparado(disciplinaId, phaseNumber, events);
+
+        // Se há terceiro evento noturno separado, tratar eventos noturnos de forma independente
+        if (hasThirdNoturnoSeparado && currentEventStartTime) {
+            if (isHorarioNoturno(currentEventStartTime)) {
+                // Para eventos noturnos, buscar cor apenas entre eventos noturnos
+                return getDisciplinaColorFromNoturnoOnly(disciplinaId, phaseNumber, events);
+            } else {
+                // Para eventos matutinos/vespertinos, buscar cor apenas entre matutinos/vespertinos
+                return getDisciplinaColorFromMatutinoVespertinoOnly(disciplinaId, phaseNumber, events);
+            }
+        }
+
+        // LÓGICA ORIGINAL: Buscar a cor do primeiro período desta disciplina em QUALQUER dia da semana
         // Isso garante que eventos no segundo período mantenham a cor consistente
 
         const dayOrder = [
@@ -4946,11 +5181,12 @@ export default function Horarios() {
 
                 // Para cada evento no slot
                 eventsInSlot.forEach((event) => {
-                    // Buscar cor do primeiro período cronológico para esta disciplina
+                    // NOVA LÓGICA: Buscar cor considerando terceiro evento noturno separado
                     const firstPeriodColor = getDisciplinaColorFromFirstPeriod(
                         event.disciplinaId,
                         phase,
-                        eventsFormatted
+                        eventsFormatted,
+                        event.startTime // NOVO: passar o horário atual para contexto
                     );
 
                     // Aplicar lógica de cores dos turnos
@@ -5000,13 +5236,14 @@ export default function Horarios() {
     // Função modificada para obter cor baseada no dia e contexto
     const getEventColor = useCallback(
         (dayId, time, disciplinaId, phaseNumber, events) => {
-            // Aplicar lógica de cores baseada nos turnos
+            // NOVA LÓGICA: Aplicar regras especiais para terceiro evento noturno
 
-            // Buscar cor do primeiro período cronológico para esta disciplina
+            // Buscar cor do primeiro período cronológico para esta disciplina (passando o horário atual)
             const firstPeriodColor = getDisciplinaColorFromFirstPeriod(
                 disciplinaId,
                 phaseNumber,
-                events
+                events,
+                time // NOVO: passar o horário atual para contexto
             );
 
             const allFirstSlots = [
@@ -5627,6 +5864,12 @@ export default function Horarios() {
         if (!events[phaseNumber] || !originalDisciplinaId || !updatedEventData)
             return;
 
+        // NOVA LÓGICA: Verificar se há terceiro evento noturno separado
+        const hasThirdNoturnoSeparado = hasThirdEventNoturnoSeparado(originalDisciplinaId, phaseNumber, events);
+
+        // Obter o horário do evento que está sendo atualizado para determinar contexto
+        const currentEventStartTime = updatedEventData.startTime;
+
         // Encontrar todos os eventos da disciplina original na mesma fase
         for (const [eventKey, eventArray] of Object.entries(
             events[phaseNumber]
@@ -5643,6 +5886,17 @@ export default function Horarios() {
 
                 // Sincronizar apenas eventos da mesma disciplina original
                 if (event.disciplinaId === originalDisciplinaId) {
+                    // NOVA REGRA: Se há terceiro evento noturno separado, só sincronizar dentro do mesmo contexto
+                    if (hasThirdNoturnoSeparado && currentEventStartTime) {
+                        const isCurrentNoturno = isHorarioNoturno(currentEventStartTime);
+                        const isEventNoturno = isHorarioNoturno(event.startTime);
+
+                        // Só sincronizar se ambos são do mesmo contexto (ambos noturnos ou ambos matutino/vespertino)
+                        if (isCurrentNoturno !== isEventNoturno) {
+                            return event; // Não sincronizar eventos de contextos diferentes
+                        }
+                    }
+
                     return {
                         ...event,
                         // Sincronizar disciplina
@@ -5681,6 +5935,48 @@ export default function Horarios() {
         }
     };
 
+    // NOVA FUNÇÃO: Atualizar cores para disciplinas com terceiro evento noturno separado
+    const updateColorsForSeparatedNoturno = (events, phaseNumber, disciplinaId, protectedEventId) => {
+        // Obter cores separadas para eventos noturnos e matutinos/vespertinos
+        const noturnoColor = getDisciplinaColorFromNoturnoOnly(disciplinaId, phaseNumber, events);
+        const matutinoVespertinoColor = getDisciplinaColorFromMatutinoVespertinoOnly(disciplinaId, phaseNumber, events);
+
+        for (const [eventKey, eventArray] of Object.entries(events[phaseNumber])) {
+            const eventsInSlot = Array.isArray(eventArray) ? eventArray : [eventArray];
+            const updatedEvents = eventsInSlot.map((event) => {
+                // 🛡️ PROTEÇÃO: Proteger evento sendo editado
+                if (protectedEventId && event.id === protectedEventId) {
+                    return event;
+                }
+
+                if (event.disciplinaId === disciplinaId) {
+                    if (isHorarioNoturno(event.startTime)) {
+                        // Eventos noturnos usam cor dos eventos noturnos
+                        return {
+                            ...event,
+                            color: noturnoColor || getColorByDay(event.dayId),
+                        };
+                    } else if (isHorarioMatutinoOuVespertino(event.startTime)) {
+                        // Eventos matutinos/vespertinos usam cor dos eventos matutinos/vespertinos
+                        return {
+                            ...event,
+                            color: matutinoVespertinoColor || getColorByDay(event.dayId),
+                        };
+                    }
+                }
+
+                return event;
+            });
+
+            // Preservar estrutura
+            if (updatedEvents.length === 1) {
+                events[phaseNumber][eventKey] = updatedEvents[0];
+            } else {
+                events[phaseNumber][eventKey] = updatedEvents;
+            }
+        }
+    };
+
     // Função para atualizar cores de disciplinas relacionadas
     const updateRelatedDisciplinaColors = (
         events,
@@ -5690,9 +5986,16 @@ export default function Horarios() {
     ) => {
         if (!events[phaseNumber] || !disciplinaId) return;
 
-        // Buscar cor do primeiro período cronológico usando as constantes globais
+        // NOVA LÓGICA: Verificar se há terceiro evento noturno separado
+        const hasThirdNoturnoSeparado = hasThirdEventNoturnoSeparado(disciplinaId, phaseNumber, events);
 
-        // Buscar cor do primeiro período cronológico
+        if (hasThirdNoturnoSeparado) {
+            // Tratar eventos noturnos e matutinos/vespertinos separadamente
+            updateColorsForSeparatedNoturno(events, phaseNumber, disciplinaId, protectedEventId);
+            return;
+        }
+
+        // LÓGICA ORIGINAL: Buscar cor do primeiro período cronológico
         let firstPeriodColor = null;
 
         const dayOrder = [
