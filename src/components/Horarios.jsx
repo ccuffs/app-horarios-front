@@ -38,6 +38,7 @@ import {
     Delete as DeleteIcon,
     Warning as WarningIcon,
     Schedule as ScheduleIcon,
+    Download as DownloadIcon,
 } from "@mui/icons-material";
 import axios from "axios";
 import { customColors } from "./CustomThemeProvider";
@@ -6179,6 +6180,138 @@ export default function Horarios() {
         [originalEventBackup, selectedEvent, selectedPhase]
     );
 
+    // Função para gerar e baixar arquivo JSON com os horários
+    const generateScheduleJSON = () => {
+        try {
+            const scheduleData = [];
+            let currentId = 1;
+
+            // Percorrer todas as fases e eventos
+            Object.keys(events).forEach((phaseNumber) => {
+                const phaseEvents = events[phaseNumber];
+
+                Object.keys(phaseEvents).forEach((slotKey) => {
+                    const eventsInSlot = Array.isArray(phaseEvents[slotKey])
+                        ? phaseEvents[slotKey]
+                        : [phaseEvents[slotKey]];
+
+                    eventsInSlot.forEach((event) => {
+                        // Verificar se o evento tem dados válidos
+                        if (!event.disciplinaId || !event.professorId) {
+                            return; // Pular eventos incompletos
+                        }
+
+                        // Buscar informações da disciplina
+                        const disciplina = disciplinas.find(d => d.id === event.disciplinaId);
+                        if (!disciplina) return;
+
+                        // Buscar informações dos professores (pode ter múltiplos)
+                        let professoresCodigos = [];
+
+                        if (event.professoresIds && Array.isArray(event.professoresIds)) {
+                            // Formato novo com múltiplos professores
+                            professoresCodigos = event.professoresIds;
+                        } else if (event.professorId) {
+                            // Formato antigo com um professor
+                            professoresCodigos = [event.professorId];
+                        }
+
+                        if (professoresCodigos.length === 0) return;
+
+                        // Determinar o valor de slots baseado no turno
+                        const isNoturno = isHorarioNoturno(event.startTime);
+                        const slots = isNoturno ? 2 : 1;
+
+                        // Mapear período baseado no horário específico
+                        let period;
+                        if (firstMatutinoSlots.includes(event.startTime)) {
+                            period = 1; // Primeiro período matutino
+                        } else if (secondMatutinoSlots.includes(event.startTime)) {
+                            period = 2; // Segundo período matutino
+                        } else if (firstVespertinoSlots.includes(event.startTime)) {
+                            period = 4; // Primeiro período vespertino
+                        } else if (secondVespertinoSlots.includes(event.startTime)) {
+                            period = 5; // Segundo período vespertino
+                        } else if (isNoturno) {
+                            period = 6; // Período noturno único
+                        } else {
+                            period = 6; // Default para noturno
+                        }
+
+                        // Para horários noturnos: agrupar todos os professores em uma entrada
+                        // Para outros turnos: criar entrada separada para cada professor
+                        if (isNoturno) {
+                            // Horário noturno: uma entrada com todos os professores
+                            const scheduleItem = {
+                                id: currentId++,
+                                code: disciplina.codigo,
+                                name: `${disciplina.codigo} - ${disciplina.nome}`,
+                                credits: 4,
+                                slots: 2,
+                                group: parseInt(phaseNumber, 10),
+                                members: professoresCodigos, // Todos os professores juntos
+                                weekDay: dayToNumber[event.dayId] + 1,
+                                period: period
+                            };
+
+                            scheduleData.push(scheduleItem);
+                        } else {
+                            // Horários matutino/vespertino: entrada separada para cada professor
+                            professoresCodigos.forEach((professorCodigo) => {
+                                const scheduleItem = {
+                                    id: currentId++,
+                                    code: disciplina.codigo,
+                                    name: `${disciplina.codigo} - ${disciplina.nome}`,
+                                    credits: 4,
+                                    slots: 1,
+                                    group: parseInt(phaseNumber, 10),
+                                    members: [professorCodigo],
+                                    weekDay: dayToNumber[event.dayId] + 1,
+                                    period: period
+                                };
+
+                                scheduleData.push(scheduleItem);
+                            });
+                        }
+                    });
+                });
+            });
+
+            // Ordenar por grupo, depois por dia da semana, depois por período
+            scheduleData.sort((a, b) => {
+                if (a.group !== b.group) return a.group - b.group;
+                if (a.weekDay !== b.weekDay) return a.weekDay - b.weekDay;
+                return a.period - b.period;
+            });
+
+            // Gerar nome do arquivo
+            const nomeArquivo = selectedCurso
+                ? `schedule_${selectedCurso.nome.replace(/\s+/g, '_')}_${selectedAnoSemestre.ano}_${selectedAnoSemestre.semestre}.json`
+                : `schedule_${selectedAnoSemestre.ano}_${selectedAnoSemestre.semestre}.json`;
+
+            // Criar e baixar arquivo
+            const dataStr = JSON.stringify(scheduleData, null, 4);
+            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+
+            const url = URL.createObjectURL(dataBlob);
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = nomeArquivo;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            URL.revokeObjectURL(url);
+
+            setSnackbarMessage(`Arquivo ${nomeArquivo} baixado com sucesso! (${scheduleData.length} horários)`);
+            setSnackbarOpen(true);
+
+        } catch (error) {
+            console.error("Erro ao gerar JSON:", error);
+            setSnackbarMessage("Erro ao gerar arquivo JSON: " + error.message);
+            setSnackbarOpen(true);
+        }
+    };
+
     return (
         <Box sx={{ padding: 2 }}>
             <Box
@@ -6331,6 +6464,26 @@ export default function Horarios() {
                                 return "Nenhuma Mudança";
                             })()}
                         </Button>
+
+                        <Tooltip title="Baixar horários em formato JSON">
+                            <Button
+                                variant="outlined"
+                                color="secondary"
+                                onClick={generateScheduleJSON}
+                                disabled={
+                                    loadingHorarios ||
+                                    !selectedCurso ||
+                                    getValidHorariosCount() === 0
+                                }
+                                startIcon={<DownloadIcon />}
+                                sx={{
+                                    minWidth: { xs: "200px", sm: "140px" },
+                                    width: { xs: "100%", sm: "auto" },
+                                }}
+                            >
+                                Baixar JSON
+                            </Button>
+                        </Tooltip>
                     </Box>
 
                     {/* Segunda linha de seletores em mobile, inline em desktop */}
