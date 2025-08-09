@@ -9,7 +9,7 @@ import React from "react";
 import Navbar from "./Navbar";
 import Login from "./Login";
 import ProtectedRoute from "../contexts/ProtectedRoute";
-import { AuthProvider } from "../contexts/AuthContext";
+import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import { Permissoes } from "../enums/permissoes";
 
 import axiosInstance from "../auth/axios";
@@ -28,119 +28,127 @@ import ThemeSwitch from "./ThemeSwitch";
 // Contexto para gerenciar o estado do drawer
 export const DrawerContext = React.createContext();
 
-function App() {
-  const [desktopOpen, setDesktopOpen] = React.useState(false);
+function AppContent() {
+	const [desktopOpen, setDesktopOpen] = React.useState(false);
+	const { isAuthenticated } = useAuth();
 
-  return (
-    <AuthProvider>
-      <CustomThemeProvider>
-        <DrawerContext.Provider value={{ desktopOpen, setDesktopOpen }}>
-          <Box sx={{ display: "flex" }}>
-            <Navbar />
-            <Box
-              component="main"
-              sx={{
-                flexGrow: 1,
-                p: 3,
-                width: { md: desktopOpen ? `calc(100% - 240px)` : "100%" },
-                transition: (theme) =>
-                  theme.transitions.create(["width", "margin"], {
-                    easing: theme.transitions.easing.sharp,
-                    duration: theme.transitions.duration.leavingScreen,
-                  }),
-              }}
-            >
-              <Toolbar /> {/* Spacing for AppBar */}
-              <ThemeSwitch />
-              <Container maxWidth="xl" sx={{ mt: 2 }}>
-                <Routes>
-                  <Route path="/login" element={<Login />} />
-                  <Route
-                    path="/"
-                    element={
-                      <ProtectedRoute
-                        permissao={[
-                          Permissoes.HORARIOS.VISUALIZAR,
-                          Permissoes.HORARIOS.VISUALIZAR_TODOS,
-                        ]}
-                      >
-                        <Horarios />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="visualizar-horarios"
-                    element={
-                      <ProtectedRoute
-                        permissao={[
-                          Permissoes.HORARIOS.VISUALIZAR,
-                          Permissoes.HORARIOS.VISUALIZAR_TODOS,
-                        ]}
-                      >
-                        <HorariosView />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="ccrs"
-                    element={
-                      <ProtectedRoute
-                        permissao={[
-                          Permissoes.CCR.VISUALIZAR,
-                          Permissoes.CCR.VISUALIZAR_TODAS,
-                        ]}
-                      >
-                        <CCRs />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="cursos"
-                    element={
-                      <ProtectedRoute
-                        permissao={[
-                          Permissoes.OFERTAS_CURSO.VISUALIZAR,
-                          Permissoes.OFERTAS_CURSO.VISUALIZAR_TODOS,
-                        ]}
-                      >
-                        <Cursos />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="professores"
-                    element={
-                      <ProtectedRoute
-                        permissao={[
-                          Permissoes.DOCENTES.VISUALIZAR,
-                          Permissoes.DOCENTES.VISUALIZAR_TODOS,
-                        ]}
-                      >
-                        <Professores />
-                      </ProtectedRoute>
-                    }
-                  />
-                  <Route
-                    path="ofertas"
-                    element={
-                      <ProtectedRoute
-                        permissao={[
-                          Permissoes.OFERTAS_CURSO.VISUALIZAR,
-                          Permissoes.OFERTAS_CURSO.VISUALIZAR_TODOS,
-                        ]}
-                      >
-                        <Ofertas />
-                      </ProtectedRoute>
-                    }
-                  />
-                </Routes>
-              </Container>
-            </Box>
-          </Box>
-        </DrawerContext.Provider>
-      </CustomThemeProvider>
-    </AuthProvider>
-  );
+	return (
+		<DrawerContext.Provider value={{ desktopOpen, setDesktopOpen }}>
+			<Box sx={{ display: "flex" }}>
+				<Navbar />
+				<Box
+					component="main"
+					sx={{
+						flexGrow: 1,
+						p: 3,
+						width: {
+							md:
+								isAuthenticated && desktopOpen
+									? `calc(100% - 240px)`
+									: "100%",
+						},
+						transition: (theme) =>
+							theme.transitions.create(["width", "margin"], {
+								easing: theme.transitions.easing.sharp,
+								duration:
+									theme.transitions.duration.leavingScreen,
+							}),
+					}}
+				>
+					<Toolbar /> {/* Spacing for AppBar */}
+					<ThemeSwitch />
+					<Container maxWidth="xl" sx={{ mt: 2 }}>
+						<Routes>
+							<Route path="/login" element={<Login />} />
+							<Route
+								path="/"
+								element={
+									<ProtectedRoute
+										permissao={[
+											Permissoes.HORARIOS.VISUALIZAR,
+											Permissoes.HORARIOS
+												.VISUALIZAR_TODOS,
+										]}
+									>
+										<Horarios />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path="visualizar-horarios"
+								element={<HorariosView />}
+							/>
+							<Route
+								path="ccrs"
+								element={
+									<ProtectedRoute
+										permissao={[
+											Permissoes.CCR.VISUALIZAR,
+											Permissoes.CCR.VISUALIZAR_TODAS,
+										]}
+									>
+										<CCRs />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path="cursos"
+								element={
+									<ProtectedRoute
+										permissao={[
+											Permissoes.OFERTAS_CURSO.VISUALIZAR,
+											Permissoes.OFERTAS_CURSO
+												.VISUALIZAR_TODOS,
+										]}
+									>
+										<Cursos />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path="professores"
+								element={
+									<ProtectedRoute
+										permissao={[
+											Permissoes.DOCENTES.VISUALIZAR,
+											Permissoes.DOCENTES
+												.VISUALIZAR_TODOS,
+										]}
+									>
+										<Professores />
+									</ProtectedRoute>
+								}
+							/>
+							<Route
+								path="ofertas"
+								element={
+									<ProtectedRoute
+										permissao={[
+											Permissoes.OFERTAS_CURSO.VISUALIZAR,
+											Permissoes.OFERTAS_CURSO
+												.VISUALIZAR_TODOS,
+										]}
+									>
+										<Ofertas />
+									</ProtectedRoute>
+								}
+							/>
+						</Routes>
+					</Container>
+				</Box>
+			</Box>
+		</DrawerContext.Provider>
+	);
+}
+
+function App() {
+	return (
+		<AuthProvider>
+			<CustomThemeProvider>
+				<AppContent />
+			</CustomThemeProvider>
+		</AuthProvider>
+	);
 }
 
 export default App;
