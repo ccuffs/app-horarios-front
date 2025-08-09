@@ -40,6 +40,7 @@ export default function CCRs() {
 		id: "",
 		codigo: "",
 		nome: "",
+		creditos: 4,
 		ementa: "",
 	});
 	const [cursosSelecionados, setCursosSelecionados] = useState([]);
@@ -116,6 +117,7 @@ export default function CCRs() {
 					formData: {
 						codigo: formData.codigo,
 						nome: formData.nome,
+						creditos: formData.creditos,
 						ementa: formData.ementa,
 					},
 					cursosSelecionados: cursosSelecionados,
@@ -128,6 +130,7 @@ export default function CCRs() {
 				id: "",
 				codigo: "",
 				nome: "",
+				creditos: 4,
 				ementa: "",
 			});
 			setCursosSelecionados([]);
@@ -148,6 +151,7 @@ export default function CCRs() {
 			id: "",
 			codigo: "",
 			nome: "",
+			creditos: 4,
 			ementa: "",
 		});
 		setCursosSelecionados([]);
@@ -175,7 +179,7 @@ export default function CCRs() {
 			setMessageText("Falha ao remover CCR!");
 			setMessageSeverity("error");
 		} finally {
-			setFormData({ id: "", codigo: "", nome: "", ementa: "" });
+			setFormData({ id: "", codigo: "", nome: "", creditos: 4, ementa: "" });
 			setOpenDialog(false);
 			setOpenMessage(true);
 			await getData();
@@ -189,6 +193,7 @@ export default function CCRs() {
 	const columns = [
 		{ field: "codigo", headerName: "Código", width: 120 },
 		{ field: "nome", headerName: "Nome", width: 300 },
+		{ field: "creditos", headerName: "Créditos", width: 100 },
 		{ field: "ementa", headerName: "Ementa", width: 300 },
 		{
 			field: "cursos",
@@ -255,6 +260,14 @@ export default function CCRs() {
 							fullWidth
 							size="small"
 							value={formData.nome}
+							onChange={handleInputChange}
+						/>
+						<TextField
+							name="creditos"
+							label="Créditos"
+							type="text"
+							size="small"
+							value={formData.creditos}
 							onChange={handleInputChange}
 						/>
 					</Stack>

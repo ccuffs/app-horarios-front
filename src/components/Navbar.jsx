@@ -105,9 +105,9 @@ function Navbar() {
 					</ListItemButton>
 				</ListItem>
 				<PermissionContext
-					permissoes={[
-						Permissoes.CCR.VISUALIZAR,
-						Permissoes.CCR.VISUALIZAR_TODAS,
+					grupos={[
+						Permissoes.GRUPO.ADMIN,
+						Permissoes.GRUPO.COORDENADOR,						,
 					]}
 					showError={false}
 				>
@@ -116,40 +116,16 @@ function Navbar() {
 							<ListItemText primary="CCRs" />
 						</ListItemButton>
 					</ListItem>
-				</PermissionContext>
-				<PermissionContext
-					permissoes={[
-						Permissoes.OFERTAS_CURSO.VISUALIZAR,
-						Permissoes.OFERTAS_CURSO.VISUALIZAR_TODOS,
-					]}
-					showError={false}
-				>
 					<ListItem disablePadding>
 						<ListItemButton onClick={handleClickCursos}>
 							<ListItemText primary="Cursos" />
 						</ListItemButton>
 					</ListItem>
-				</PermissionContext>
-				<PermissionContext
-					permissoes={[
-						Permissoes.DOCENTES.VISUALIZAR,
-						Permissoes.DOCENTES.VISUALIZAR_TODOS,
-					]}
-					showError={false}
-				>
 					<ListItem disablePadding>
 						<ListItemButton onClick={handleClickProfessores}>
 							<ListItemText primary="Professores" />
 						</ListItemButton>
 					</ListItem>
-				</PermissionContext>
-				<PermissionContext
-					permissoes={[
-						Permissoes.OFERTAS_CURSO.VISUALIZAR,
-						Permissoes.OFERTAS_CURSO.VISUALIZAR_TODOS,
-					]}
-					showError={false}
-				>
 					<ListItem disablePadding>
 						<ListItemButton onClick={handleClickOfertas}>
 							<ListItemText primary="Ofertas" />
