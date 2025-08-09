@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axiosInstance from "../auth/axios";
 
 import {
   Alert,
@@ -57,8 +57,8 @@ export default function CCRs() {
 
   async function getData() {
     try {
-      const res = await axios.get("/ccrs");
-      setCCRs(res.data.ccrs);
+      const res = await axiosInstance.get("/ccrs");
+      setCCRs(res.ccrs);
     } catch (error) {
       console.log("Não foi possível retornar a lista de CCRs: ", error);
       setCCRs([]);
@@ -67,8 +67,8 @@ export default function CCRs() {
 
   async function getCursos() {
     try {
-      const res = await axios.get("/cursos");
-      setCursos(res.data.cursos);
+      const res = await axiosInstance.get("/cursos");
+      setCursos(res.cursos);
     } catch (error) {
       console.log("Não foi possível retornar a lista de cursos: ", error);
       setCursos([]);
@@ -102,13 +102,13 @@ export default function CCRs() {
   async function handleAddOrUpdate() {
     try {
       if (edit) {
-        await axios.put("/ccrs/", {
+        await axiosInstance.put("/ccrs/", {
           formData: formData,
           cursosSelecionados: cursosSelecionados,
         });
         setMessageText("CCR atualizado com sucesso!");
       } else {
-        await axios.post("/ccrs", {
+        await axiosInstance.post("/ccrs", {
           formData: {
             codigo: formData.codigo,
             nome: formData.nome,
@@ -163,7 +163,7 @@ export default function CCRs() {
   async function handleDeleteClick() {
     try {
       console.log(idDelete);
-      await axios.delete(`/ccrs/${idDelete}`);
+      await axiosInstance.delete(`/ccrs/${idDelete}`);
       setMessageText("CCR removido com sucesso!");
       setMessageSeverity("success");
     } catch (error) {

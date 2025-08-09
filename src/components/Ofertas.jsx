@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axiosInstance from "../auth/axios";
 
 import {
   Alert,
@@ -44,10 +44,10 @@ export default function Ofertas() {
 
   async function getData() {
     try {
-      const res = await axios.get("/ofertas");
+      const res = await axiosInstance.get("/ofertas");
 
       // Remove duplicatas baseadas na chave primária composta
-      const uniqueOfertas = res.data.ofertas.filter(
+      const uniqueOfertas = res.ofertas.filter(
         (oferta, index, self) =>
           index ===
           self.findIndex(
@@ -67,8 +67,8 @@ export default function Ofertas() {
 
   async function getCursos() {
     try {
-      const res = await axios.get("/cursos");
-      setCursos(res.data.cursos);
+      const res = await axiosInstance.get("/cursos");
+      setCursos(res.cursos);
     } catch (error) {
       setCursos([]);
     }
@@ -139,13 +139,13 @@ export default function Ofertas() {
       }
 
       if (edit) {
-        await axios.put(
+        await axiosInstance.put(
           `/ofertas/${dataToSend.ano}/${dataToSend.semestre}/${dataToSend.id_curso}/${dataToSend.fase}/${dataToSend.turno}`,
           dataToSend,
         );
         setMessageText("Oferta atualizada com sucesso!");
       } else {
-        await axios.post("/ofertas", dataToSend);
+        await axiosInstance.post("/ofertas", dataToSend);
         setMessageText("Oferta inserida com sucesso!");
       }
       setMessageSeverity("success");
@@ -156,7 +156,9 @@ export default function Ofertas() {
 
       // Melhor tratamento de erro baseado na resposta da API
       if (error.response?.data?.message) {
-        setMessageText(error.response.data.message);
+        setMessageText(
+          error.response?.data?.message || error.message || "Erro desconhecido",
+        );
       } else if (error.response?.status === 409) {
         setMessageText("Esta oferta já existe no sistema!");
       } else if (error.response?.status === 400) {
@@ -191,7 +193,7 @@ export default function Ofertas() {
 
   async function handleDeleteClick() {
     try {
-      await axios.delete(
+      await axiosInstance.delete(
         `/ofertas/${deleteData.ano}/${deleteData.semestre}/${deleteData.id_curso}/${deleteData.fase}`,
       );
       setMessageText("Oferta removida com sucesso!");

@@ -13,7 +13,7 @@ import {
   Tooltip,
   useTheme,
 } from "@mui/material";
-import axios from "axios";
+import axiosInstance from "../auth/axios";
 import { customColors } from "./CustomThemeProvider";
 
 const timeSlotsMatutino = [
@@ -1041,8 +1041,8 @@ export default function HorariosView() {
     try {
       setLoadingCursos(true);
       setErrorCursos(null);
-      const response = await axios.get("http://localhost:3010/api/cursos");
-      const cursosData = response.data.cursos || [];
+      const response = await axiosInstance.get("/cursos");
+      const cursosData = response.cursos || [];
       setCursos(cursosData);
 
       if (!selectedCurso && cursosData.length > 0) {
@@ -1061,10 +1061,8 @@ export default function HorariosView() {
   const fetchAnosSemestres = async () => {
     try {
       setLoadingAnosSemestres(true);
-      const response = await axios.get(
-        "http://localhost:3010/api/ano-semestre",
-      );
-      const anosSemestresData = response.data.anosSemestres || [];
+      const response = await axiosInstance.get("/ano-semestre");
+      const anosSemestresData = response.anosSemestres || [];
       setAnosSemestres(anosSemestresData);
 
       if (anosSemestresData.length > 0) {
@@ -1094,8 +1092,8 @@ export default function HorariosView() {
   const fetchProfessores = async () => {
     try {
       setLoadingProfessores(true);
-      const response = await axios.get("http://localhost:3010/api/docentes");
-      const professoresFormatados = response.data.docentes.map((prof) => ({
+      const response = await axiosInstance.get("/docentes");
+      const professoresFormatados = response.docentes.map((prof) => ({
         id: prof.codigo,
         codigo: prof.codigo,
         nome: prof.nome,
@@ -1114,8 +1112,8 @@ export default function HorariosView() {
   const fetchDisciplinas = async () => {
     try {
       setLoadingDisciplinas(true);
-      const response = await axios.get("http://localhost:3010/api/ccrs");
-      const disciplinas = response.data.ccrs || [];
+      const response = await axiosInstance.get("/ccrs");
+      const disciplinas = response.ccrs || [];
       setDisciplinas(disciplinas);
     } catch (error) {
       console.error("Erro ao buscar disciplinas:", error);
@@ -1142,10 +1140,10 @@ export default function HorariosView() {
         params.id_curso = selectedCurso.id;
       }
 
-      const response = await axios.get("http://localhost:3010/api/ofertas", {
+      const response = await axiosInstance.get("/ofertas", {
         params,
       });
-      const ofertasData = response.data.ofertas || [];
+      const ofertasData = response.ofertas || [];
       setOfertas(ofertasData);
     } catch (error) {
       console.error("Erro ao buscar ofertas:", error);
@@ -1161,7 +1159,7 @@ export default function HorariosView() {
     setLoadError(null);
 
     try {
-      const response = await axios.get("http://localhost:3010/api/horarios", {
+      const response = await axiosInstance.get("/horarios", {
         params: {
           ano: selectedAnoSemestre.ano,
           semestre: selectedAnoSemestre.semestre,
@@ -1170,7 +1168,7 @@ export default function HorariosView() {
         },
       });
 
-      const horariosFromDb = response.data.horarios || [];
+      const horariosFromDb = response.horarios || [];
 
       if (horariosFromDb.length === 0) {
         setEvents({});

@@ -18,6 +18,7 @@ import {
 import MenuIcon from "@mui/icons-material/Menu";
 import { useNavigate } from "react-router-dom";
 import { DrawerContext } from "./App";
+import { useAuth } from "../contexts/AuthContext";
 
 const drawerWidth = 240;
 
@@ -33,6 +34,7 @@ function Navbar() {
   const navigate = useNavigate();
   const theme = useTheme();
   const isMobile = useMediaQuery(theme.breakpoints.down("md"));
+  const { usuario, logout } = useAuth();
 
   function handleDrawerToggle() {
     setMobileOpen(!mobileOpen);
@@ -111,6 +113,20 @@ function Navbar() {
             <ListItemText primary="Ofertas" />
           </ListItemButton>
         </ListItem>
+        <Divider />
+        {!usuario ? (
+          <ListItem disablePadding>
+            <ListItemButton onClick={() => navigate("/login")}>
+              <ListItemText primary="Login" />
+            </ListItemButton>
+          </ListItem>
+        ) : (
+          <ListItem disablePadding>
+            <ListItemButton onClick={logout}>
+              <ListItemText primary="Sair" />
+            </ListItemButton>
+          </ListItem>
+        )}
       </List>
     </Box>
   );
@@ -147,7 +163,15 @@ function Navbar() {
           >
             Construção de Horários
           </Typography>
-          <Button color="inherit">Login</Button>
+          {!usuario ? (
+            <Button color="inherit" onClick={() => navigate("/login")}>
+              Login
+            </Button>
+          ) : (
+            <Button color="inherit" onClick={logout}>
+              Sair
+            </Button>
+          )}
         </Toolbar>
       </AppBar>
 

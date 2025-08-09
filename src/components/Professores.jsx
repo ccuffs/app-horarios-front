@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axiosInstance from "../auth/axios";
 
 import {
   Alert,
@@ -37,9 +37,9 @@ export default function Professores() {
 
   async function getData() {
     try {
-      const res = await axios.get("/docentes");
+      const res = await axiosInstance.get("/docentes");
 
-      setProfessores(res.data.docentes);
+      setProfessores(res.docentes);
     } catch (error) {
       console.log("Não foi possível retornar a lista de professores: ", error);
       setProfessores([]);
@@ -76,12 +76,12 @@ export default function Professores() {
       };
 
       if (edit) {
-        await axios.put("/docentes/", {
+        await axiosInstance.put("/docentes/", {
           formData: dataToSend,
         });
         setMessageText("Docente atualizado com sucesso!");
       } else {
-        await axios.post("/docentes", {
+        await axiosInstance.post("/docentes", {
           formData: dataToSend,
         });
 
@@ -119,7 +119,7 @@ export default function Professores() {
   async function handleDeleteClick() {
     try {
       console.log(idDelete);
-      await axios.delete(`/docentes/${idDelete}`);
+      await axiosInstance.delete(`/docentes/${idDelete}`);
       setMessageText("Docente removido com sucesso!");
       setMessageSeverity("success");
     } catch (error) {

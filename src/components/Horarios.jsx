@@ -40,7 +40,7 @@ import {
   Schedule as ScheduleIcon,
   Download as DownloadIcon,
 } from "@mui/icons-material";
-import axios from "axios";
+import axiosInstance from "../auth/axios";
 import { customColors } from "./CustomThemeProvider";
 
 const timeSlotsMatutino = [
@@ -567,17 +567,14 @@ const EventModal = ({
             const allHorariosResponse = await Promise.all(
               anosSemestres.map(async (anoSem) => {
                 try {
-                  const response = await axios.get(
-                    "http://localhost:3010/api/horarios",
-                    {
-                      params: {
-                        ano: anoSem.ano,
-                        semestre: anoSem.semestre,
-                        id_curso: selectedCurso?.id || 1,
-                      },
+                  const response = await axiosInstance.get("/horarios", {
+                    params: {
+                      ano: anoSem.ano,
+                      semestre: anoSem.semestre,
+                      id_curso: selectedCurso?.id || 1,
                     },
-                  );
-                  return response.data.horarios || [];
+                  });
+                  return response.horarios || [];
                 } catch (error) {
                   return [];
                 }
@@ -2837,11 +2834,9 @@ export default function Horarios() {
 
       const userId = getCurrentUserId();
 
-      const response = await axios.get(
-        `http://localhost:3010/api/usuarios/${userId}/cursos`,
-      );
+      const response = await axiosInstance.get(`/usuarios/${userId}/cursos`);
 
-      const cursosData = response.data.cursos || [];
+      const cursosData = response.cursos || [];
       setCursos(cursosData);
 
       // Se não há curso selecionado e há cursos disponíveis, selecionar o primeiro
@@ -2866,11 +2861,9 @@ export default function Horarios() {
     try {
       setLoadingAnosSemestres(true);
       setErrorAnosSemestres(null);
-      const response = await axios.get(
-        "http://localhost:3010/api/ano-semestre",
-      );
+      const response = await axiosInstance.get("/ano-semestre");
 
-      const anosSemestresData = response.data.anosSemestres || [];
+      const anosSemestresData = response.anosSemestres || [];
       setAnosSemestres(anosSemestresData);
 
       // Se não há ano/semestre selecionado ou se o selecionado não existe, selecionar o primeiro disponível
@@ -2904,10 +2897,10 @@ export default function Horarios() {
     try {
       setLoadingProfessores(true);
       setErrorProfessores(null);
-      const response = await axios.get("http://localhost:3010/api/docentes");
+      const response = await axiosInstance.get("/docentes");
 
       // Mapear dados da API para o formato esperado pelo frontend
-      const professoresFormatados = response.data.docentes.map((prof) => ({
+      const professoresFormatados = response.docentes.map((prof) => ({
         id: prof.codigo, // Usar codigo como id
         codigo: prof.codigo,
         name: prof.nome, // Mapear nome para name
@@ -2929,9 +2922,9 @@ export default function Horarios() {
     try {
       setLoadingDisciplinas(true);
       setErrorDisciplinas(null);
-      const response = await axios.get("http://localhost:3010/api/ccrs");
+      const response = await axiosInstance.get("/ccrs");
       // Espera-se que a resposta seja { ccrs: [...] }
-      const disciplinas = response.data.ccrs || [];
+      const disciplinas = response.ccrs || [];
 
       const uniqueDisciplinas = getUniqueDisciplinas(disciplinas);
 
@@ -2966,11 +2959,11 @@ export default function Horarios() {
         params.id_curso = selectedCurso.id;
       }
 
-      const response = await axios.get("http://localhost:3010/api/ofertas", {
+      const response = await axiosInstance.get("/ofertas", {
         params,
       });
 
-      const ofertasData = response.data.ofertas || [];
+      const ofertasData = response.ofertas || [];
       setOfertas(ofertasData);
     } catch (error) {
       console.error("Erro ao buscar ofertas:", error);
@@ -3185,17 +3178,14 @@ export default function Horarios() {
       const allHorariosResponse = await Promise.all(
         anosSemestres.map(async (anoSem) => {
           try {
-            const response = await axios.get(
-              "http://localhost:3010/api/horarios",
-              {
-                params: {
-                  ano: anoSem.ano,
-                  semestre: anoSem.semestre,
-                  id_curso: 1,
-                },
+            const response = await axiosInstance.get("/horarios", {
+              params: {
+                ano: anoSem.ano,
+                semestre: anoSem.semestre,
+                id_curso: 1,
               },
-            );
-            return response.data.horarios || [];
+            });
+            return response.horarios || [];
           } catch (error) {
             return [];
           }
@@ -3499,17 +3489,14 @@ export default function Horarios() {
             const allHorariosResponse = await Promise.all(
               anosSemestres.map(async (anoSem) => {
                 try {
-                  const response = await axios.get(
-                    "http://localhost:3010/api/horarios",
-                    {
-                      params: {
-                        ano: anoSem.ano,
-                        semestre: anoSem.semestre,
-                        id_curso: selectedCurso?.id || 1,
-                      },
+                  const response = await axiosInstance.get("/horarios", {
+                    params: {
+                      ano: anoSem.ano,
+                      semestre: anoSem.semestre,
+                      id_curso: selectedCurso?.id || 1,
                     },
-                  );
-                  return response.data.horarios || [];
+                  });
+                  return response.horarios || [];
                 } catch (error) {
                   console.warn(
                     `Erro ao buscar horários para ${anoSem.ano}/${anoSem.semestre}:`,
@@ -3896,17 +3883,17 @@ export default function Horarios() {
       // 2.3. Fazer as requisições em ordem: primeiro remove, depois cria
       // Primeiro, remover todos os horários existentes
       for (const h of removidos) {
-        await axios.delete(`http://localhost:3010/api/horarios/${h.id}`);
+        await axiosInstance.delete(`/horarios/${h.id}`);
       }
 
       // Processar edições (se houver)
       for (const h of editados) {
-        await axios.put(`http://localhost:3010/api/horarios/${h.id}`, h);
+        await axiosInstance.put(`/horarios/${h.id}`, h);
       }
 
       // Por último, criar todos os novos horários
       if (novos.length > 0) {
-        await axios.post("http://localhost:3010/api/horarios/bulk", {
+        await axiosInstance.post("/horarios/bulk", {
           horarios: novos,
         });
       }
@@ -3996,7 +3983,7 @@ export default function Horarios() {
       // já são carregados no useEffect inicial
       await fetchOfertas();
 
-      const response = await axios.get("http://localhost:3010/api/horarios", {
+      const response = await axiosInstance.get("/horarios", {
         params: {
           ano: selectedAnoSemestre.ano,
           semestre: selectedAnoSemestre.semestre,
@@ -4004,7 +3991,7 @@ export default function Horarios() {
         },
       });
 
-      const horariosFromDb = response.data.horarios || [];
+      const horariosFromDb = response.horarios || [];
 
       if (horariosFromDb.length === 0) {
         setEvents({});
@@ -6144,8 +6131,8 @@ export default function Horarios() {
                       const publicado = novoStatus === "publicado";
 
                       try {
-                        await axios.patch(
-                          `http://localhost:3010/api/ano-semestre/${selectedAnoSemestre.ano}/${selectedAnoSemestre.semestre}/publicacao`,
+                        await axiosInstance.patch(
+                          `/ano-semestre/${selectedAnoSemestre.ano}/${selectedAnoSemestre.semestre}/publicacao`,
                           { publicado },
                         );
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import axios from "axios";
+import axiosInstance from "../auth/axios";
 
 import {
   Alert,
@@ -42,8 +42,8 @@ export default function Cursos() {
 
   async function getData() {
     try {
-      const res = await axios.get("/cursos");
-      setCursos(res.data.cursos);
+      const res = await axiosInstance.get("/cursos");
+      setCursos(res.cursos);
     } catch (error) {
       console.log("Não foi possível retornar a lista de cursos: ", error);
       setCursos([]);
@@ -74,12 +74,12 @@ export default function Cursos() {
     console.log(formData);
     try {
       if (edit) {
-        await axios.put("/cursos/", {
+        await axiosInstance.put("/cursos/", {
           formData: formData,
         });
         setMessageText("Curso atualizado com sucesso!");
       } else {
-        await axios.post("/cursos/", {
+        await axiosInstance.post("/cursos/", {
           formData: {
             codigo: formData.codigo,
             nome: formData.nome,
@@ -123,7 +123,7 @@ export default function Cursos() {
   async function handleDeleteClick() {
     try {
       console.log(idDelete);
-      await axios.delete(`/cursos/${idDelete}`);
+      await axiosInstance.delete(`/cursos/${idDelete}`);
       setMessageText("Curso removido com sucesso!");
       setMessageSeverity("success");
     } catch (error) {
