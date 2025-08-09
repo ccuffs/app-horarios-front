@@ -42,6 +42,9 @@ import {
 } from "@mui/icons-material";
 import axiosInstance from "../auth/axios";
 import { customColors } from "./CustomThemeProvider";
+import { useAuth } from "../contexts/AuthContext";
+import { Permissoes } from "../enums/permissoes";
+import permissoesService from "../services/permissoesService";
 
 const timeSlotsMatutino = [
 	"07:30:00",
@@ -517,9 +520,6 @@ const EventModal = ({
 	disciplinas,
 	events,
 	selectedPhase,
-	getDisciplinaProfessorFromOtherPeriod,
-	getDisciplinaProfessorFromSamePhase,
-	verificarConflitoProfessor,
 	anosSemestres,
 	selectedAnoSemestre,
 	selectedCurso,
@@ -2053,24 +2053,46 @@ const CalendarEvent = ({
 	verificarSeEventoTemConflito,
 	obterConflitosDoEvento,
 }) => {
+    const { permissoesUsuario } = useAuth();
+    const canDeleteHorario = permissoesService.verificarPermissaoPorId(
+        permissoesUsuario,
+        Permissoes.HORARIOS.DELETAR,
+    );
+    const canEditHorario = permissoesService.verificarPermissaoPorId(
+        permissoesUsuario,
+        Permissoes.HORARIOS.EDITAR,
+    );
+    const canManageHorarios =
+        permissoesService.verificarPermissaoPorId(
+            permissoesUsuario,
+            Permissoes.HORARIOS.CRIAR,
+        ) ||
+        permissoesService.verificarPermissaoPorId(
+            permissoesUsuario,
+            Permissoes.HORARIOS.EDITAR,
+        );
 	const [isDragging, setIsDragging] = useState(false);
 	const [isResizing, setIsResizing] = useState(false);
 	const eventRef = useRef(null);
 
-	const handleMouseDown = useCallback((e) => {
+    const handleMouseDown = useCallback((e) => {
 		e.stopPropagation();
+        if (!canEditHorario) {
+            return;
+        }
 
-		if (e.target.classList.contains("resize-handle")) {
-			setIsResizing(true);
-			e.preventDefault();
-		} else {
-			setIsDragging(true);
-		}
+        if (e.target.classList.contains("resize-handle")) {
+            setIsResizing(true);
+            e.preventDefault();
+        } else {
+            setIsDragging(true);
+        }
 	}, []);
 
-	const handleMouseMove = useCallback(
-		(e) => {
-			if (isResizing && eventRef.current) {
+    const handleMouseMove = useCallback(
+        (e) => {
+            if (!canEditHorario) return;
+            if (isResizing && eventRef.current) {
 				const container = eventRef.current.closest(".time-grid");
 				if (!container) return;
 
@@ -2091,7 +2113,7 @@ const CalendarEvent = ({
 				}
 			}
 		},
-		[isResizing, event, onResize, timeSlots],
+        [isResizing, event, onResize, timeSlots, canEditHorario],
 	);
 
 	const handleMouseUp = useCallback(() => {
@@ -2111,10 +2133,14 @@ const CalendarEvent = ({
 		}
 	}, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
 
-	const handleDragStart = (e) => {
-		e.dataTransfer.setData("text/plain", JSON.stringify(event));
-		e.dataTransfer.effectAllowed = "move";
-	};
+    const handleDragStart = (e) => {
+        if (!canEditHorario) {
+            e.preventDefault();
+            return;
+        }
+        e.dataTransfer.setData("text/plain", JSON.stringify(event));
+        e.dataTransfer.effectAllowed = "move";
+    };
 
 	// Buscar nomes dos professores
 	const getProfessoresInfo = () => {
@@ -2181,16 +2207,16 @@ const CalendarEvent = ({
 	};
 
 	const eventContent = (
-		<Paper
+        <Paper
 			ref={eventRef}
-			draggable
+            draggable={canEditHorario}
 			onDragStart={handleDragStart}
 			sx={{
 				...calculateMultipleEventStyles(),
 				backgroundColor: event.disciplinaId ? event.color : "#9e9e9e", // Cinza se não tem disciplina
 				color: "white",
 				padding: isMultiple ? "2px 4px" : 1, // Padding mais compacto para múltiplos
-				cursor: isDragging ? "grabbing" : "grab",
+                cursor: canEditHorario ? (isDragging ? "grabbing" : "grab") : "default",
 				height: `${event.duration * 30}px`,
 				minHeight: "30px",
 				overflow: "hidden",
@@ -2202,17 +2228,18 @@ const CalendarEvent = ({
 				transition: isDragging || isResizing ? "none" : "all 0.2s ease",
 				border: !event.disciplinaId ? "2px dashed #fff" : "none", // Borda tracejada se incompleto
 				opacity: !event.disciplinaId ? 0.7 : 1, // Reduzir opacidade se incompleto
-				"&:hover": {
-					boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
-					"& .resize-handle": {
-						opacity: 1,
-					},
-				},
+                "&:hover": {
+                    boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+                    "& .resize-handle": {
+                        opacity: canEditHorario ? 1 : 0,
+                    },
+                },
 			}}
 			onMouseDown={handleMouseDown}
-			onClick={(e) => {
+            onClick={(e) => {
 				e.stopPropagation();
-				if (!isDragging && !isResizing && onEdit) {
+                if (!isDragging && !isResizing && onEdit) {
+                    if (!canManageHorarios) return;
 					onEdit(event);
 				}
 			}}
@@ -2287,8 +2314,8 @@ const CalendarEvent = ({
 				</Tooltip>
 			)}
 
-			{/* Botão de delete */}
-			{!isMultiple && onDelete && (
+            {/* Botão de delete */}
+            {!isMultiple && onDelete && canDeleteHorario && (
 				<IconButton
 					size="small"
 					onClick={(e) => {
@@ -2499,7 +2526,7 @@ const CalendarEvent = ({
 			)}
 
 			{/* Resize handle */}
-			<Box
+            <Box
 				className="resize-handle"
 				sx={{
 					position: "absolute",
@@ -2523,11 +2550,12 @@ const CalendarEvent = ({
 						borderRadius: "1px",
 					},
 				}}
-				onMouseDown={(e) => {
-					e.stopPropagation();
-					setIsResizing(true);
-					e.preventDefault();
-				}}
+                onMouseDown={(e) => {
+                    e.stopPropagation();
+                    if (!canEditHorario) return;
+                    setIsResizing(true);
+                    e.preventDefault();
+                }}
 			/>
 		</Paper>
 	);
@@ -2669,6 +2697,20 @@ const TimeSlot = ({
 	obterConflitosDoEvento,
 	sx, // Propriedade de estilo adicional
 }) => {
+    const { permissoesUsuario } = useAuth();
+    const canManageHorarios =
+        permissoesService.verificarPermissaoPorId(
+            permissoesUsuario,
+            Permissoes.HORARIOS.CRIAR,
+        ) ||
+        permissoesService.verificarPermissaoPorId(
+            permissoesUsuario,
+            Permissoes.HORARIOS.EDITAR,
+        );
+    const canEditHorario = permissoesService.verificarPermissaoPorId(
+        permissoesUsuario,
+        Permissoes.HORARIOS.EDITAR,
+    );
 	const theme = useTheme();
 	const eventKey = `${dayId}-${time}`;
 	const eventData = events[eventKey];
@@ -2679,9 +2721,13 @@ const TimeSlot = ({
 		: [];
 	const [isDragOver, setIsDragOver] = useState(false);
 
-	const handleDrop = (e) => {
+    const handleDrop = (e) => {
 		e.preventDefault();
 		setIsDragOver(false);
+
+        if (!canEditHorario) {
+            return;
+        }
 
 		try {
 			const eventData = JSON.parse(e.dataTransfer.getData("text/plain"));
@@ -2691,14 +2737,15 @@ const TimeSlot = ({
 		}
 	};
 
-	const handleDragOver = (e) => {
+    const handleDragOver = (e) => {
 		e.preventDefault();
-		setIsDragOver(true);
+        if (!canEditHorario) return;
+        setIsDragOver(true);
 	};
 
-	const handleDragLeave = () => {
-		setIsDragOver(false);
-	};
+    const handleDragLeave = () => {
+        setIsDragOver(false);
+    };
 
 	return (
 		<Box
@@ -2728,11 +2775,13 @@ const TimeSlot = ({
 				transition: "background-color 0.2s ease",
 				display: "flex",
 				gap: eventsArray.length > 1 ? "1px" : "0",
-				cursor:
-					timeSlotsNoturno.includes(time) &&
-					!isValidStartTimeNoturno(time)
-						? "not-allowed"
-						: "pointer",
+                cursor:
+                    !canEditHorario
+                        ? "default"
+                        : timeSlotsNoturno.includes(time) &&
+                          !isValidStartTimeNoturno(time)
+                            ? "not-allowed"
+                            : "pointer",
 				opacity:
 					timeSlotsNoturno.includes(time) &&
 					!isValidStartTimeNoturno(time)
@@ -2743,7 +2792,8 @@ const TimeSlot = ({
 			onDrop={handleDrop}
 			onDragOver={handleDragOver}
 			onDragLeave={handleDragLeave}
-			onDoubleClick={() => {
+            onDoubleClick={() => {
+                if (!canManageHorarios) return;
 				// Verificar se é um horário válido para início de aula
 				if (
 					timeSlotsNoturno.includes(time) &&
@@ -3124,6 +3174,16 @@ if (!document.getElementById("conflict-badge-styles")) {
 }
 
 export default function Horarios() {
+    const { permissoesUsuario } = useAuth();
+    const canManageHorarios =
+        permissoesService.verificarPermissaoPorId(
+            permissoesUsuario,
+            Permissoes.HORARIOS.CRIAR,
+        ) &&
+        permissoesService.verificarPermissaoPorId(
+            permissoesUsuario,
+            Permissoes.HORARIOS.EDITAR,
+        );
 	const [selectedAnoSemestre, setSelectedAnoSemestre] = useState({
 		ano: new Date().getFullYear(),
 		semestre: 1,
@@ -6548,56 +6608,60 @@ export default function Horarios() {
 							</Button>
 						</Badge>
 
-						<Button
-							variant="contained"
-							color="primary"
-							onClick={saveAllHorariosToDatabase}
-							disabled={savingHorarios || !hasPendingChanges()}
-							startIcon={
-								savingHorarios ? (
-									<CircularProgress size={20} />
-								) : (
-									<SaveIcon />
-								)
-							}
-							sx={{
-								minWidth: { xs: "200px", sm: "180px" },
-								width: { xs: "100%", sm: "auto" },
-							}}
-						>
-							{(() => {
-								if (savingHorarios) {
-									return "Salvando...";
-								}
+                        {canManageHorarios && (
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                onClick={saveAllHorariosToDatabase}
+                                disabled={savingHorarios || !hasPendingChanges()}
+                                startIcon={
+                                    savingHorarios ? (
+                                        <CircularProgress size={20} />
+                                    ) : (
+                                        <SaveIcon />
+                                    )
+                                }
+                                sx={{
+                                    minWidth: { xs: "200px", sm: "180px" },
+                                    width: { xs: "100%", sm: "auto" },
+                                }}
+                            >
+                                {(() => {
+                                    if (savingHorarios) {
+                                        return "Salvando...";
+                                    }
 
-								const changes = getChangesCount();
-								if (changes.total > 0) {
-									return `Sincronizar Mudanças (${changes.total})`;
-								}
+                                    const changes = getChangesCount();
+                                    if (changes.total > 0) {
+                                        return `Sincronizar Mudanças (${changes.total})`;
+                                    }
 
-								return "Nenhuma Mudança";
-							})()}
-						</Button>
+                                    return "Nenhuma Mudança";
+                                })()}
+                            </Button>
+                        )}
 
-						<Tooltip title="Baixar horários em formato JSON">
-							<Button
-								variant="outlined"
-								color="secondary"
-								onClick={generateScheduleJSON}
-								disabled={
-									loadingHorarios ||
-									!selectedCurso ||
-									getValidHorariosCount() === 0
-								}
-								startIcon={<DownloadIcon />}
-								sx={{
-									minWidth: { xs: "200px", sm: "140px" },
-									width: { xs: "100%", sm: "auto" },
-								}}
-							>
-								Baixar JSON
-							</Button>
-						</Tooltip>
+                        {canManageHorarios && (
+                            <Tooltip title="Baixar horários em formato JSON">
+                                <Button
+                                    variant="outlined"
+                                    color="secondary"
+                                    onClick={generateScheduleJSON}
+                                    disabled={
+                                        loadingHorarios ||
+                                        !selectedCurso ||
+                                        getValidHorariosCount() === 0
+                                    }
+                                    startIcon={<DownloadIcon />}
+                                    sx={{
+                                        minWidth: { xs: "200px", sm: "140px" },
+                                        width: { xs: "100%", sm: "auto" },
+                                    }}
+                                >
+                                    Baixar JSON
+                                </Button>
+                            </Tooltip>
+                        )}
 					</Box>
 
 					{/* Segunda linha de seletores em mobile, inline em desktop */}
@@ -6731,8 +6795,9 @@ export default function Horarios() {
 													: "rascunho"
 												: "rascunho";
 										})()}
-										onChange={async (e) => {
-											const novoStatus = e.target.value;
+								onChange={async (e) => {
+                                    if (!canManageHorarios) return; // trava alteração se não tem permissão
+                                    const novoStatus = e.target.value;
 											const publicado =
 												novoStatus === "publicado";
 
@@ -6779,11 +6844,12 @@ export default function Horarios() {
 												);
 											}
 										}}
-										label="Status"
-										disabled={
-											loadingAnosSemestres ||
-											!selectedCurso
-										}
+								label="Status"
+								disabled={
+									loadingAnosSemestres ||
+									!selectedCurso ||
+									!canManageHorarios
+								}
 									>
 										<MenuItem value="rascunho">
 											📝 Rascunho
@@ -7414,17 +7480,19 @@ export default function Horarios() {
 					>
 						Descartar e Recarregar
 					</Button>
-					<Button
-						onClick={handleSyncAndReload}
-						variant="contained"
-						color="primary"
-						startIcon={<SaveIcon />}
-						disabled={savingHorarios}
-					>
-						{savingHorarios
-							? "Sincronizando..."
-							: "Sincronizar e Recarregar"}
-					</Button>
+                    {canManageHorarios && (
+                        <Button
+                            onClick={handleSyncAndReload}
+                            variant="contained"
+                            color="primary"
+                            startIcon={<SaveIcon />}
+                            disabled={savingHorarios}
+                        >
+                            {savingHorarios
+                                ? "Sincronizando..."
+                                : "Sincronizar e Recarregar"}
+                        </Button>
+                    )}
 				</DialogActions>
 			</Dialog>
 
