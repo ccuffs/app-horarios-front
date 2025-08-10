@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, {
+	useState,
+	useEffect,
+	useCallback,
+	useRef,
+	useMemo,
+} from "react";
 import {
 	Typography,
 	Box,
@@ -31,6 +37,13 @@ import {
 	Badge,
 	Snackbar,
 	useTheme,
+	Drawer,
+	Table,
+	TableBody,
+	TableCell,
+	TableContainer,
+	TableHead,
+	TableRow,
 } from "@mui/material";
 import {
 	Close as CloseIcon,
@@ -39,6 +52,8 @@ import {
 	Warning as WarningIcon,
 	Schedule as ScheduleIcon,
 	Download as DownloadIcon,
+	TableChart as TableChartIcon,
+	FileCopy as FileCopyIcon,
 } from "@mui/icons-material";
 import axiosInstance from "../auth/axios";
 import { customColors } from "./CustomThemeProvider";
@@ -111,6 +126,16 @@ const allMatutinoVespertinoSlots = [
 	...firstVespertinoSlots,
 	...secondVespertinoSlots,
 ];
+
+// Retorna o turno (matutino, vespertino, noturno) dado um horário HH:MM:SS
+const getTurnoFromTime = (time) => {
+	if (!time || typeof time !== "string") return "desconhecido";
+	const t = time.length === 5 ? `${time}:00` : time; // normalizar HH:MM -> HH:MM:SS
+	if (timeSlotsMatutino.includes(t)) return "matutino";
+	if (timeSlotsVespertino.includes(t)) return "vespertino";
+	if (timeSlotsNoturno.includes(t)) return "noturno";
+	return "desconhecido";
+};
 
 // Função para verificar se um horário é noturno
 const isHorarioNoturno = (startTime) => {
@@ -628,10 +653,10 @@ const EventModal = ({
 													)
 														? existingEvent.professoresIds
 														: existingEvent.professorId
-															? [
-																	existingEvent.professorId,
-																]
-															: [];
+														? [
+																existingEvent.professorId,
+														  ]
+														: [];
 
 												if (
 													professoresDoEvento.includes(
@@ -1347,17 +1372,6 @@ const EventModal = ({
 															: profId
 													}
 													onDelete={() => {
-														// Não permitir remover se é o último professor
-														if (
-															professoresIds.length ===
-															1
-														) {
-															setErroValidacao(
-																"Deve ter pelo menos um professor selecionado.",
-															);
-															return;
-														}
-
 														const newProfessoresIds =
 															professoresIds.filter(
 																(id) =>
@@ -1398,19 +1412,6 @@ const EventModal = ({
 															professorAutoSelected
 																? "#4caf50"
 																: undefined,
-														"& .MuiChip-deleteIcon":
-															{
-																color:
-																	professoresIds.length ===
-																	1
-																		? "#ccc"
-																		: "inherit",
-																cursor:
-																	professoresIds.length ===
-																	1
-																		? "not-allowed"
-																		: "pointer",
-															},
 													}}
 												/>
 
@@ -1638,8 +1639,6 @@ const EventModal = ({
 							>
 								💡 Clique no "X" de qualquer professor para
 								removê-lo
-								{professoresIds.length === 1 &&
-									" (deve manter pelo menos 1)"}
 							</Typography>
 						</Box>
 					)}
@@ -1709,10 +1708,10 @@ const EventModal = ({
 								{timeSlotsMatutino.includes(event.startTime)
 									? "Matutino"
 									: timeSlotsVespertino.includes(
-												event.startTime,
-										  )
-										? "Vespertino"
-										: "Noturno"}
+											event.startTime,
+									  )
+									? "Vespertino"
+									: "Noturno"}
 							</Typography>
 						</Box>
 					)}
@@ -1753,6 +1752,151 @@ const EventModal = ({
 	);
 };
 
+// Modal para importação de horários
+const ImportModal = ({
+	open,
+	onClose,
+	anosSemestres,
+	selectedAnoSemestreOrigem,
+	onAnoSemestreOrigemChange,
+	incluirDocentes,
+	onIncluirDocentesChange,
+	incluirOfertas,
+	onIncluirOfertasChange,
+	onImport,
+	loading,
+	error,
+	selectedAnoSemestre,
+}) => {
+	// Filtrar anos/semestres anteriores ao atual
+	const anosSemestresAnteriores = anosSemestres.filter(
+		(as) =>
+			as.ano < selectedAnoSemestre.ano ||
+			(as.ano === selectedAnoSemestre.ano &&
+				as.semestre < selectedAnoSemestre.semestre),
+	);
+
+	return (
+		<Dialog open={open} onClose={onClose} maxWidth="sm" fullWidth>
+			<DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+				<FileCopyIcon color="primary" />
+				Importar Horários
+			</DialogTitle>
+
+			<DialogContent dividers>
+				<Box sx={{ mb: 3 }}>
+					<Typography variant="body1" sx={{ mb: 2 }}>
+						Não foram encontrados horários para o ano/semestre
+						selecionado. Deseja importar horários de um ano/semestre
+						anterior?
+					</Typography>
+
+					<FormControl fullWidth sx={{ mb: 2 }}>
+						<InputLabel>Ano/Semestre de Origem</InputLabel>
+						<Select
+							value={
+								selectedAnoSemestreOrigem
+									? `${selectedAnoSemestreOrigem.ano}/${selectedAnoSemestreOrigem.semestre}`
+									: ""
+							}
+							onChange={(e) => {
+								const [ano, semestre] =
+									e.target.value.split("/");
+								onAnoSemestreOrigemChange({
+									ano: parseInt(ano),
+									semestre: parseInt(semestre),
+								});
+							}}
+							label="Ano/Semestre de Origem"
+						>
+							{anosSemestresAnteriores.map((as) => (
+								<MenuItem
+									key={`${as.ano}-${as.semestre}`}
+									value={`${as.ano}/${as.semestre}`}
+								>
+									{as.ano}/{as.semestre}
+								</MenuItem>
+							))}
+						</Select>
+					</FormControl>
+
+					<FormControlLabel
+						control={
+							<Checkbox
+								checked={Boolean(incluirDocentes)}
+								onChange={(e) =>
+									onIncluirDocentesChange(e.target.checked)
+								}
+								color="primary"
+							/>
+						}
+						label="Incluir docentes na importação"
+					/>
+
+					<Typography
+						variant="body2"
+						color="textSecondary"
+						sx={{ mt: 1, mb: 2 }}
+					>
+						{incluirDocentes
+							? "Os horários serão importados com os docentes originais."
+							: "Os horários serão importados com o docente 'sem.professor' para que possam ser editados posteriormente."}
+					</Typography>
+
+					<FormControlLabel
+						control={
+							<Checkbox
+								checked={Boolean(incluirOfertas)}
+								onChange={(e) =>
+									onIncluirOfertasChange(e.target.checked)
+								}
+								color="primary"
+							/>
+						}
+						label="Incluir ofertas na importação"
+					/>
+
+					<Typography
+						variant="body2"
+						color="textSecondary"
+						sx={{ mt: 1 }}
+					>
+						{incluirOfertas
+							? "As ofertas (fases e turnos) serão importadas do ano/semestre de origem."
+							: "Apenas os horários serão importados, sem as configurações de ofertas."}
+					</Typography>
+
+					{error && (
+						<Alert severity="error" sx={{ mt: 2 }}>
+							{error}
+						</Alert>
+					)}
+				</Box>
+			</DialogContent>
+
+			<DialogActions>
+				<Button onClick={onClose} disabled={loading}>
+					Cancelar
+				</Button>
+				<Button
+					onClick={onImport}
+					variant="contained"
+					disabled={!selectedAnoSemestreOrigem || loading}
+					startIcon={
+						loading ? (
+							<CircularProgress size={20} />
+						) : (
+							<FileCopyIcon />
+						)
+					}
+				>
+					{loading ? "Importando..." : "Importar"}
+				</Button>
+			</DialogActions>
+		</Dialog>
+	);
+};
+
 // Modal para exibir conflitos de horários
 const ConflitosModal = ({ open, onClose, conflitos, professores }) => {
 	const formatarHorario = (inicio, duracao) => {
@@ -1767,10 +1911,9 @@ const ConflitosModal = ({ open, onClose, conflitos, professores }) => {
 
 		return `${horarioNormalizado} - ${fimHoras
 			.toString()
-			.padStart(
-				2,
-				"0",
-			)}:${fimMinutosRestantes.toString().padStart(2, "0")}`;
+			.padStart(2, "0")}:${fimMinutosRestantes
+			.toString()
+			.padStart(2, "0")}`;
 	};
 
 	const conflitosAgrupados = conflitos.reduce((acc, conflito) => {
@@ -2053,46 +2196,46 @@ const CalendarEvent = ({
 	verificarSeEventoTemConflito,
 	obterConflitosDoEvento,
 }) => {
-    const { permissoesUsuario } = useAuth();
-    const canDeleteHorario = permissoesService.verificarPermissaoPorId(
-        permissoesUsuario,
-        Permissoes.HORARIOS.DELETAR,
-    );
-    const canEditHorario = permissoesService.verificarPermissaoPorId(
-        permissoesUsuario,
-        Permissoes.HORARIOS.EDITAR,
-    );
-    const canManageHorarios =
-        permissoesService.verificarPermissaoPorId(
-            permissoesUsuario,
-            Permissoes.HORARIOS.CRIAR,
-        ) ||
-        permissoesService.verificarPermissaoPorId(
-            permissoesUsuario,
-            Permissoes.HORARIOS.EDITAR,
-        );
+	const { permissoesUsuario } = useAuth();
+	const canDeleteHorario = permissoesService.verificarPermissaoPorId(
+		permissoesUsuario,
+		Permissoes.HORARIOS.DELETAR,
+	);
+	const canEditHorario = permissoesService.verificarPermissaoPorId(
+		permissoesUsuario,
+		Permissoes.HORARIOS.EDITAR,
+	);
+	const canManageHorarios =
+		permissoesService.verificarPermissaoPorId(
+			permissoesUsuario,
+			Permissoes.HORARIOS.CRIAR,
+		) ||
+		permissoesService.verificarPermissaoPorId(
+			permissoesUsuario,
+			Permissoes.HORARIOS.EDITAR,
+		);
 	const [isDragging, setIsDragging] = useState(false);
 	const [isResizing, setIsResizing] = useState(false);
 	const eventRef = useRef(null);
 
-    const handleMouseDown = useCallback((e) => {
+	const handleMouseDown = useCallback((e) => {
 		e.stopPropagation();
-        if (!canEditHorario) {
-            return;
-        }
+		if (!canEditHorario) {
+			return;
+		}
 
-        if (e.target.classList.contains("resize-handle")) {
-            setIsResizing(true);
-            e.preventDefault();
-        } else {
-            setIsDragging(true);
-        }
+		if (e.target.classList.contains("resize-handle")) {
+			setIsResizing(true);
+			e.preventDefault();
+		} else {
+			setIsDragging(true);
+		}
 	}, []);
 
-    const handleMouseMove = useCallback(
-        (e) => {
-            if (!canEditHorario) return;
-            if (isResizing && eventRef.current) {
+	const handleMouseMove = useCallback(
+		(e) => {
+			if (!canEditHorario) return;
+			if (isResizing && eventRef.current) {
 				const container = eventRef.current.closest(".time-grid");
 				if (!container) return;
 
@@ -2113,7 +2256,7 @@ const CalendarEvent = ({
 				}
 			}
 		},
-        [isResizing, event, onResize, timeSlots, canEditHorario],
+		[isResizing, event, onResize, timeSlots, canEditHorario],
 	);
 
 	const handleMouseUp = useCallback(() => {
@@ -2133,14 +2276,14 @@ const CalendarEvent = ({
 		}
 	}, [isDragging, isResizing, handleMouseMove, handleMouseUp]);
 
-    const handleDragStart = (e) => {
-        if (!canEditHorario) {
-            e.preventDefault();
-            return;
-        }
-        e.dataTransfer.setData("text/plain", JSON.stringify(event));
-        e.dataTransfer.effectAllowed = "move";
-    };
+	const handleDragStart = (e) => {
+		if (!canEditHorario) {
+			e.preventDefault();
+			return;
+		}
+		e.dataTransfer.setData("text/plain", JSON.stringify(event));
+		e.dataTransfer.effectAllowed = "move";
+	};
 
 	// Buscar nomes dos professores
 	const getProfessoresInfo = () => {
@@ -2207,16 +2350,20 @@ const CalendarEvent = ({
 	};
 
 	const eventContent = (
-        <Paper
+		<Paper
 			ref={eventRef}
-            draggable={canEditHorario}
+			draggable={canEditHorario}
 			onDragStart={handleDragStart}
 			sx={{
 				...calculateMultipleEventStyles(),
 				backgroundColor: event.disciplinaId ? event.color : "#9e9e9e", // Cinza se não tem disciplina
 				color: "white",
 				padding: isMultiple ? "2px 4px" : 1, // Padding mais compacto para múltiplos
-                cursor: canEditHorario ? (isDragging ? "grabbing" : "grab") : "default",
+				cursor: canEditHorario
+					? isDragging
+						? "grabbing"
+						: "grab"
+					: "default",
 				height: `${event.duration * 30}px`,
 				minHeight: "30px",
 				overflow: "hidden",
@@ -2228,18 +2375,18 @@ const CalendarEvent = ({
 				transition: isDragging || isResizing ? "none" : "all 0.2s ease",
 				border: !event.disciplinaId ? "2px dashed #fff" : "none", // Borda tracejada se incompleto
 				opacity: !event.disciplinaId ? 0.7 : 1, // Reduzir opacidade se incompleto
-                "&:hover": {
-                    boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
-                    "& .resize-handle": {
-                        opacity: canEditHorario ? 1 : 0,
-                    },
-                },
+				"&:hover": {
+					boxShadow: "0 2px 6px rgba(0,0,0,0.3)",
+					"& .resize-handle": {
+						opacity: canEditHorario ? 1 : 0,
+					},
+				},
 			}}
 			onMouseDown={handleMouseDown}
-            onClick={(e) => {
+			onClick={(e) => {
 				e.stopPropagation();
-                if (!isDragging && !isResizing && onEdit) {
-                    if (!canManageHorarios) return;
+				if (!isDragging && !isResizing && onEdit) {
+					if (!canManageHorarios) return;
 					onEdit(event);
 				}
 			}}
@@ -2314,8 +2461,8 @@ const CalendarEvent = ({
 				</Tooltip>
 			)}
 
-            {/* Botão de delete */}
-            {!isMultiple && onDelete && canDeleteHorario && (
+			{/* Botão de delete */}
+			{!isMultiple && onDelete && canDeleteHorario && (
 				<IconButton
 					size="small"
 					onClick={(e) => {
@@ -2401,7 +2548,7 @@ const CalendarEvent = ({
 												? professor.name.substring(
 														0,
 														10,
-													) + "..."
+												  ) + "..."
 												: professor.name
 											: professor.name}
 									</Typography>
@@ -2471,20 +2618,24 @@ const CalendarEvent = ({
 				}}
 			>
 				{isMultiple
-					? `${formatTimeForDisplay(event.startTime)}-${formatTimeForDisplay(
+					? `${formatTimeForDisplay(
+							event.startTime,
+					  )}-${formatTimeForDisplay(
 							getEndTime(
 								event.startTime,
 								event.duration,
 								timeSlots,
 							),
-						)}`
-					: `${formatTimeForDisplay(event.startTime)} - ${formatTimeForDisplay(
+					  )}`
+					: `${formatTimeForDisplay(
+							event.startTime,
+					  )} - ${formatTimeForDisplay(
 							getEndTime(
 								event.startTime,
 								event.duration,
 								timeSlots,
 							),
-						)}`}
+					  )}`}
 			</Typography>
 
 			{/* Mostrar comentário se existir - SEMPRE mostrar quando há comentário */}
@@ -2526,7 +2677,7 @@ const CalendarEvent = ({
 			)}
 
 			{/* Resize handle */}
-            <Box
+			<Box
 				className="resize-handle"
 				sx={{
 					position: "absolute",
@@ -2550,12 +2701,12 @@ const CalendarEvent = ({
 						borderRadius: "1px",
 					},
 				}}
-                onMouseDown={(e) => {
-                    e.stopPropagation();
-                    if (!canEditHorario) return;
-                    setIsResizing(true);
-                    e.preventDefault();
-                }}
+				onMouseDown={(e) => {
+					e.stopPropagation();
+					if (!canEditHorario) return;
+					setIsResizing(true);
+					e.preventDefault();
+				}}
 			/>
 		</Paper>
 	);
@@ -2697,20 +2848,20 @@ const TimeSlot = ({
 	obterConflitosDoEvento,
 	sx, // Propriedade de estilo adicional
 }) => {
-    const { permissoesUsuario } = useAuth();
-    const canManageHorarios =
-        permissoesService.verificarPermissaoPorId(
-            permissoesUsuario,
-            Permissoes.HORARIOS.CRIAR,
-        ) ||
-        permissoesService.verificarPermissaoPorId(
-            permissoesUsuario,
-            Permissoes.HORARIOS.EDITAR,
-        );
-    const canEditHorario = permissoesService.verificarPermissaoPorId(
-        permissoesUsuario,
-        Permissoes.HORARIOS.EDITAR,
-    );
+	const { permissoesUsuario } = useAuth();
+	const canManageHorarios =
+		permissoesService.verificarPermissaoPorId(
+			permissoesUsuario,
+			Permissoes.HORARIOS.CRIAR,
+		) ||
+		permissoesService.verificarPermissaoPorId(
+			permissoesUsuario,
+			Permissoes.HORARIOS.EDITAR,
+		);
+	const canEditHorario = permissoesService.verificarPermissaoPorId(
+		permissoesUsuario,
+		Permissoes.HORARIOS.EDITAR,
+	);
 	const theme = useTheme();
 	const eventKey = `${dayId}-${time}`;
 	const eventData = events[eventKey];
@@ -2721,13 +2872,13 @@ const TimeSlot = ({
 		: [];
 	const [isDragOver, setIsDragOver] = useState(false);
 
-    const handleDrop = (e) => {
+	const handleDrop = (e) => {
 		e.preventDefault();
 		setIsDragOver(false);
 
-        if (!canEditHorario) {
-            return;
-        }
+		if (!canEditHorario) {
+			return;
+		}
 
 		try {
 			const eventData = JSON.parse(e.dataTransfer.getData("text/plain"));
@@ -2737,15 +2888,15 @@ const TimeSlot = ({
 		}
 	};
 
-    const handleDragOver = (e) => {
+	const handleDragOver = (e) => {
 		e.preventDefault();
-        if (!canEditHorario) return;
-        setIsDragOver(true);
+		if (!canEditHorario) return;
+		setIsDragOver(true);
 	};
 
-    const handleDragLeave = () => {
-        setIsDragOver(false);
-    };
+	const handleDragLeave = () => {
+		setIsDragOver(false);
+	};
 
 	return (
 		<Box
@@ -2764,24 +2915,23 @@ const TimeSlot = ({
 							? "rgba(144, 202, 249, 0.16)"
 							: "#e3f2fd"
 						: timeSlotsNoturno.includes(time) &&
-							  !isValidStartTimeNoturno(time)
-							? theme.palette.mode === "dark"
-								? "rgba(255, 255, 255, 0.08)"
-								: "#f0f0f0"
-							: theme.palette.mode === "dark"
-								? "rgba(255, 255, 255, 0.12)"
-								: "#f5f5f5",
+						  !isValidStartTimeNoturno(time)
+						? theme.palette.mode === "dark"
+							? "rgba(255, 255, 255, 0.08)"
+							: "#f0f0f0"
+						: theme.palette.mode === "dark"
+						? "rgba(255, 255, 255, 0.12)"
+						: "#f5f5f5",
 				},
 				transition: "background-color 0.2s ease",
 				display: "flex",
 				gap: eventsArray.length > 1 ? "1px" : "0",
-                cursor:
-                    !canEditHorario
-                        ? "default"
-                        : timeSlotsNoturno.includes(time) &&
-                          !isValidStartTimeNoturno(time)
-                            ? "not-allowed"
-                            : "pointer",
+				cursor: !canEditHorario
+					? "default"
+					: timeSlotsNoturno.includes(time) &&
+					  !isValidStartTimeNoturno(time)
+					? "not-allowed"
+					: "pointer",
 				opacity:
 					timeSlotsNoturno.includes(time) &&
 					!isValidStartTimeNoturno(time)
@@ -2792,8 +2942,8 @@ const TimeSlot = ({
 			onDrop={handleDrop}
 			onDragOver={handleDragOver}
 			onDragLeave={handleDragLeave}
-            onDoubleClick={() => {
-                if (!canManageHorarios) return;
+			onDoubleClick={() => {
+				if (!canManageHorarios) return;
 				// Verificar se é um horário válido para início de aula
 				if (
 					timeSlotsNoturno.includes(time) &&
@@ -3025,7 +3175,7 @@ const PhaseGrid = ({
 													"dark"
 														? "rgba(255, 255, 255, 0.3)"
 														: "#bbb"
-												}`
+											  }`
 											: "none",
 									display: "flex",
 									alignItems: "center",
@@ -3134,7 +3284,7 @@ const PhaseGrid = ({
 														"dark"
 															? "rgba(255, 255, 255, 0.05)"
 															: "#f5f5f5",
-												}
+											  }
 											: {}
 									}
 								/>
@@ -3174,16 +3324,16 @@ if (!document.getElementById("conflict-badge-styles")) {
 }
 
 export default function Horarios() {
-    const { permissoesUsuario } = useAuth();
-    const canManageHorarios =
-        permissoesService.verificarPermissaoPorId(
-            permissoesUsuario,
-            Permissoes.HORARIOS.CRIAR,
-        ) &&
-        permissoesService.verificarPermissaoPorId(
-            permissoesUsuario,
-            Permissoes.HORARIOS.EDITAR,
-        );
+	const { permissoesUsuario } = useAuth();
+	const canManageHorarios =
+		permissoesService.verificarPermissaoPorId(
+			permissoesUsuario,
+			Permissoes.HORARIOS.CRIAR,
+		) &&
+		permissoesService.verificarPermissaoPorId(
+			permissoesUsuario,
+			Permissoes.HORARIOS.EDITAR,
+		);
 	const [selectedAnoSemestre, setSelectedAnoSemestre] = useState({
 		ano: new Date().getFullYear(),
 		semestre: 1,
@@ -3220,6 +3370,151 @@ export default function Horarios() {
 	const [snackbarMessage, setSnackbarMessage] = useState("");
 	const [snackbarOpen, setSnackbarOpen] = useState(false);
 	const [showReloadConfirmation, setShowReloadConfirmation] = useState(false);
+
+	// Modal de importação de horários
+	const [showImportModal, setShowImportModal] = useState(false);
+	const [importLoading, setImportLoading] = useState(false);
+	const [importError, setImportError] = useState(null);
+	const [incluirDocentes, setIncluirDocentes] = useState(false);
+	const [incluirOfertas, setIncluirOfertas] = useState(false);
+	const [selectedAnoSemestreOrigem, setSelectedAnoSemestreOrigem] =
+		useState(null);
+
+	// Drawer lateral: Créditos por docente
+	const [openCreditosDrawer, setOpenCreditosDrawer] = useState(false);
+
+	// Estado para armazenar créditos do semestre atual por docente
+	const creditosSemestreAtualPorDocente = useMemo(() => {
+		// Estrutura: { codigoDocente: totalCreditosNoSemestreAtual }
+		const mapa = new Map();
+		if (!events || !disciplinas || disciplinas.length === 0) return mapa;
+
+		// Índice de créditos por CCR
+		const creditosPorCcr = new Map(
+			disciplinas.map((d) => [String(d.id), Number(d.creditos) || 0]),
+		);
+
+		// Evitar contar o mesmo CCR mais de uma vez por docente no mesmo turno do semestre
+		const vistos = new Set(); // chave: `${docente}-${ccr}-${turno}`
+
+		Object.keys(events).forEach((phaseNumber) => {
+			const phaseEvents = events[phaseNumber];
+			if (!phaseEvents) return;
+			Object.values(phaseEvents).forEach((eventArray) => {
+				const eventsInSlot = Array.isArray(eventArray)
+					? eventArray
+					: [eventArray];
+				eventsInSlot.forEach((ev) => {
+					if (!ev?.disciplinaId) return;
+					const creditos =
+						creditosPorCcr.get(String(ev.disciplinaId)) || 0;
+					// Pode ter múltiplos professores
+					const professoresIds = Array.isArray(ev.professoresIds)
+						? ev.professoresIds
+						: ev.professorId
+						? [ev.professorId]
+						: [];
+					professoresIds.forEach((cod) => {
+						const docente = String(cod);
+						const turno = getTurnoFromTime(ev.startTime);
+						const par = `${docente}-${String(
+							ev.disciplinaId,
+						)}-${turno}`;
+						if (vistos.has(par)) return;
+						vistos.add(par);
+						const atual = mapa.get(docente) || 0;
+						mapa.set(docente, atual + creditos);
+					});
+				});
+			});
+		});
+
+		return mapa;
+	}, [events, disciplinas]);
+
+	// Busca do outro semestre no mesmo ano para média anual
+	const [creditosOutroSemestre, setCreditosOutroSemestre] = useState(
+		new Map(),
+	);
+	useEffect(() => {
+		const carregarOutroSemestre = async () => {
+			try {
+				if (!selectedCurso?.id || !selectedAnoSemestre?.ano) {
+					setCreditosOutroSemestre(new Map());
+					return;
+				}
+				const outroSemestre =
+					selectedAnoSemestre.semestre === 1 ? 2 : 1;
+				// Buscar horários do outro semestre para o mesmo ano/curso
+				const resp = await axiosInstance.get("/horarios", {
+					params: {
+						ano: selectedAnoSemestre.ano,
+						semestre: outroSemestre,
+						id_curso: selectedCurso.id,
+					},
+				});
+				const horarios = resp.horarios || [];
+				// Índice de créditos por CCR
+				const creditosPorCcr = new Map(
+					disciplinas.map((d) => [
+						String(d.id),
+						Number(d.creditos) || 0,
+					]),
+				);
+				const mapa = new Map();
+				const vistos = new Set(); // `${docente}-${ccr}-${turno}` para o outro semestre
+				horarios.forEach((h) => {
+					if (!h?.id_ccr || !h?.codigo_docente) return;
+					const docente = String(h.codigo_docente);
+					const turno = getTurnoFromTime(h.hora_inicio);
+					const par = `${docente}-${String(h.id_ccr)}-${turno}`;
+					if (vistos.has(par)) return;
+					vistos.add(par);
+					const creditos = creditosPorCcr.get(String(h.id_ccr)) || 0;
+					const atual = mapa.get(docente) || 0;
+					mapa.set(docente, atual + creditos);
+				});
+				setCreditosOutroSemestre(mapa);
+			} catch (e) {
+				console.error(
+					"Erro ao carregar créditos do outro semestre:",
+					e,
+				);
+				setCreditosOutroSemestre(new Map());
+			}
+		};
+
+		carregarOutroSemestre();
+	}, [selectedCurso, selectedAnoSemestre, disciplinas]);
+
+	// Linhas da tabela: docente, créditos no semestre atual, média anual
+	const linhasCreditos = useMemo(() => {
+		// Apenas docentes que possuem horários no semestre atual
+		const docentesKeys = new Set(
+			Array.from(creditosSemestreAtualPorDocente.keys()),
+		);
+		// Mapear para exibição
+		const docentesMap = new Map(
+			professores.map((p) => [String(p.codigo || p.id), p]),
+		);
+		const linhas = Array.from(docentesKeys).map((cod) => {
+			const atual = creditosSemestreAtualPorDocente.get(String(cod)) || 0;
+			const outro = creditosOutroSemestre.get(String(cod)) || 0;
+			const numSemestres = (atual > 0 ? 1 : 0) + (outro > 0 ? 1 : 0);
+			const mediaAnual =
+				numSemestres > 0 ? (atual + outro) / numSemestres : 0;
+			const prof = docentesMap.get(String(cod));
+			return {
+				codigo: String(cod),
+				nome: prof?.name || prof?.nome || String(cod),
+				creditosSemestre: atual,
+				mediaAnual,
+			};
+		});
+		// Ordenar por nome
+		linhas.sort((a, b) => a.nome.localeCompare(b.nome));
+		return linhas;
+	}, [creditosSemestreAtualPorDocente, creditosOutroSemestre, professores]);
 
 	// Helper para verificar se o semestre é par (para compatibilidade)
 	const isEvenSemester = selectedAnoSemestre.semestre === 2;
@@ -3470,8 +3765,8 @@ export default function Horarios() {
 			evento.professoresIds && Array.isArray(evento.professoresIds)
 				? evento.professoresIds.map(String)
 				: evento.professorId
-					? [String(evento.professorId)]
-					: [];
+				? [String(evento.professorId)]
+				: [];
 
 		// Não mostrar conflitos para eventos sem disciplina definida
 		if (
@@ -3528,8 +3823,8 @@ export default function Horarios() {
 			evento.professoresIds && Array.isArray(evento.professoresIds)
 				? evento.professoresIds.map(String)
 				: evento.professorId
-					? [String(evento.professorId)]
-					: [];
+				? [String(evento.professorId)]
+				: [];
 
 		// Não retornar conflitos para eventos sem disciplina definida
 		if (
@@ -3631,8 +3926,8 @@ export default function Horarios() {
 								Array.isArray(event.professoresIds)
 									? event.professoresIds
 									: event.professorId
-										? [event.professorId]
-										: [];
+									? [event.professorId]
+									: [];
 
 							if (professoresDoEvento.includes(codigoProfessor)) {
 								horariosTemporarios.push({
@@ -3697,8 +3992,8 @@ export default function Horarios() {
 						horario.tipo === "novo"
 							? 3
 							: horario.tipo === "temporario"
-								? 2
-								: 1;
+							? 2
+							: 1;
 					const existente = eventosUnicos.get(eventoId);
 
 					if (!existente || prioridade > existente.prioridade) {
@@ -3978,8 +4273,8 @@ export default function Horarios() {
 												)
 													? event.professoresIds
 													: event.professorId
-														? [event.professorId]
-														: [];
+													? [event.professorId]
+													: [];
 
 											if (
 												professoresDoEvento.includes(
@@ -4091,8 +4386,8 @@ export default function Horarios() {
 									horario.tipo === "novo"
 										? 3
 										: horario.tipo === "temporario"
-											? 2
-											: 1;
+										? 2
+										: 1;
 								const existente = eventosUnicos.get(eventoId);
 
 								if (
@@ -4364,7 +4659,9 @@ export default function Horarios() {
 													/-prof\d+$/,
 													"",
 												);
-												uniqueId = `${baseId}-prof${index + 1}`;
+												uniqueId = `${baseId}-prof${
+													index + 1
+												}`;
 											}
 
 											const eventoCopy = {
@@ -4524,6 +4821,17 @@ export default function Horarios() {
 			if (horariosFromDb.length === 0) {
 				setEvents({});
 				setOriginalHorarios([]);
+				// Verificar se há anos/semestres anteriores disponíveis para importação
+				const anosSemestresAnteriores = anosSemestres.filter(
+					(as) =>
+						as.ano < selectedAnoSemestre.ano ||
+						(as.ano === selectedAnoSemestre.ano &&
+							as.semestre < selectedAnoSemestre.semestre),
+				);
+
+				if (anosSemestresAnteriores.length > 0) {
+					setShowImportModal(true);
+				}
 				return;
 			}
 
@@ -4720,7 +5028,9 @@ export default function Horarios() {
 												/-prof\d+$/,
 												"",
 											);
-											uniqueId = `${baseId}-prof${index + 1}`;
+											uniqueId = `${baseId}-prof${
+												index + 1
+											}`;
 										}
 
 										currentHorarios.push({
@@ -4822,6 +5132,63 @@ export default function Horarios() {
 		return changes.total > 0;
 	};
 
+	// Função para importar horários de ano/semestre anterior
+	const importarHorarios = async () => {
+		if (!selectedAnoSemestreOrigem || !selectedCurso) {
+			setImportError("Selecione um ano/semestre de origem e um curso");
+			return;
+		}
+
+		setImportLoading(true);
+		setImportError(null);
+
+		try {
+			const response = await axiosInstance.post("/horarios/importar", {
+				ano_origem: selectedAnoSemestreOrigem.ano,
+				semestre_origem: selectedAnoSemestreOrigem.semestre,
+				ano_destino: selectedAnoSemestre.ano,
+				semestre_destino: selectedAnoSemestre.semestre,
+				id_curso: selectedCurso.id,
+				incluir_docentes: incluirDocentes,
+				incluir_ofertas: incluirOfertas,
+			});
+
+			// Em nosso axios, a resposta pode já ser os dados.
+			const data = response?.data ?? response;
+
+			if (data) {
+				const message = `Importação realizada com sucesso! ${
+					data.horarios_importados || 0
+				} horários e ${data.ofertas_importadas || 0} ofertas criados.`;
+				setSnackbarMessage(message);
+				setSnackbarOpen(true);
+				setShowImportModal(false);
+
+				// Recarregar os horários após importação
+				await loadHorariosFromDatabase();
+			} else {
+				setImportError("Erro ao importar horários");
+			}
+		} catch (error) {
+			console.error("Erro ao importar horários:", error);
+			setImportError(
+				error.response?.data?.message ||
+					"Erro ao importar horários. Verifique a conexão.",
+			);
+		} finally {
+			setImportLoading(false);
+		}
+	};
+
+	// Função para fechar modal de importação
+	const handleCloseImportModal = () => {
+		setShowImportModal(false);
+		setImportError(null);
+		setIncluirDocentes(false);
+		setIncluirOfertas(false);
+		setSelectedAnoSemestreOrigem(null);
+	};
+
 	// Função para obter turno de uma fase específica baseado na oferta
 	// Retorna todos os turnos disponíveis para uma fase
 	const getTurnosOferta = (phaseNumber) => {
@@ -4832,12 +5199,12 @@ export default function Horarios() {
 				phaseNumber === 9
 					? "noturno"
 					: isEvenSemester
-						? !isOddPhase
-							? "vespertino"
-							: "noturno"
-						: isOddPhase
-							? "vespertino"
-							: "noturno";
+					? !isOddPhase
+						? "vespertino"
+						: "noturno"
+					: isOddPhase
+					? "vespertino"
+					: "noturno";
 			return [defaultTurno];
 		}
 
@@ -4857,12 +5224,12 @@ export default function Horarios() {
 				phaseNumber === 9
 					? "noturno"
 					: isEvenSemester
-						? !isOddPhase
-							? "vespertino"
-							: "noturno"
-						: isOddPhase
-							? "vespertino"
-							: "noturno";
+					? !isOddPhase
+						? "vespertino"
+						: "noturno"
+					: isOddPhase
+					? "vespertino"
+					: "noturno";
 			return [defaultTurno];
 		}
 
@@ -6459,7 +6826,9 @@ export default function Horarios() {
 
 			// Gerar nome do arquivo
 			const nomeArquivo = selectedCurso
-				? `schedule_${selectedCurso.nome.replace(/\s+/g, "_")}_${selectedAnoSemestre.ano}_${selectedAnoSemestre.semestre}.json`
+				? `schedule_${selectedCurso.nome.replace(/\s+/g, "_")}_${
+						selectedAnoSemestre.ano
+				  }_${selectedAnoSemestre.semestre}.json`
 				: `schedule_${selectedAnoSemestre.ano}_${selectedAnoSemestre.semestre}.json`;
 
 			// Criar e baixar arquivo
@@ -6556,28 +6925,32 @@ export default function Horarios() {
 								hasPendingChanges()
 									? `Há ${
 											getChangesCount().total
-										} mudança(s) não sincronizada(s). Clique para ver opções.`
+									  } mudança(s) não sincronizada(s). Clique para ver opções.`
 									: "Recarregar dados do banco de dados"
 							}
 						>
-							<Button
-								variant="outlined"
-								onClick={handleReloadClick}
-								disabled={loadingHorarios}
-								color={
-									hasPendingChanges() ? "warning" : "primary"
-								}
-								sx={{
-									minWidth: { xs: "200px", sm: "140px" },
-									width: { xs: "100%", sm: "auto" },
-								}}
-							>
-								{loadingHorarios
-									? "Carregando..."
-									: hasPendingChanges()
+							<span>
+								<Button
+									variant="outlined"
+									onClick={handleReloadClick}
+									disabled={loadingHorarios}
+									color={
+										hasPendingChanges()
+											? "warning"
+											: "primary"
+									}
+									sx={{
+										minWidth: { xs: "200px", sm: "140px" },
+										width: { xs: "100%", sm: "auto" },
+									}}
+								>
+									{loadingHorarios
+										? "Carregando..."
+										: hasPendingChanges()
 										? "Recarregar*"
 										: "Recarregar"}
-							</Button>
+								</Button>
+							</span>
 						</Tooltip>
 
 						<Badge
@@ -6608,60 +6981,67 @@ export default function Horarios() {
 							</Button>
 						</Badge>
 
-                        {canManageHorarios && (
-                            <Button
-                                variant="contained"
-                                color="primary"
-                                onClick={saveAllHorariosToDatabase}
-                                disabled={savingHorarios || !hasPendingChanges()}
-                                startIcon={
-                                    savingHorarios ? (
-                                        <CircularProgress size={20} />
-                                    ) : (
-                                        <SaveIcon />
-                                    )
-                                }
-                                sx={{
-                                    minWidth: { xs: "200px", sm: "180px" },
-                                    width: { xs: "100%", sm: "auto" },
-                                }}
-                            >
-                                {(() => {
-                                    if (savingHorarios) {
-                                        return "Salvando...";
-                                    }
+						{canManageHorarios && (
+							<Button
+								variant="contained"
+								color="primary"
+								onClick={saveAllHorariosToDatabase}
+								disabled={
+									savingHorarios || !hasPendingChanges()
+								}
+								startIcon={
+									savingHorarios ? (
+										<CircularProgress size={20} />
+									) : (
+										<SaveIcon />
+									)
+								}
+								sx={{
+									minWidth: { xs: "200px", sm: "180px" },
+									width: { xs: "100%", sm: "auto" },
+								}}
+							>
+								{(() => {
+									if (savingHorarios) {
+										return "Salvando...";
+									}
 
-                                    const changes = getChangesCount();
-                                    if (changes.total > 0) {
-                                        return `Sincronizar Mudanças (${changes.total})`;
-                                    }
+									const changes = getChangesCount();
+									if (changes.total > 0) {
+										return `Sincronizar Mudanças (${changes.total})`;
+									}
 
-                                    return "Nenhuma Mudança";
-                                })()}
-                            </Button>
-                        )}
+									return "Nenhuma Mudança";
+								})()}
+							</Button>
+						)}
 
-                        {canManageHorarios && (
-                            <Tooltip title="Baixar horários em formato JSON">
-                                <Button
-                                    variant="outlined"
-                                    color="secondary"
-                                    onClick={generateScheduleJSON}
-                                    disabled={
-                                        loadingHorarios ||
-                                        !selectedCurso ||
-                                        getValidHorariosCount() === 0
-                                    }
-                                    startIcon={<DownloadIcon />}
-                                    sx={{
-                                        minWidth: { xs: "200px", sm: "140px" },
-                                        width: { xs: "100%", sm: "auto" },
-                                    }}
-                                >
-                                    Baixar JSON
-                                </Button>
-                            </Tooltip>
-                        )}
+						{canManageHorarios && (
+							<Tooltip title="Baixar horários em formato JSON">
+								<span>
+									<Button
+										variant="outlined"
+										color="secondary"
+										onClick={generateScheduleJSON}
+										disabled={
+											loadingHorarios ||
+											!selectedCurso ||
+											getValidHorariosCount() === 0
+										}
+										startIcon={<DownloadIcon />}
+										sx={{
+											minWidth: {
+												xs: "200px",
+												sm: "140px",
+											},
+											width: { xs: "100%", sm: "auto" },
+										}}
+									>
+										Baixar JSON
+									</Button>
+								</span>
+							</Tooltip>
+						)}
 					</Box>
 
 					{/* Segunda linha de seletores em mobile, inline em desktop */}
@@ -6795,9 +7175,9 @@ export default function Horarios() {
 													: "rascunho"
 												: "rascunho";
 										})()}
-								onChange={async (e) => {
-                                    if (!canManageHorarios) return; // trava alteração se não tem permissão
-                                    const novoStatus = e.target.value;
+										onChange={async (e) => {
+											if (!canManageHorarios) return; // trava alteração se não tem permissão
+											const novoStatus = e.target.value;
 											const publicado =
 												novoStatus === "publicado";
 
@@ -6817,7 +7197,7 @@ export default function Horarios() {
 															? {
 																	...as,
 																	publicado,
-																}
+															  }
 															: as,
 													),
 												);
@@ -6844,12 +7224,12 @@ export default function Horarios() {
 												);
 											}
 										}}
-								label="Status"
-								disabled={
-									loadingAnosSemestres ||
-									!selectedCurso ||
-									!canManageHorarios
-								}
+										label="Status"
+										disabled={
+											loadingAnosSemestres ||
+											!selectedCurso ||
+											!canManageHorarios
+										}
 									>
 										<MenuItem value="rascunho">
 											📝 Rascunho
@@ -7044,14 +7424,14 @@ export default function Horarios() {
 							{loadingCursos
 								? "Carregando cursos do usuário..."
 								: loadingProfessores
-									? "Carregando dados dos professores..."
-									: loadingDisciplinas
-										? "Carregando dados das disciplinas..."
-										: loadingAnosSemestres
-											? "Carregando anos/semestres disponíveis..."
-											: loadingOfertas
-												? "Carregando ofertas de curso..."
-												: "Carregando horários salvos..."}
+								? "Carregando dados dos professores..."
+								: loadingDisciplinas
+								? "Carregando dados das disciplinas..."
+								: loadingAnosSemestres
+								? "Carregando anos/semestres disponíveis..."
+								: loadingOfertas
+								? "Carregando ofertas de curso..."
+								: "Carregando horários salvos..."}
 						</Typography>
 						{loadingOfertas && (
 							<Typography
@@ -7155,6 +7535,24 @@ export default function Horarios() {
 						}
 						return null;
 					})()}
+
+					{/* Botão para abrir/fechar Drawer de créditos por docente */}
+					<Box
+						sx={{
+							display: "flex",
+							justifyContent: "flex-end",
+							mb: 1,
+						}}
+					>
+						<Button
+							variant="outlined"
+							size="small"
+							startIcon={<TableChartIcon />}
+							onClick={() => setOpenCreditosDrawer(true)}
+						>
+							Créditos por Docente
+						</Button>
+					</Box>
 
 					{/* Mostrar informações sobre fases disponíveis */}
 					{(() => {
@@ -7380,7 +7778,9 @@ export default function Horarios() {
 
 									statusText += ` • ${
 										changes.total
-									} mudança(s) pendente(s) (${changeDetails.join(", ")})`;
+									} mudança(s) pendente(s) (${changeDetails.join(
+										", ",
+									)})`;
 								} else {
 									statusText += " • Sincronizado com o banco";
 								}
@@ -7406,6 +7806,106 @@ export default function Horarios() {
 					</Box>
 				</>
 			)}
+
+			{/* Drawer lateral com tabela de créditos por docente */}
+			<Drawer
+				anchor="right"
+				open={openCreditosDrawer}
+				onClose={() => setOpenCreditosDrawer(false)}
+			>
+				<Box sx={{ width: { xs: 320, sm: 380 }, p: 2 }}>
+					<Box
+						sx={{
+							display: "flex",
+							alignItems: "center",
+							justifyContent: "space-between",
+							mb: 1,
+						}}
+					>
+						<Typography variant="h6" sx={{ fontWeight: "medium" }}>
+							Créditos por Docente
+						</Typography>
+						<IconButton
+							size="small"
+							onClick={() => setOpenCreditosDrawer(false)}
+						>
+							<CloseIcon />
+						</IconButton>
+					</Box>
+					<Typography
+						variant="body2"
+						color="text.secondary"
+						sx={{ mb: 1 }}
+					>
+						{selectedCurso
+							? `${selectedCurso.nome}`
+							: "Curso não selecionado"}{" "}
+						• {selectedAnoSemestre.ano}
+					</Typography>
+					<Divider sx={{ mb: 2 }} />
+					<TableContainer component={Paper}>
+						<Table size="small" stickyHeader>
+							<TableHead>
+								<TableRow>
+									<TableCell>Docente</TableCell>
+									<TableCell align="right">
+										Créditos ({selectedAnoSemestre.semestre}
+										º)
+									</TableCell>
+									<TableCell align="right">
+										Média anual
+									</TableCell>
+								</TableRow>
+							</TableHead>
+							<TableBody>
+								{linhasCreditos.length === 0 ? (
+									<TableRow>
+										<TableCell colSpan={3}>
+											<Typography
+												variant="body2"
+												color="text.secondary"
+											>
+												Nenhum crédito calculado.
+											</Typography>
+										</TableCell>
+									</TableRow>
+								) : (
+									linhasCreditos.map((linha) => (
+										<TableRow key={linha.codigo} hover>
+											<TableCell>
+												<Typography
+													variant="body2"
+													fontWeight="medium"
+												>
+													{linha.nome}
+												</Typography>
+												<Typography
+													variant="caption"
+													color="text.secondary"
+												>
+													{linha.codigo}
+												</Typography>
+											</TableCell>
+											<TableCell align="right">
+												{linha.creditosSemestre}
+											</TableCell>
+											<TableCell align="right">
+												{Number.isFinite(
+													linha.mediaAnual,
+												)
+													? linha.mediaAnual.toFixed(
+															1,
+													  )
+													: "0.0"}
+											</TableCell>
+										</TableRow>
+									))
+								)}
+							</TableBody>
+						</Table>
+					</TableContainer>
+				</Box>
+			</Drawer>
 
 			<EventModal
 				open={modalOpen}
@@ -7480,21 +7980,37 @@ export default function Horarios() {
 					>
 						Descartar e Recarregar
 					</Button>
-                    {canManageHorarios && (
-                        <Button
-                            onClick={handleSyncAndReload}
-                            variant="contained"
-                            color="primary"
-                            startIcon={<SaveIcon />}
-                            disabled={savingHorarios}
-                        >
-                            {savingHorarios
-                                ? "Sincronizando..."
-                                : "Sincronizar e Recarregar"}
-                        </Button>
-                    )}
+					{canManageHorarios && (
+						<Button
+							onClick={handleSyncAndReload}
+							variant="contained"
+							color="primary"
+							startIcon={<SaveIcon />}
+							disabled={savingHorarios}
+						>
+							{savingHorarios
+								? "Sincronizando..."
+								: "Sincronizar e Recarregar"}
+						</Button>
+					)}
 				</DialogActions>
 			</Dialog>
+
+			<ImportModal
+				open={showImportModal}
+				onClose={handleCloseImportModal}
+				anosSemestres={anosSemestres}
+				selectedAnoSemestreOrigem={selectedAnoSemestreOrigem}
+				onAnoSemestreOrigemChange={setSelectedAnoSemestreOrigem}
+				incluirDocentes={incluirDocentes}
+				onIncluirDocentesChange={setIncluirDocentes}
+				incluirOfertas={incluirOfertas}
+				onIncluirOfertasChange={setIncluirOfertas}
+				onImport={importarHorarios}
+				loading={importLoading}
+				error={importError}
+				selectedAnoSemestre={selectedAnoSemestre}
+			/>
 
 			<ConflitosModal
 				open={showConflitos}
@@ -7511,7 +8027,11 @@ export default function Horarios() {
 			>
 				<Alert
 					onClose={() => setSnackbarOpen(false)}
-					severity="error"
+					severity={
+						snackbarMessage.includes("sucesso")
+							? "success"
+							: "error"
+					}
 					variant="filled"
 					sx={{ width: "100%" }}
 				>
