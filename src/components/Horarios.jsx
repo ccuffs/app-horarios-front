@@ -3362,6 +3362,8 @@ export default function Horarios() {
 	const [anosSemestres, setAnosSemestres] = useState([]);
 	const [loadingAnosSemestres, setLoadingAnosSemestres] = useState(true);
 	const [errorAnosSemestres, setErrorAnosSemestres] = useState(null);
+	const [hasAutoSelectedAnoSemestre, setHasAutoSelectedAnoSemestre] =
+		useState(false);
 	const [conflitosHorarios, setConflitosHorarios] = useState([]);
 	const [showConflitos, setShowConflitos] = useState(false);
 	const [ofertas, setOfertas] = useState([]);
@@ -3570,24 +3572,6 @@ export default function Horarios() {
 
 			const anosSemestresData = response.anosSemestres || [];
 			setAnosSemestres(anosSemestresData);
-
-			// Se não há ano/semestre selecionado ou se o selecionado não existe, selecionar o primeiro disponível
-			if (anosSemestresData.length > 0) {
-				const anoSemestreExiste = anosSemestresData.some(
-					(as) =>
-						as.ano === selectedAnoSemestre.ano &&
-						as.semestre === selectedAnoSemestre.semestre,
-				);
-
-				if (!anoSemestreExiste) {
-					// Selecionar o mais recente (primeiro da lista ordenada)
-					const maisRecente = anosSemestresData[0];
-					setSelectedAnoSemestre({
-						ano: maisRecente.ano,
-						semestre: maisRecente.semestre,
-					});
-				}
-			}
 		} catch (error) {
 			console.error("Erro ao buscar anos/semestres:", error);
 			setErrorAnosSemestres(
@@ -3598,6 +3582,85 @@ export default function Horarios() {
 			setLoadingAnosSemestres(false);
 		}
 	};
+
+	// Auto-selecionar período conforme regra: mais recente rascunho; senão, mais recente com horários
+	useEffect(() => {
+		const autoSelect = async () => {
+			if (hasAutoSelectedAnoSemestre) return;
+			if (!Array.isArray(anosSemestres) || anosSemestres.length === 0)
+				return;
+			if (!selectedCurso || !selectedCurso.id) return;
+
+			// 1) Mais recente como rascunho (publicado === false)
+			const draft = anosSemestres.find((as) => as.publicado === false);
+			if (draft) {
+				// Se o draft é anterior ao ano/semestre atual, priorizar o período atual (mesmo que publicado)
+				const now = new Date();
+				const currentAno = now.getFullYear();
+				const currentSemestre = now.getMonth() < 6 ? 1 : 2;
+				const draftIsBeforeCurrent =
+					draft.ano < currentAno ||
+					(draft.ano === currentAno && draft.semestre < currentSemestre);
+
+				if (draftIsBeforeCurrent) {
+					const existsCurrent = anosSemestres.some(
+						(as) => as.ano === currentAno && as.semestre === currentSemestre,
+					);
+					if (existsCurrent) {
+						setSelectedAnoSemestre({
+							ano: currentAno,
+							semestre: currentSemestre,
+						});
+						setHasAutoSelectedAnoSemestre(true);
+						return;
+					}
+					// Se o atual não existe no cadastro, seguir fluxo normal abaixo
+				} else {
+					setSelectedAnoSemestre({ ano: draft.ano, semestre: draft.semestre });
+					setHasAutoSelectedAnoSemestre(true);
+					return;
+				}
+			}
+
+			// 2) Mais recente com horários cadastrados para o curso selecionado
+			try {
+				const results = await Promise.all(
+					anosSemestres.map(async (as) => {
+						try {
+							const resp = await axiosInstance.get("/horarios", {
+								params: {
+									ano: as.ano,
+									semestre: as.semestre,
+									id_curso: selectedCurso.id,
+								},
+							});
+							const count =
+								resp?.count ?? (Array.isArray(resp?.horarios) ? resp.horarios.length : 0);
+							return { as, count };
+						} catch (_) {
+							return { as, count: 0 };
+						}
+					}),
+				);
+
+				const found = results.find((r) => r.count > 0);
+				if (found) {
+					setSelectedAnoSemestre({
+						ano: found.as.ano,
+						semestre: found.as.semestre,
+					});
+				} else {
+					// 3) Nenhum com horários: selecionar o mais recente da lista
+					const first = anosSemestres[0];
+					setSelectedAnoSemestre({ ano: first.ano, semestre: first.semestre });
+				}
+			} finally {
+				setHasAutoSelectedAnoSemestre(true);
+			}
+		};
+
+		autoSelect();
+	}, [anosSemestres, selectedCurso, hasAutoSelectedAnoSemestre]);
 
 	// Função para buscar professores da API
 	const fetchProfessores = async () => {
