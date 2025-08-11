@@ -40,7 +40,7 @@ export default function CCRs() {
 		id: "",
 		codigo: "",
 		nome: "",
-		creditos: 4,
+		creditos: "",
 		ementa: "",
 	});
 	const [cursosSelecionados, setCursosSelecionados] = useState([]);
