@@ -6949,17 +6949,6 @@ export default function Horarios() {
 					>
 						Grade de Horários
 					</Typography>
-					<Typography
-						variant="caption"
-						color="textSecondary"
-						sx={{
-							fontSize: { xs: "0.7rem", sm: "0.75rem" },
-							display: "block",
-						}}
-					>
-						Usuário: {getCurrentUserId()} • Mostrando apenas cursos
-						vinculados
-					</Typography>
 				</Box>
 
 				{/* Seção dos controles - empilha em mobile, linha em desktop */}
