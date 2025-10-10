@@ -58,7 +58,7 @@ import {
 import axiosInstance from "../auth/axios";
 import { customColors } from "./CustomThemeProvider";
 import { useAuth } from "../contexts/AuthContext";
-import { Permissoes } from "../enums/permissoes";
+import Permissoes from "../enums/permissoes";
 import permissoesService from "../services/permissoesService";
 
 const timeSlotsMatutino = [
@@ -3600,11 +3600,14 @@ export default function Horarios() {
 				const currentSemestre = now.getMonth() < 6 ? 1 : 2;
 				const draftIsBeforeCurrent =
 					draft.ano < currentAno ||
-					(draft.ano === currentAno && draft.semestre < currentSemestre);
+					(draft.ano === currentAno &&
+						draft.semestre < currentSemestre);
 
 				if (draftIsBeforeCurrent) {
 					const existsCurrent = anosSemestres.some(
-						(as) => as.ano === currentAno && as.semestre === currentSemestre,
+						(as) =>
+							as.ano === currentAno &&
+							as.semestre === currentSemestre,
 					);
 					if (existsCurrent) {
 						setSelectedAnoSemestre({
@@ -3616,7 +3619,10 @@ export default function Horarios() {
 					}
 					// Se o atual não existe no cadastro, seguir fluxo normal abaixo
 				} else {
-					setSelectedAnoSemestre({ ano: draft.ano, semestre: draft.semestre });
+					setSelectedAnoSemestre({
+						ano: draft.ano,
+						semestre: draft.semestre,
+					});
 					setHasAutoSelectedAnoSemestre(true);
 					return;
 				}
@@ -3635,7 +3641,10 @@ export default function Horarios() {
 								},
 							});
 							const count =
-								resp?.count ?? (Array.isArray(resp?.horarios) ? resp.horarios.length : 0);
+								resp?.count ??
+								(Array.isArray(resp?.horarios)
+									? resp.horarios.length
+									: 0);
 							return { as, count };
 						} catch (_) {
 							return { as, count: 0 };
@@ -3652,7 +3661,10 @@ export default function Horarios() {
 				} else {
 					// 3) Nenhum com horários: selecionar o mais recente da lista
 					const first = anosSemestres[0];
-					setSelectedAnoSemestre({ ano: first.ano, semestre: first.semestre });
+					setSelectedAnoSemestre({
+						ano: first.ano,
+						semestre: first.semestre,
+					});
 				}
 			} finally {
 				setHasAutoSelectedAnoSemestre(true);
@@ -6294,8 +6306,6 @@ export default function Horarios() {
 									eventData.hora_inicio,
 								duracao:
 									eventData.duration || eventData.duracao,
-								permitirConflito:
-									eventData.permitirConflito || false,
 							};
 
 							return updatedEvent;

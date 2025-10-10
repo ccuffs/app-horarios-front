@@ -63,4 +63,4 @@ permissoesService.verificarPermissaoPorGrupos = (
   return resultado;
 };
 
-module.exports = permissoesService;
+export default permissoesService;

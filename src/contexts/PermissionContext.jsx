@@ -1,7 +1,7 @@
 import React from "react";
 import { Alert, Box } from "@mui/material";
 import { useAuth } from "./AuthContext";
-import permissoesService from "../services/permissoesService";
+import permissoesService from "../services/permissoesService.js";
 
 export default function PermissionContext({
 	children,

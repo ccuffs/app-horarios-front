@@ -38,4 +38,4 @@ Permissoes.CCR = {
   DELETAR: 70,
 };
 
-module.exports = { Permissoes };
+export default Permissoes;

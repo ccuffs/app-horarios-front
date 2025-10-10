@@ -20,7 +20,7 @@ import { useNavigate } from "react-router";
 import { DrawerContext } from "./App";
 import { useAuth } from "../contexts/AuthContext";
 import PermissionContext from "../contexts/PermissionContext";
-import { Permissoes } from "../enums/permissoes";
+import Permissoes from "../enums/permissoes.js";
 import UserMenu from "./UserMenu";
 
 const drawerWidth = 240;

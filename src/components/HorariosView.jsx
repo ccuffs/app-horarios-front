@@ -13,7 +13,7 @@ import {
 	Tooltip,
 	useTheme,
 } from "@mui/material";
-import publicAxiosInstance from "../auth/publicAxios";
+import publicAxiosInstance from "../auth/publicAxios.js";
 import { customColors } from "./CustomThemeProvider";
 
 const timeSlotsMatutino = [

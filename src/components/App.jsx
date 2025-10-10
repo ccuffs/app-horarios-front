@@ -1,7 +1,5 @@
 // import Grid from '@mui/material/Grid'; // Grid version 1
 
-import Grid from "@mui/material/Unstable_Grid2"; // Grid version 2
-
 import { Container, Stack, Box, Toolbar } from "@mui/material";
 import { Route, Routes } from "react-router";
 import React from "react";
@@ -10,9 +8,9 @@ import Navbar from "./Navbar";
 import Login from "./Login";
 import ProtectedRoute from "../contexts/ProtectedRoute";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
-import { Permissoes } from "../enums/permissoes";
+import Permissoes from "../enums/permissoes.js";
 
-import axiosInstance from "../auth/axios";
+
 import Cursos from "./Cursos";
 import CCRs from "./CCRs";
 import Professores from "./Professores";

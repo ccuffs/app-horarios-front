@@ -1,4 +1,4 @@
-import axiosInstance from "../auth/axios";
+import axiosInstance from "../auth/axios.js";
 
 export async function login(userId, senha) {
   try {

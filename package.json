@@ -13,20 +13,20 @@
     "@testing-library/jest-dom": "^5.14.1",
     "@testing-library/react": "^13.0.0",
     "@testing-library/user-event": "^13.2.1",
+    "@vitejs/plugin-react": "^5.0.4",
     "axios": "^1.6.8",
     "react": "^18.3.1",
     "react-beautiful-dnd": "^13.1.1",
     "react-dom": "^18.3.1",
     "react-resizable": "^3.0.5",
     "react-router": "^7.9.4",
-    "react-scripts": "5.0.1",
+    "vite": "^7.1.9",
     "web-vitals": "^2.1.0"
   },
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject"
+    "start": "vite",
+    "build": "vite build",
+    "serve": "vite preview"
   },
   "eslintConfig": {
     "extends": [
