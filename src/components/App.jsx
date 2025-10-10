@@ -3,7 +3,7 @@
 import Grid from "@mui/material/Unstable_Grid2"; // Grid version 2
 
 import { Container, Stack, Box, Toolbar } from "@mui/material";
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router";
 import React from "react";
 
 import Navbar from "./Navbar";
