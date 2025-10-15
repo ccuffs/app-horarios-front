@@ -31,7 +31,7 @@
   },
   "scripts": {
     "start": "vite",
-    "build": "vite build",
+    "build": "react-router build",
     "dev": "react-router dev",
     "serve": "vite preview"
   },
