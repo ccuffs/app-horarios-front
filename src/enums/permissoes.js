@@ -6,6 +6,14 @@ Permissoes.GRUPO = {
 	DOCENTE: 3,
 };
 
+Permissoes.CURSO = {
+	VISUALIZAR: 1,
+	VISUALIZAR_TODOS: 2,
+	CRIAR: 3,
+	EDITAR: 4,
+	DELETAR: 5,
+};
+
 Permissoes.HORARIOS = {
 	VISUALIZAR: 6,
 	VISUALIZAR_TODOS: 7,
