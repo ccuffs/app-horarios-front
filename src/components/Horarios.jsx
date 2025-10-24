@@ -782,37 +782,44 @@ const EventModal = ({
 											.substring(0, 5)
 									: outroHorario.hora_inicio;
 
-							// Considerar que é o MESMO compromisso (portanto não é conflito) se todos os
-							// atributos básicos coincidirem – ignoramos diferença de duração para permitir
-							// edições que apenas alteram o tamanho da aula.
-							if (
-								horarioAtual.id_ccr === outroHorario.id_ccr &&
-								hora1 === hora2 &&
-								horarioAtual.ano === outroHorario.ano &&
-								horarioAtual.semestre ===
-									outroHorario.semestre &&
-								horarioAtual.dia_semana ===
-									outroHorario.dia_semana &&
-								horarioAtual.codigo_docente ===
-									outroHorario.codigo_docente
-							) {
-								return; // É o mesmo compromisso (possível edição), não gera conflito
-							}
+						// Considerar que é o MESMO compromisso (portanto não é conflito) se todos os
+						// atributos básicos coincidirem – ignoramos diferença de duração para permitir
+						// edições que apenas alteram o tamanho da aula.
+						if (
+							horarioAtual.id_ccr === outroHorario.id_ccr &&
+							hora1 === hora2 &&
+							horarioAtual.ano === outroHorario.ano &&
+							horarioAtual.semestre ===
+								outroHorario.semestre &&
+							horarioAtual.dia_semana ===
+								outroHorario.dia_semana &&
+							horarioAtual.codigo_docente ===
+								outroHorario.codigo_docente
+						) {
+							return; // É o mesmo compromisso (possível edição), não gera conflito
+						}
 
-							// Verificar se algum dos eventos permite conflito
-							if (
-								horarioAtual.permitirConflito ||
-								outroHorario.permitirConflito
-							) {
-								return; // Pular se algum evento permitir conflito
-							}
+						// Regra 4: Se algum dos eventos permite conflito, não acusar conflito
+						if (
+							horarioAtual.permitirConflito ||
+							outroHorario.permitirConflito
+						) {
+							return; // Pular se algum evento permitir conflito
+						}
 
-							// Verificar se ambos os horários têm disciplinas e há sobreposição
-							if (
-								horarioAtual.id_ccr &&
-								outroHorario.id_ccr &&
-								horariosSeOverlapam(horarioAtual, outroHorario)
-							) {
+						// Regra 3: Se mesmo CCR, mesmo horário/dia mas fases diferentes, não é conflito
+						if (horarioAtual.id_ccr === outroHorario.id_ccr && horarioAtual.fase !== outroHorario.fase) {
+							return; // Mesmo CCR em fases diferentes não é conflito
+						}
+
+						// Regra 1 e 2: Verificar sobreposição temporal
+						// Regra 1: CCRs diferentes, mesmo horário/dia, qualquer fase → CONFLITO
+						// Regra 2: Mesmo CCR, mesmo horário/dia, mesma fase → CONFLITO
+						if (
+							horarioAtual.id_ccr &&
+							outroHorario.id_ccr &&
+							horariosSeOverlapam(horarioAtual, outroHorario)
+						) {
 								// Criar ID único para evitar duplicatas
 								const conflict1 = `${
 									horarioAtual.id_ccr || "null"
@@ -4148,12 +4155,19 @@ export default function Horarios() {
 							continue; // São o mesmo horário, não é conflito
 						}
 
-						// Verificar se algum dos eventos permite conflito
+						// Regra 4: Se algum dos eventos permite conflito, não acusar conflito
 						if (h1.permitirConflito || h2.permitirConflito) {
 							continue; // Pular se algum evento permitir conflito
 						}
 
-						// Verificar sobreposição temporal
+						// Regra 3: Se mesmo CCR, mesmo horário/dia mas fases diferentes, não é conflito
+						if (h1.id_ccr === h2.id_ccr && h1.fase !== h2.fase) {
+							continue; // Mesmo CCR em fases diferentes não é conflito
+						}
+
+						// Regra 1 e 2: Verificar sobreposição temporal
+						// Regra 1: CCRs diferentes, mesmo horário/dia, qualquer fase → CONFLITO
+						// Regra 2: Mesmo CCR, mesmo horário/dia, mesma fase → CONFLITO
 						if (horariosSeOverlapam(h1, h2)) {
 							// Criar ID único determinístico para o conflito
 							const conflict1 = `${h1.id_ccr || "null"}-${
@@ -4569,28 +4583,40 @@ export default function Horarios() {
 											.slice(0, 2)
 											.join(":");
 
-										// Verificar se na prática é o MESMO compromisso (ignora duração, pois
-										// ela pode ter sido editada antes da sincronização).
-										const saoOMesmoHorario =
-											h1.id_ccr === h2.id_ccr &&
-											hora1Normalizada ===
-												hora2Normalizada &&
-											h1.ano === h2.ano &&
-											h1.semestre === h2.semestre &&
-											h1.dia_semana === h2.dia_semana &&
-											h1.codigo_docente ===
-												h2.codigo_docente;
+									// Verificar se na prática é o MESMO compromisso (ignora duração, pois
+									// ela pode ter sido editada antes da sincronização).
+									const saoOMesmoHorario =
+										h1.id_ccr === h2.id_ccr &&
+										hora1Normalizada ===
+											hora2Normalizada &&
+										h1.ano === h2.ano &&
+										h1.semestre === h2.semestre &&
+										h1.dia_semana === h2.dia_semana &&
+										h1.codigo_docente ===
+											h2.codigo_docente;
 
-										if (saoOMesmoHorario) {
-											continue; // São o mesmo horário, não é conflito
-										}
+									if (saoOMesmoHorario) {
+										continue; // São o mesmo horário, não é conflito
+									}
 
-										// Verificar se ambos os horários têm disciplinas e há sobreposição temporal
-										if (
-											h1.id_ccr &&
-											h2.id_ccr &&
-											horariosSeOverlapam(h1, h2)
-										) {
+									// Regra 4: Se algum dos eventos permite conflito, não acusar conflito
+									if (h1.permitirConflito || h2.permitirConflito) {
+										continue; // Pular se algum evento permitir conflito
+									}
+
+									// Regra 3: Se mesmo CCR, mesmo horário/dia mas fases diferentes, não é conflito
+									if (h1.id_ccr === h2.id_ccr && h1.fase !== h2.fase) {
+										continue; // Mesmo CCR em fases diferentes não é conflito
+									}
+
+									// Regra 1 e 2: Verificar sobreposição temporal
+									// Regra 1: CCRs diferentes, mesmo horário/dia, qualquer fase → CONFLITO
+									// Regra 2: Mesmo CCR, mesmo horário/dia, mesma fase → CONFLITO
+									if (
+										h1.id_ccr &&
+										h2.id_ccr &&
+										horariosSeOverlapam(h1, h2)
+									) {
 											// Criar ID único determinístico baseado nas propriedades dos horários
 											const conflict1 = `${h1.id_ccr}-${h1.ano}-${h1.semestre}-${hora1}-${h1.duracao}`;
 											const conflict2 = `${h2.id_ccr}-${h2.ano}-${h2.semestre}-${hora2}-${h2.duracao}`;
