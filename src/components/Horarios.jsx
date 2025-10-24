@@ -4698,7 +4698,7 @@ export default function Horarios() {
 		setSaveSuccess(false);
 
 		try {
-			// 2.1. Montar lista de horários atuais
+			// 1. Montar lista de horários atuais
 			const horariosAtuais = [];
 			Object.keys(events).forEach((phaseNumber) => {
 				const phaseEvents = events[phaseNumber];
@@ -4771,41 +4771,90 @@ export default function Horarios() {
 				}
 			});
 
-			// 2.2. Estratégia simplificada: substituir todos os horários
-			// Para evitar problemas de diff complexo, vamos:
-			// 1. Remover TODOS os horários originais
-			// 2. Criar TODOS os horários atuais
+			// 2. Identificar mudanças comparando com horários originais
+			const novos = [];
+			const editados = [];
+			const removidosIds = [];
 
-			const novos = horariosAtuais; // Todos os atuais serão criados
-			const editados = []; // Não fazemos edições, só recreação
-			const removidos = originalHorarios; // Todos os originais serão removidos
+			// 2.1 Criar mapa de horários originais por ID para busca rápida
+			const originaisPorId = {};
+			originalHorarios.forEach((original) => {
+				originaisPorId[original.id] = original;
+			});
 
-			// 2.3. Fazer as requisições em ordem: primeiro remove, depois cria
-			// Primeiro, remover todos os horários existentes
-			for (const h of removidos) {
-				await axiosInstance.delete(`/horarios/${h.id}`);
+			// 2.2 Função auxiliar para verificar se horário foi modificado
+			const horarioFoiModificado = (atual, original) => {
+				const hora1 = normalizeTimeFromDB(atual.hora_inicio);
+				const hora2 = normalizeTimeFromDB(original.hora_inicio);
+
+				return (
+					atual.id_ccr !== original.id_ccr ||
+					atual.codigo_docente !== original.codigo_docente ||
+					atual.dia_semana !== original.dia_semana ||
+					hora1 !== hora2 ||
+					atual.duracao !== original.duracao ||
+					atual.fase !== original.fase ||
+					(atual.comentario || "") !== (original.comentario || "")
+				);
+			};
+
+			// 2.3 Set para rastrear IDs originais processados
+			const idsOriginaisProcessados = new Set();
+
+			// 2.4 Processar horários atuais
+			horariosAtuais.forEach((atual) => {
+				// Verificar se o horário atual tem um ID que corresponde a um original
+				const original = originaisPorId[atual.id];
+
+				if (original) {
+					// Horário existe no banco (mesmo ID)
+					idsOriginaisProcessados.add(original.id);
+
+					if (horarioFoiModificado(atual, original)) {
+						// Foi modificado (qualquer campo) → EDITADO
+						editados.push(atual);
+					}
+					// Se não foi modificado, não fazemos nada (não tocar no banco)
+				} else {
+					// ID não existe no banco → NOVO
+					novos.push(atual);
+				}
+			});
+
+			// 2.5 Identificar horários removidos
+			// São os horários originais cujos IDs não foram processados
+			originalHorarios.forEach((original) => {
+				if (!idsOriginaisProcessados.has(original.id)) {
+					// Não foi processado = não existe mais → REMOVIDO
+					removidosIds.push(original.id);
+				}
+			});
+
+			// 3. Sincronizar apenas se há mudanças
+			if (novos.length === 0 && editados.length === 0 && removidosIds.length === 0) {
+				setSaveSuccess(true);
+				setTimeout(() => setSaveSuccess(false), 3000);
+				setSavingHorarios(false);
+				return;
 			}
 
-			// Processar edições (se houver)
-			for (const h of editados) {
-				await axiosInstance.put(`/horarios/${h.id}`, h);
-			}
-
-			// Por último, criar todos os novos horários
-			if (novos.length > 0) {
-				await axiosInstance.post("/horarios/bulk", {
-					horarios: novos,
-				});
-			}
+			// 4. Enviar para o backend via novo endpoint /sync
+			await axiosInstance.post("/horarios/sync", {
+				novos,
+				editados,
+				removidos: removidosIds,
+			});
 
 			setSaveSuccess(true);
 			setTimeout(() => setSaveSuccess(false), 3000);
+
 			// Atualizar os originais para refletir o novo estado
 			setOriginalHorarios(horariosAtuais);
 
 			// Verificar conflitos após salvar
 			await detectarConflitosHorarios();
 		} catch (error) {
+			console.error("Erro ao sincronizar horários:", error);
 			setSaveError(
 				error.response?.data?.message ||
 					"Erro ao salvar horários. Tente novamente.",
@@ -5072,8 +5121,8 @@ export default function Horarios() {
 		// Se originalHorarios é array vazio [], significa que carregou mas não tinha horários
 		// Neste caso, todos os eventos atuais são novos (added)
 
-		// Converter eventos atuais para formato comparável
-		const currentHorarios = [];
+		// Converter eventos atuais para formato comparável (mesma lógica do saveAllHorariosToDatabase)
+		const horariosAtuais = [];
 		Object.keys(events).forEach((phaseNumber) => {
 			const phaseEvents = events[phaseNumber];
 			if (phaseEvents) {
@@ -5108,34 +5157,28 @@ export default function Horarios() {
 											}`;
 										}
 
-										currentHorarios.push({
+										const eventoCopy = {
+											...event,
+											professorId,
 											id: uniqueId,
-											id_ccr: event.disciplinaId,
-											codigo_docente: professorId,
-											dia_semana:
-												dayToNumber[event.dayId],
-											hora_inicio: normalizeTimeFromDB(
-												event.startTime,
-											),
-											duracao: event.duration,
-											fase: parseInt(phaseNumber),
-											comentario: event.comentario || "",
-										});
+										};
+										const dbEvent = eventToDbFormat(
+											eventoCopy,
+											phaseNumber,
+											selectedAnoSemestre,
+											selectedCurso,
+										);
+										horariosAtuais.push(dbEvent);
 									},
 								);
 							} else if (event.professorId) {
-								currentHorarios.push({
-									id: event.id,
-									id_ccr: event.disciplinaId,
-									codigo_docente: event.professorId,
-									dia_semana: dayToNumber[event.dayId],
-									hora_inicio: normalizeTimeFromDB(
-										event.startTime,
-									),
-									duracao: event.duration,
-									fase: parseInt(phaseNumber),
-									comentario: event.comentario || "",
-								});
+								const dbEvent = eventToDbFormat(
+									event,
+									phaseNumber,
+									selectedAnoSemestre,
+									selectedCurso,
+								);
+								horariosAtuais.push(dbEvent);
 							}
 						}
 					});
@@ -5147,54 +5190,57 @@ export default function Horarios() {
 			modified = 0,
 			removed = 0;
 
-		// Contar adições e modificações
-		currentHorarios.forEach((current) => {
-			// Normalizar hora_inicio para comparação
-			const currentHora = normalizeTimeFromDB(current.hora_inicio);
+		// Criar mapa de horários originais por ID para busca rápida
+		const originaisPorId = {};
+		originalHorarios.forEach((original) => {
+			originaisPorId[original.id] = original;
+		});
 
-			const original = originalHorarios.find((orig) => {
-				const originalHora = normalizeTimeFromDB(orig.hora_inicio);
-				return (
-					orig.id_ccr === current.id_ccr &&
-					orig.codigo_docente === current.codigo_docente &&
-					orig.dia_semana === current.dia_semana &&
-					orig.fase === current.fase &&
-					originalHora === currentHora
-				);
-			});
+		// Função auxiliar para verificar se horário foi modificado
+		const horarioFoiModificado = (atual, original) => {
+			const hora1 = normalizeTimeFromDB(atual.hora_inicio);
+			const hora2 = normalizeTimeFromDB(original.hora_inicio);
 
-			if (!original) {
-				added++; // Novo horário
-			} else {
-				// Verificar se foi modificado (duração, fase ou comentário)
-				const isModified =
-					original.duracao !== current.duracao ||
-					original.fase !== current.fase ||
-					(original.comentario || "") !== (current.comentario || "");
+			return (
+				atual.id_ccr !== original.id_ccr ||
+				atual.codigo_docente !== original.codigo_docente ||
+				atual.dia_semana !== original.dia_semana ||
+				hora1 !== hora2 ||
+				atual.duracao !== original.duracao ||
+				atual.fase !== original.fase ||
+				(atual.comentario || "") !== (original.comentario || "")
+			);
+		};
 
-				if (isModified) {
+		// Set para rastrear IDs originais processados
+		const idsOriginaisProcessados = new Set();
+
+		// Processar horários atuais
+		horariosAtuais.forEach((atual) => {
+			// Verificar se o horário atual tem um ID que corresponde a um original
+			const original = originaisPorId[atual.id];
+
+			if (original) {
+				// Horário existe no banco (mesmo ID)
+				idsOriginaisProcessados.add(original.id);
+
+				if (horarioFoiModificado(atual, original)) {
+					// Foi modificado (qualquer campo) → EDITADO
 					modified++;
 				}
+				// Se não foi modificado, não fazemos nada (não tocar no banco)
+			} else {
+				// ID não existe no banco → NOVO
+				added++;
 			}
 		});
 
-		// Contar remoções
+		// Identificar horários removidos
+		// São os horários originais cujos IDs não foram processados
 		originalHorarios.forEach((original) => {
-			const originalHora = normalizeTimeFromDB(original.hora_inicio);
-
-			const current = currentHorarios.find((curr) => {
-				const currentHora = normalizeTimeFromDB(curr.hora_inicio);
-				return (
-					curr.id_ccr === original.id_ccr &&
-					curr.codigo_docente === original.codigo_docente &&
-					curr.dia_semana === original.dia_semana &&
-					curr.fase === original.fase &&
-					currentHora === originalHora
-				);
-			});
-
-			if (!current) {
-				removed++; // Horário removido
+			if (!idsOriginaisProcessados.has(original.id)) {
+				// Não foi processado = não existe mais → REMOVIDO
+				removed++;
 			}
 		});
 
