@@ -16,7 +16,7 @@ import {
 	Stack,
 	TextField,
 } from "@mui/material";
-import { DataGrid } from "@mui/x-data-grid";
+import CustomDataGrid from "./CustomDataGrid.jsx";
 import cursosController from "../controllers/cursos-controller.js";
 import cursosService from "../services/cursos-service.js";
 
@@ -263,12 +263,13 @@ export default function Cursos() {
 					</Dialog>
 				</Stack>
 				<Box style={{ height: "500px" }}>
-					<DataGrid
+					<CustomDataGrid
 						rows={cursos}
 						columns={columns}
 						pageSize={5}
 						checkboxSelection={false}
 						disableSelectionOnClick
+						getRowId={(row) => row.id}
 					/>
 				</Box>
 			</Stack>
