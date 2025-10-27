@@ -20,7 +20,7 @@ import {
 	Stack,
 	TextField,
 } from "@mui/material";
-import { DataGrid } from "@mui/x-data-grid";
+import CustomDataGrid from "./CustomDataGrid.jsx";
 
 const ITEM_HEIGHT = 48;
 const ITEM_PADDING_TOP = 8;
@@ -382,12 +382,13 @@ export default function CCRs() {
 					</Dialog>
 				</Stack>
 				<Box style={{ height: "500px" }}>
-					<DataGrid
+					<CustomDataGrid
 						rows={ccrs}
 						columns={columns}
 						pageSize={5}
 						checkboxSelection={false}
 						disableSelectionOnClick
+						getRowId={(row) => row.id}
 					/>
 				</Box>
 			</Stack>
