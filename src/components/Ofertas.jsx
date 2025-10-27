@@ -16,7 +16,7 @@ import {
 	Stack,
 	TextField,
 } from "@mui/material";
-import { DataGrid } from "@mui/x-data-grid";
+import CustomDataGrid from "./CustomDataGrid.jsx";
 import ofertasController from "../controllers/ofertas-controller.js";
 import ofertasService from "../services/ofertas-service.js";
 
@@ -339,7 +339,7 @@ export default function Ofertas() {
 					</Dialog>
 				</Stack>
 				<Box style={{ height: "500px" }}>
-					<DataGrid
+					<CustomDataGrid
 						rows={ofertas}
 						columns={columns}
 						pageSize={5}
