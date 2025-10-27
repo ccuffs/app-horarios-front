@@ -1779,7 +1779,7 @@ export default function Horarios() {
 					return;
 				}
 
-				const event = dbToEventFormat(baseHorario, disciplinas);
+				const event = dbToEventFormat(baseHorario, disciplinas, professores);
 
 				// Validar apenas se conversão básica foi bem sucedida
 				if (!event.dayId) {

@@ -289,7 +289,7 @@ export const getColorByDay = (dayId) => {
 	return dayColors[dayId] || "#9C27B0";
 };
 
-export const dbToEventFormat = (dbEvent, disciplinas) => {
+export const dbToEventFormat = (dbEvent, disciplinas, professores) => {
 	const disciplina = disciplinas.find((d) => d.id === dbEvent.id_ccr);
 	const dayId = numberToDay[dbEvent.dia_semana];
 	const startTime = normalizeTimeFromDB(dbEvent.hora_inicio);
@@ -300,20 +300,20 @@ export const dbToEventFormat = (dbEvent, disciplinas) => {
 		startTime,
 		duration: dbEvent.duracao || 2,
 		color: getColorByDay(dayId),
-		professorId: dbEvent.codigo_docente,
+		professorId: dbEvent.codigo_docente, // Compatibilidade com formato antigo
 		disciplinaId: dbEvent.id_ccr,
 		dayId,
+		comentario: dbEvent.comentario || "",
+		fase: dbEvent.fase,
+		// Campos do banco
 		id_curso: dbEvent.id_curso,
 		id_ccr: dbEvent.id_ccr,
 		codigo_docente: dbEvent.codigo_docente,
 		dia_semana: dbEvent.dia_semana,
 		ano: dbEvent.ano,
 		semestre: dbEvent.semestre,
-		fase: dbEvent.fase,
 		hora_inicio: startTime,
 		duracao: dbEvent.duracao || 2,
-		comentario: dbEvent.comentario || "",
-		permitirConflito: dbEvent.permitirConflito || false,
 	};
 };
 
@@ -474,4 +474,148 @@ export const getEndTime = (startTime, duration, timeSlots) => {
 	return `${finalHour.toString().padStart(2, "0")}:${finalMinute
 		.toString()
 		.padStart(2, "0")}`;
+};
+
+// Função para buscar cor de disciplina baseada no primeiro dia da semana onde aparece
+export const getDisciplinaColorFromFirstPeriod = (
+	disciplinaId,
+	phaseNumber,
+	events,
+) => {
+	if (!disciplinaId || !events[phaseNumber]) return null;
+
+	const dayOrder = [
+		"monday",
+		"tuesday",
+		"wednesday",
+		"thursday",
+		"friday",
+		"saturday",
+	];
+	const allFirstSlots = [
+		...firstMatutinoSlots,
+		...firstVespertinoSlots,
+		...firstNoturnoSlots,
+	];
+
+	// PRIORIDADE 1: Buscar nos primeiros períodos ordenados por dia da semana
+	for (const dayId of dayOrder) {
+		for (const [, eventArray] of Object.entries(events[phaseNumber])) {
+			const eventsInSlot = Array.isArray(eventArray)
+				? eventArray
+				: [eventArray];
+			for (const event of eventsInSlot) {
+				if (
+					event.disciplinaId === disciplinaId &&
+					event.dayId === dayId &&
+					allFirstSlots.includes(event.startTime)
+				) {
+					return getColorByDay(dayId);
+				}
+			}
+		}
+	}
+
+	// PRIORIDADE 2: Se não encontrou nos primeiros períodos, buscar nos segundos períodos
+	const allSecondSlots = [
+		...secondMatutinoSlots,
+		...secondVespertinoSlots,
+		...secondNoturnoSlots,
+	];
+
+	for (const dayId of dayOrder) {
+		for (const [, eventArray] of Object.entries(events[phaseNumber])) {
+			const eventsInSlot = Array.isArray(eventArray)
+				? eventArray
+				: [eventArray];
+			for (const event of eventsInSlot) {
+				if (
+					event.disciplinaId === disciplinaId &&
+					event.dayId === dayId &&
+					allSecondSlots.includes(event.startTime)
+				) {
+					return getColorByDay(dayId);
+				}
+			}
+		}
+	}
+
+	// PRIORIDADE 3: Se não encontrou nem nos primeiros nem nos segundos períodos,
+	// buscar qualquer evento existente da mesma disciplina para manter consistência
+	for (const [, eventArray] of Object.entries(events[phaseNumber])) {
+		const eventsInSlot = Array.isArray(eventArray)
+			? eventArray
+			: [eventArray];
+		for (const event of eventsInSlot) {
+			if (event.disciplinaId === disciplinaId && event.color) {
+				return event.color;
+			}
+		}
+	}
+
+	return null;
+};
+
+// Função para corrigir cores após carregamento dos dados
+export const fixEventColorsAfterLoading = (eventsFormatted) => {
+	// Para cada fase
+	Object.keys(eventsFormatted).forEach((phase) => {
+		const phaseEvents = eventsFormatted[phase];
+
+		// Para cada slot de eventos
+		Object.keys(phaseEvents).forEach((slotKey) => {
+			const eventsInSlot = Array.isArray(phaseEvents[slotKey])
+				? phaseEvents[slotKey]
+				: [phaseEvents[slotKey]];
+
+			// Para cada evento no slot
+			eventsInSlot.forEach((event) => {
+				// Buscar cor do primeiro período cronológico para esta disciplina
+				const firstPeriodColor = getDisciplinaColorFromFirstPeriod(
+					event.disciplinaId,
+					phase,
+					eventsFormatted,
+				);
+
+				// Aplicar lógica de cores dos turnos
+				const allFirstSlots = [
+					...firstMatutinoSlots,
+					...firstVespertinoSlots,
+					...firstNoturnoSlots,
+				];
+				const allSecondSlots = [
+					...secondMatutinoSlots,
+					...secondVespertinoSlots,
+					...secondNoturnoSlots,
+				];
+
+				if (
+					event.startTime &&
+					allFirstSlots.includes(event.startTime)
+				) {
+					// Primeiro período - usar cor do primeiro dia da semana onde a disciplina aparece
+					if (firstPeriodColor) {
+						event.color = firstPeriodColor;
+					} else {
+						event.color = getColorByDay(event.dayId);
+					}
+				} else if (
+					event.startTime &&
+					allSecondSlots.includes(event.startTime)
+				) {
+					// Segundo período - seguir cor do primeiro período, ou se não há first slots, usar cor do primeiro dia em second slots
+					if (firstPeriodColor) {
+						event.color = firstPeriodColor;
+					} else {
+						event.color = getColorByDay(event.dayId);
+					}
+				} else {
+					// Outros horários - usar cor do dia
+					event.color = getColorByDay(event.dayId);
+				}
+			});
+		});
+	});
+
+	return eventsFormatted;
 };
