@@ -123,7 +123,7 @@ function Navbar() {
 					</ListItem>
 					<ListItem disablePadding>
 						<ListItemButton onClick={handleClickProfessores}>
-							<ListItemText primary="Professores" />
+							<ListItemText primary="Docentes" />
 						</ListItemButton>
 					</ListItem>
 					<ListItem disablePadding>

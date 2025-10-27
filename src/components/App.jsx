@@ -13,7 +13,7 @@ import Permissoes from "../enums/permissoes.js";
 
 import Cursos from "./Cursos";
 import CCRs from "./CCRs";
-import Professores from "./Professores";
+import Docentes from "./Docentes";
 import Ofertas from "./Ofertas";
 import Horarios from "./Horarios";
 import HorariosView from "./HorariosView";
@@ -113,7 +113,7 @@ function AppContent() {
 												.VISUALIZAR_TODOS,
 										]}
 									>
-										<Professores />
+										<Docentes />
 									</ProtectedRoute>
 								}
 							/>

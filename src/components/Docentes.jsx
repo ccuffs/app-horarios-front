@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from "react";
-import axiosInstance from "../auth/axios";
-
 import {
 	Alert,
 	Box,
@@ -15,9 +13,11 @@ import {
 	TextField,
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
+import docentesController from "../controllers/docentes-controller.js";
+import docentesService from "../services/docentes-service.js";
 
-export default function Professores() {
-	const [professores, setProfessores] = useState([]);
+export default function Docentes() {
+	const [docentes, setDocentes] = useState([]);
 	const [formData, setFormData] = useState({
 		codigo: "",
 		nome: "",
@@ -37,25 +37,20 @@ export default function Professores() {
 
 	async function getData() {
 		try {
-			const res = await axiosInstance.get("/docentes");
-
-			setProfessores(res.docentes);
+			const docentesData = await docentesService.getDocentes();
+			setDocentes(docentesData);
 		} catch (error) {
 			console.log(
-				"Não foi possível retornar a lista de professores: ",
+				"Não foi possível retornar a lista de docentes: ",
 				error,
 			);
-			setProfessores([]);
+			setDocentes([]);
 		}
 	}
 
 	function handleEdit(data) {
-		setFormData({
-			codigo: data.codigo || "",
-			nome: data.nome || "",
-			email: data.email || "",
-			sala: data.sala !== null ? data.sala.toString() : "",
-		});
+		const editData = docentesController.prepareEditData(data);
+		setFormData(editData);
 		setEdit(true);
 	}
 
@@ -69,46 +64,40 @@ export default function Professores() {
 	}
 
 	async function handleAddOrUpdate() {
-		try {
-			// Prepara os dados convertendo strings vazias para null onde apropriado
-			const dataToSend = {
-				codigo: formData.codigo,
-				nome: formData.nome,
-				email: formData.email,
-				sala:
-					formData.sala === ""
-						? null
-						: parseInt(formData.sala) || null,
-			};
+		const validation = docentesController.validateFormData(
+			formData,
+			edit,
+		);
 
-			if (edit) {
-				await axiosInstance.put("/docentes/", {
-					formData: dataToSend,
-				});
-				setMessageText("Docente atualizado com sucesso!");
-			} else {
-				await axiosInstance.post("/docentes", {
-					formData: dataToSend,
-				});
-
-				setMessageText("Docente inserido com sucesso!");
-			}
-			setMessageSeverity("success");
-			setFormData({ codigo: "", nome: "", email: "", sala: "" });
-			setEdit(false);
-		} catch (error) {
-			console.log("Nao foi possível inserir o docente no banco de dados");
-			setMessageText("Falha ao gravar docente!");
+		if (!validation.isValid) {
+			setMessageText(validation.message);
 			setMessageSeverity("error");
-		} finally {
 			setOpenMessage(true);
-			await getData();
+			return;
 		}
+
+		const result = await docentesController.saveOrUpdateDocente(
+			formData,
+			edit,
+		);
+
+		if (result.success) {
+			setMessageText(result.message);
+			setMessageSeverity("success");
+			setFormData(docentesController.getResetFormData());
+			setEdit(false);
+		} else {
+			setMessageText(result.message);
+			setMessageSeverity("error");
+		}
+
+		setOpenMessage(true);
+		await getData();
 	}
 
 	function handleCancelClick() {
 		setEdit(false);
-		setFormData({ codigo: "", nome: "", email: "", sala: "" });
+		setFormData(docentesController.getResetFormData());
 	}
 
 	function handleCloseMessage(_, reason) {
@@ -123,21 +112,20 @@ export default function Professores() {
 	}
 
 	async function handleDeleteClick() {
-		try {
-			console.log(idDelete);
-			await axiosInstance.delete(`/docentes/${idDelete}`);
-			setMessageText("Docente removido com sucesso!");
+		const result = await docentesController.removeDocente(idDelete);
+
+		if (result.success) {
+			setMessageText(result.message);
 			setMessageSeverity("success");
-		} catch (error) {
-			console.log("Nao foi possível remover o docente no banco de dados");
-			setMessageText("Falha ao remover docente!");
+		} else {
+			setMessageText(result.message);
 			setMessageSeverity("error");
-		} finally {
-			setFormData({ codigo: "", nome: "", email: "", sala: "" });
-			setOpenDialog(false);
-			setOpenMessage(true);
-			await getData();
 		}
+
+		setFormData(docentesController.getResetFormData());
+		setOpenDialog(false);
+		setOpenMessage(true);
+		await getData();
 	}
 
 	function handleNoDeleteClick() {
@@ -260,17 +248,17 @@ export default function Professores() {
 						</DialogContent>
 						<DialogActions>
 							<Button onClick={handleNoDeleteClick}>
-								Disagree
+								Cancelar
 							</Button>
 							<Button onClick={handleDeleteClick} autoFocus>
-								Agree
+								Confirmar
 							</Button>
 						</DialogActions>
 					</Dialog>
 				</Stack>
 				<Box style={{ height: "500px" }}>
 					<DataGrid
-						rows={professores}
+						rows={docentes}
 						columns={columns}
 						pageSize={5}
 						checkboxSelection={false}
