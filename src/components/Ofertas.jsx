@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from "react";
-import axiosInstance from "../auth/axios";
-
 import {
 	Alert,
 	Box,
@@ -19,6 +17,8 @@ import {
 	TextField,
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
+import ofertasController from "../controllers/ofertas-controller.js";
+import ofertasService from "../services/ofertas-service.js";
 
 export default function Ofertas() {
 	const [ofertas, setOfertas] = useState([]);
@@ -38,60 +38,39 @@ export default function Ofertas() {
 	const [deleteData, setDeleteData] = React.useState(null);
 
 	useEffect(() => {
-		getData();
-		getCursos();
+		loadData();
 	}, []);
+
+	const loadData = async () => {
+		try {
+			const { ofertas: ofertasData, cursos: cursosData } =
+				await ofertasController.loadOfertasAndCursos();
+			setOfertas(ofertasData);
+			setCursos(cursosData);
+		} catch (error) {
+			setOfertas([]);
+			setCursos([]);
+		}
+	};
 
 	async function getData() {
 		try {
-			const res = await axiosInstance.get("/ofertas");
-
-			// Remove duplicatas baseadas na chave primária composta
-			const uniqueOfertas = res.ofertas.filter(
-				(oferta, index, self) =>
-					index ===
-					self.findIndex(
-						(o) =>
-							o.ano === oferta.ano &&
-							o.semestre === oferta.semestre &&
-							o.id_curso === oferta.id_curso &&
-							o.fase === oferta.fase,
-					),
-			);
-
-			setOfertas(uniqueOfertas);
+			const ofertasData = await ofertasService.getOfertas();
+			setOfertas(ofertasData);
 		} catch (error) {
 			setOfertas([]);
 		}
 	}
 
-	async function getCursos() {
-		try {
-			const res = await axiosInstance.get("/cursos");
-			setCursos(res.cursos);
-		} catch (error) {
-			setCursos([]);
-		}
-	}
-
 	function handleEdit(data) {
-		setFormData({
-			ano: data.ano?.toString() || "",
-			semestre: data.semestre?.toString() || "",
-			id_curso: data.id_curso?.toString() || "",
-			fase: data.fase?.toString() || "",
-			turno: data.turno || "",
-		});
+		const editData = ofertasController.prepareEditData(data);
+		setFormData(editData);
 		setEdit(true);
 	}
 
 	function handleDelete(row) {
-		setDeleteData({
-			ano: row.ano,
-			semestre: row.semestre,
-			id_curso: row.id_curso,
-			fase: row.fase,
-		});
+		const deleteDataPrepared = ofertasController.prepareDeleteData(row);
+		setDeleteData(deleteDataPrepared);
 		setOpenDialog(true);
 	}
 
@@ -100,100 +79,39 @@ export default function Ofertas() {
 	}
 
 	async function handleAddOrUpdate() {
-		try {
-			// Validar dados obrigatórios antes de enviar
-			if (
-				!formData.ano ||
-				!formData.semestre ||
-				!formData.id_curso ||
-				!formData.fase
-			) {
-				setMessageText(
-					"Por favor, preencha todos os campos obrigatórios: Ano, Semestre, Curso e Fase!",
-				);
-				setMessageSeverity("error");
-				setOpenMessage(true);
-				return;
-			}
+		const validation = ofertasController.validateFormData(formData);
 
-			// Prepara os dados convertendo strings para números onde necessário
-			const dataToSend = {
-				ano: parseInt(formData.ano) || null,
-				semestre: parseInt(formData.semestre) || null,
-				id_curso: parseInt(formData.id_curso) || null,
-				fase: parseInt(formData.fase) || null,
-				turno: formData.turno || null,
-			};
-
-			// Validar se os números são válidos
-			if (
-				isNaN(dataToSend.ano) ||
-				isNaN(dataToSend.semestre) ||
-				isNaN(dataToSend.id_curso) ||
-				isNaN(dataToSend.fase)
-			) {
-				setMessageText("Por favor, insira valores numéricos válidos!");
-				setMessageSeverity("error");
-				setOpenMessage(true);
-				return;
-			}
-
-			if (edit) {
-				await axiosInstance.put(
-					`/ofertas/${dataToSend.ano}/${dataToSend.semestre}/${dataToSend.id_curso}/${dataToSend.fase}/${dataToSend.turno}`,
-					dataToSend,
-				);
-				setMessageText("Oferta atualizada com sucesso!");
-			} else {
-				await axiosInstance.post("/ofertas", dataToSend);
-				setMessageText("Oferta inserida com sucesso!");
-			}
-			setMessageSeverity("success");
-			setFormData({
-				ano: "",
-				semestre: "",
-				id_curso: "",
-				fase: "",
-				turno: "",
-			});
-			setEdit(false);
-		} catch (error) {
-			console.error("Erro ao salvar oferta:", error);
-
-			// Melhor tratamento de erro baseado na resposta da API
-			if (error.response?.data?.message) {
-				setMessageText(
-					error.response?.data?.message ||
-						error.message ||
-						"Erro desconhecido",
-				);
-			} else if (error.response?.status === 409) {
-				setMessageText("Esta oferta já existe no sistema!");
-			} else if (error.response?.status === 400) {
-				setMessageText(
-					"Dados inválidos. Verifique os campos preenchidos!",
-				);
-			} else {
-				setMessageText(
-					"Falha ao gravar oferta! Verifique os dados e tente novamente.",
-				);
-			}
+		if (!validation.isValid) {
+			setMessageText(validation.message);
 			setMessageSeverity("error");
-		} finally {
 			setOpenMessage(true);
-			await getData();
+			return;
 		}
+
+		const dataToSend = ofertasController.prepareDataForApi(formData);
+		const result = await ofertasController.saveOrUpdateOferta(
+			formData,
+			edit,
+			dataToSend,
+		);
+
+		if (result.success) {
+			setMessageText(result.message);
+			setMessageSeverity("success");
+			setFormData(ofertasController.getResetFormData());
+			setEdit(false);
+		} else {
+			setMessageText(result.message);
+			setMessageSeverity("error");
+		}
+
+		setOpenMessage(true);
+		await getData();
 	}
 
 	function handleCancelClick() {
 		setEdit(false);
-		setFormData({
-			ano: "",
-			semestre: "",
-			id_curso: "",
-			fase: "",
-			turno: "",
-		});
+		setFormData(ofertasController.getResetFormData());
 	}
 
 	function handleCloseMessage(_, reason) {
@@ -208,27 +126,20 @@ export default function Ofertas() {
 	}
 
 	async function handleDeleteClick() {
-		try {
-			await axiosInstance.delete(
-				`/ofertas/${deleteData.ano}/${deleteData.semestre}/${deleteData.id_curso}/${deleteData.fase}`,
-			);
-			setMessageText("Oferta removida com sucesso!");
+		const result = await ofertasController.removeOferta(deleteData);
+
+		if (result.success) {
+			setMessageText(result.message);
 			setMessageSeverity("success");
-		} catch (error) {
-			setMessageText("Falha ao remover oferta!");
+		} else {
+			setMessageText(result.message);
 			setMessageSeverity("error");
-		} finally {
-			setFormData({
-				ano: "",
-				semestre: "",
-				id_curso: "",
-				fase: "",
-				turno: "",
-			});
-			setOpenDialog(false);
-			setOpenMessage(true);
-			await getData();
 		}
+
+		setFormData(ofertasController.getResetFormData());
+		setOpenDialog(false);
+		setOpenMessage(true);
+		await getData();
 	}
 
 	function handleNoDeleteClick() {
