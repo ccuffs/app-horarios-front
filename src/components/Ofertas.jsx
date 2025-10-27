@@ -31,6 +31,7 @@ export default function Ofertas() {
 		turno: "",
 	});
 	const [edit, setEdit] = useState(false);
+	const [oldTurno, setOldTurno] = useState("");
 	const [openMessage, setOpenMessage] = React.useState(false);
 	const [openDialog, setOpenDialog] = React.useState(false);
 	const [messageText, setMessageText] = React.useState("");
@@ -65,6 +66,7 @@ export default function Ofertas() {
 	function handleEdit(data) {
 		const editData = ofertasController.prepareEditData(data);
 		setFormData(editData);
+		setOldTurno(data.turno || "");
 		setEdit(true);
 	}
 
@@ -93,6 +95,7 @@ export default function Ofertas() {
 			formData,
 			edit,
 			dataToSend,
+			oldTurno,
 		);
 
 		if (result.success) {
@@ -100,6 +103,7 @@ export default function Ofertas() {
 			setMessageSeverity("success");
 			setFormData(ofertasController.getResetFormData());
 			setEdit(false);
+			setOldTurno("");
 		} else {
 			setMessageText(result.message);
 			setMessageSeverity("error");
@@ -112,6 +116,7 @@ export default function Ofertas() {
 	function handleCancelClick() {
 		setEdit(false);
 		setFormData(ofertasController.getResetFormData());
+		setOldTurno("");
 	}
 
 	function handleCloseMessage(_, reason) {

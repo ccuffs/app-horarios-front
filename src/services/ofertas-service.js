@@ -41,10 +41,10 @@ export async function createOferta(data) {
 }
 
 // PUT - Atualizar oferta existente
-export async function updateOferta(ano, semestre, id_curso, fase, turno, data) {
+export async function updateOferta(ano, semestre, id_curso, fase, oldTurno, data) {
   try {
     const response = await axiosInstance.put(
-      `/ofertas/${ano}/${semestre}/${id_curso}/${fase}/${turno}`,
+      `/ofertas/${ano}/${semestre}/${id_curso}/${fase}/${oldTurno}`,
       data,
     );
     return response.data;

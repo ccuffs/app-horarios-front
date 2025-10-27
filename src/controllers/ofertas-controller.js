@@ -97,7 +97,7 @@ export function prepareDataForApi(formData) {
 /**
  * Salva ou atualiza uma oferta
  */
-export async function saveOrUpdateOferta(formData, edit, dataToSend) {
+export async function saveOrUpdateOferta(formData, edit, dataToSend, oldTurno) {
   try {
     if (edit) {
       await ofertasService.updateOferta(
@@ -105,7 +105,7 @@ export async function saveOrUpdateOferta(formData, edit, dataToSend) {
         dataToSend.semestre,
         dataToSend.id_curso,
         dataToSend.fase,
-        dataToSend.turno,
+        oldTurno,
         dataToSend,
       );
       return {
