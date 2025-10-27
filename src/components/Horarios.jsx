@@ -63,6 +63,9 @@ import EventModal from "./horarios/EventModal";
 import ImportModal from "./horarios/ImportModal";
 import ConflitosModal from "./horarios/ConflitosModal";
 import PhaseGrid from "./horarios/PhaseGrid";
+import horariosController from "../controllers/horarios-controller";
+import anoSemestreController from "../controllers/ano-semestre-controller";
+import usuariosCursosController from "../controllers/usuarios-cursos-controller";
 import {
 	timeSlotsMatutino,
 	timeSlotsVespertino,
@@ -153,51 +156,10 @@ export default function Horarios() {
 
 	// Estado para armazenar créditos do semestre atual por docente
 	const creditosSemestreAtualPorDocente = useMemo(() => {
-		// Estrutura: { codigoDocente: totalCreditosNoSemestreAtual }
-		const mapa = new Map();
-		if (!events || !disciplinas || disciplinas.length === 0) return mapa;
-
-		// Índice de créditos por CCR
-		const creditosPorCcr = new Map(
-			disciplinas.map((d) => [String(d.id), Number(d.creditos) || 0]),
+		return horariosController.calcularCreditosSemestreAtual(
+			events,
+			disciplinas,
 		);
-
-		// Evitar contar o mesmo CCR mais de uma vez por docente no mesmo turno do semestre
-		const vistos = new Set(); // chave: `${docente}-${ccr}-${turno}`
-
-		Object.keys(events).forEach((phaseNumber) => {
-			const phaseEvents = events[phaseNumber];
-			if (!phaseEvents) return;
-			Object.values(phaseEvents).forEach((eventArray) => {
-				const eventsInSlot = Array.isArray(eventArray)
-					? eventArray
-					: [eventArray];
-				eventsInSlot.forEach((ev) => {
-					if (!ev?.disciplinaId) return;
-					const creditos =
-						creditosPorCcr.get(String(ev.disciplinaId)) || 0;
-					// Pode ter múltiplos professores
-					const professoresIds = Array.isArray(ev.professoresIds)
-						? ev.professoresIds
-						: ev.professorId
-						? [ev.professorId]
-						: [];
-					professoresIds.forEach((cod) => {
-						const docente = String(cod);
-						const turno = getTurnoFromTime(ev.startTime);
-						const par = `${docente}-${String(
-							ev.disciplinaId,
-						)}-${turno}`;
-						if (vistos.has(par)) return;
-						vistos.add(par);
-						const atual = mapa.get(docente) || 0;
-						mapa.set(docente, atual + creditos);
-					});
-				});
-			});
-		});
-
-		return mapa;
 	}, [events, disciplinas]);
 
 	// Busca do outro semestre no mesmo ano para média anual
@@ -207,41 +169,12 @@ export default function Horarios() {
 	useEffect(() => {
 		const carregarOutroSemestre = async () => {
 			try {
-				if (!selectedCurso?.id || !selectedAnoSemestre?.ano) {
-					setCreditosOutroSemestre(new Map());
-					return;
-				}
-				const outroSemestre =
-					selectedAnoSemestre.semestre === 1 ? 2 : 1;
-				// Buscar horários do outro semestre para o mesmo ano/curso
-				const resp = await axiosInstance.get("/horarios", {
-					params: {
-						ano: selectedAnoSemestre.ano,
-						semestre: outroSemestre,
-						id_curso: selectedCurso.id,
-					},
-				});
-				const horarios = resp.horarios || [];
-				// Índice de créditos por CCR
-				const creditosPorCcr = new Map(
-					disciplinas.map((d) => [
-						String(d.id),
-						Number(d.creditos) || 0,
-					]),
-				);
-				const mapa = new Map();
-				const vistos = new Set(); // `${docente}-${ccr}-${turno}` para o outro semestre
-				horarios.forEach((h) => {
-					if (!h?.id_ccr || !h?.codigo_docente) return;
-					const docente = String(h.codigo_docente);
-					const turno = getTurnoFromTime(h.hora_inicio);
-					const par = `${docente}-${String(h.id_ccr)}-${turno}`;
-					if (vistos.has(par)) return;
-					vistos.add(par);
-					const creditos = creditosPorCcr.get(String(h.id_ccr)) || 0;
-					const atual = mapa.get(docente) || 0;
-					mapa.set(docente, atual + creditos);
-				});
+				const mapa =
+					await horariosController.calcularCreditosOutroSemestre(
+						selectedCurso,
+						selectedAnoSemestre,
+						disciplinas,
+					);
 				setCreditosOutroSemestre(mapa);
 			} catch (e) {
 				console.error(
@@ -300,21 +233,23 @@ export default function Horarios() {
 			setErrorCursos(null);
 
 			const userId = getCurrentUserId();
+			const { cursos: cursosData } =
+				await usuariosCursosController.loadCursosByUsuario(userId);
 
-			const response = await axiosInstance.get(
-				`/usuarios/${userId}/cursos`,
-			);
-
-			const cursosData = response.cursos || [];
 			setCursos(cursosData);
 
 			// Se não há curso selecionado e há cursos disponíveis, selecionar o primeiro
-			if (!selectedCurso && cursosData.length > 0) {
-				setSelectedCurso(cursosData[0]);
+			const cursoSelecionado =
+				usuariosCursosController.autoSelectFirstCurso(
+					cursosData,
+					selectedCurso,
+				);
+			if (cursoSelecionado) {
+				setSelectedCurso(cursoSelecionado);
 			}
 		} catch (error) {
 			console.error("Erro ao buscar cursos do usuário:", error);
-			if (error.response?.status === 404) {
+			if (error.message?.includes("404")) {
 				setErrorCursos(
 					"Usuário não encontrado ou sem cursos vinculados.",
 				);
@@ -334,9 +269,10 @@ export default function Horarios() {
 		try {
 			setLoadingAnosSemestres(true);
 			setErrorAnosSemestres(null);
-			const response = await axiosInstance.get("/ano-semestre");
 
-			const anosSemestresData = response.anosSemestres || [];
+			const { anosSemestres: anosSemestresData } =
+				await anoSemestreController.loadAnosSemestres();
+
 			setAnosSemestres(anosSemestresData);
 		} catch (error) {
 			console.error("Erro ao buscar anos/semestres:", error);
@@ -357,80 +293,14 @@ export default function Horarios() {
 				return;
 			if (!selectedCurso || !selectedCurso.id) return;
 
-			// 1) Mais recente como rascunho (publicado === false)
-			const draft = anosSemestres.find((as) => as.publicado === false);
-			if (draft) {
-				// Se o draft é anterior ao ano/semestre atual, priorizar o período atual (mesmo que publicado)
-				const now = new Date();
-				const currentAno = now.getFullYear();
-				const currentSemestre = now.getMonth() < 6 ? 1 : 2;
-				const draftIsBeforeCurrent =
-					draft.ano < currentAno ||
-					(draft.ano === currentAno &&
-						draft.semestre < currentSemestre);
-
-				if (draftIsBeforeCurrent) {
-					const existsCurrent = anosSemestres.some(
-						(as) =>
-							as.ano === currentAno &&
-							as.semestre === currentSemestre,
-					);
-					if (existsCurrent) {
-						setSelectedAnoSemestre({
-							ano: currentAno,
-							semestre: currentSemestre,
-						});
-						setHasAutoSelectedAnoSemestre(true);
-						return;
-					}
-					// Se o atual não existe no cadastro, seguir fluxo normal abaixo
-				} else {
-					setSelectedAnoSemestre({
-						ano: draft.ano,
-						semestre: draft.semestre,
-					});
-					setHasAutoSelectedAnoSemestre(true);
-					return;
-				}
-			}
-
-			// 2) Mais recente com horários cadastrados para o curso selecionado
 			try {
-				const results = await Promise.all(
-					anosSemestres.map(async (as) => {
-						try {
-							const resp = await axiosInstance.get("/horarios", {
-								params: {
-									ano: as.ano,
-									semestre: as.semestre,
-									id_curso: selectedCurso.id,
-								},
-							});
-							const count =
-								resp?.count ??
-								(Array.isArray(resp?.horarios)
-									? resp.horarios.length
-									: 0);
-							return { as, count };
-						} catch (_) {
-							return { as, count: 0 };
-						}
-					}),
+				const result = await anoSemestreController.autoSelectAnoSemestre(
+					anosSemestres,
+					selectedCurso,
 				);
 
-				const found = results.find((r) => r.count > 0);
-				if (found) {
-					setSelectedAnoSemestre({
-						ano: found.as.ano,
-						semestre: found.as.semestre,
-					});
-				} else {
-					// 3) Nenhum com horários: selecionar o mais recente da lista
-					const first = anosSemestres[0];
-					setSelectedAnoSemestre({
-						ano: first.ano,
-						semestre: first.semestre,
-					});
+				if (result) {
+					setSelectedAnoSemestre(result);
 				}
 			} finally {
 				setHasAutoSelectedAnoSemestre(true);
@@ -440,23 +310,17 @@ export default function Horarios() {
 		autoSelect();
 	}, [anosSemestres, selectedCurso, hasAutoSelectedAnoSemestre]);
 
-	// Função para buscar professores da API
+	// Função para buscar professores e disciplinas da API
 	const fetchProfessores = async () => {
 		try {
 			setLoadingProfessores(true);
 			setErrorProfessores(null);
-			const response = await axiosInstance.get("/docentes");
 
-			// Mapear dados da API para o formato esperado pelo frontend
-			const professoresFormatados = response.docentes.map((prof) => ({
-				id: prof.codigo, // Usar codigo como id
-				codigo: prof.codigo,
-				name: prof.nome, // Mapear nome para name
-				email: prof.email,
-				sala: prof.sala,
-			}));
+			const userId = getCurrentUserId();
+			const { professores: professoresData } =
+				await horariosController.loadAllData(userId);
 
-			setProfessores(professoresFormatados);
+			setProfessores(professoresData);
 		} catch (error) {
 			console.error("Erro ao buscar professores:", error);
 			setErrorProfessores(
@@ -472,13 +336,12 @@ export default function Horarios() {
 		try {
 			setLoadingDisciplinas(true);
 			setErrorDisciplinas(null);
-			const response = await axiosInstance.get("/ccrs");
-			// Espera-se que a resposta seja { ccrs: [...] }
-			const disciplinas = response.ccrs || [];
 
-			const uniqueDisciplinas = getUniqueDisciplinas(disciplinas);
+			const userId = getCurrentUserId();
+			const { disciplinas: disciplinasData } =
+				await horariosController.loadAllData(userId);
 
-			setDisciplinas(disciplinas);
+			setDisciplinas(disciplinasData);
 		} catch (error) {
 			console.error("Erro ao buscar disciplinas:", error);
 			setErrorDisciplinas("Erro ao carregar disciplinas.");
@@ -494,26 +357,11 @@ export default function Horarios() {
 			setLoadingOfertas(true);
 			setErrorOfertas(null);
 
-			// Fazer requisição com filtros se há ano/semestre e curso selecionados
-			const params = {};
-			if (
-				selectedAnoSemestre.ano &&
-				selectedAnoSemestre.semestre &&
-				selectedCurso?.id
-			) {
-				params.ano = selectedAnoSemestre.ano;
-				params.semestre = selectedAnoSemestre.semestre;
-				params.id_curso = selectedCurso.id;
-			} else if (selectedCurso?.id) {
-				// Se só tem curso selecionado, usar apenas ele
-				params.id_curso = selectedCurso.id;
-			}
+			const ofertasData = await horariosController.loadOfertas(
+				selectedAnoSemestre,
+				selectedCurso,
+			);
 
-			const response = await axiosInstance.get("/ofertas", {
-				params,
-			});
-
-			const ofertasData = response.ofertas || [];
 			setOfertas(ofertasData);
 		} catch (error) {
 			console.error("Erro ao buscar ofertas:", error);
@@ -1188,166 +1036,25 @@ export default function Horarios() {
 		setSaveSuccess(false);
 
 		try {
-			// 1. Montar lista de horários atuais
-			const horariosAtuais = [];
-			Object.keys(events).forEach((phaseNumber) => {
-				const phaseEvents = events[phaseNumber];
-				if (phaseEvents) {
-					Object.values(phaseEvents).forEach((eventArray) => {
-						const eventsInSlot = Array.isArray(eventArray)
-							? eventArray
-							: [eventArray];
-						eventsInSlot.forEach((event) => {
-							// Validar que tem disciplina e pelo menos um professor
-							const hasProfessores =
-								(event.professoresIds &&
-									Array.isArray(event.professoresIds) &&
-									event.professoresIds.length > 0) ||
-								event.professorId;
-
-							// CRITÉRIO OBRIGATÓRIO: Só sincronizar horários completos
-							if (event.disciplinaId && hasProfessores) {
-								// Se tem múltiplos professores, criar registro separado para cada um
-								if (
-									event.professoresIds &&
-									Array.isArray(event.professoresIds)
-								) {
-									event.professoresIds.forEach(
-										(professorId, index) => {
-											// Para múltiplos professores, criar ID único apenas se necessário
-											let uniqueId = event.id;
-											if (
-												event.professoresIds.length > 1
-											) {
-												// Se o ID já contém sufixo -prof, remover antes de adicionar novo
-												const baseId = event.id.replace(
-													/-prof\d+$/,
-													"",
-												);
-												uniqueId = `${baseId}-prof${
-													index + 1
-												}`;
-											}
-
-											const eventoCopy = {
-												...event,
-												professorId,
-												id: uniqueId,
-											};
-											// A fase será sempre a do grid onde está posicionado (phaseNumber)
-											const dbEvent = eventToDbFormat(
-												eventoCopy,
-												phaseNumber,
-												selectedAnoSemestre,
-												selectedCurso,
-											);
-											horariosAtuais.push(dbEvent);
-										},
-									);
-								} else if (event.professorId) {
-									// Compatibilidade com formato antigo
-									// A fase será sempre a do grid onde está posicionado (phaseNumber)
-									const dbEvent = eventToDbFormat(
-										event,
-										phaseNumber,
-										selectedAnoSemestre,
-										selectedCurso,
-									);
-									horariosAtuais.push(dbEvent);
-								}
-							}
-						});
-					});
-				}
-			});
-
-			// 2. Identificar mudanças comparando com horários originais
-			const novos = [];
-			const editados = [];
-			const removidosIds = [];
-
-			// 2.1 Criar mapa de horários originais por ID para busca rápida
-			const originaisPorId = {};
-			originalHorarios.forEach((original) => {
-				originaisPorId[original.id] = original;
-			});
-
-			// 2.2 Função auxiliar para verificar se horário foi modificado
-			const horarioFoiModificado = (atual, original) => {
-				const hora1 = normalizeTimeFromDB(atual.hora_inicio);
-				const hora2 = normalizeTimeFromDB(original.hora_inicio);
-
-				return (
-					atual.id_ccr !== original.id_ccr ||
-					atual.codigo_docente !== original.codigo_docente ||
-					atual.dia_semana !== original.dia_semana ||
-					hora1 !== hora2 ||
-					atual.duracao !== original.duracao ||
-					atual.fase !== original.fase ||
-					(atual.comentario || "") !== (original.comentario || "")
-				);
-			};
-
-			// 2.3 Set para rastrear IDs originais processados
-			const idsOriginaisProcessados = new Set();
-
-			// 2.4 Processar horários atuais
-			horariosAtuais.forEach((atual) => {
-				// Verificar se o horário atual tem um ID que corresponde a um original
-				const original = originaisPorId[atual.id];
-
-				if (original) {
-					// Horário existe no banco (mesmo ID)
-					idsOriginaisProcessados.add(original.id);
-
-					if (horarioFoiModificado(atual, original)) {
-						// Foi modificado (qualquer campo) → EDITADO
-						editados.push(atual);
-					}
-					// Se não foi modificado, não fazemos nada (não tocar no banco)
-				} else {
-					// ID não existe no banco → NOVO
-					novos.push(atual);
-				}
-			});
-
-			// 2.5 Identificar horários removidos
-			// São os horários originais cujos IDs não foram processados
-			originalHorarios.forEach((original) => {
-				if (!idsOriginaisProcessados.has(original.id)) {
-					// Não foi processado = não existe mais → REMOVIDO
-					removidosIds.push(original.id);
-				}
-			});
-
-			// 3. Sincronizar apenas se há mudanças
-			if (novos.length === 0 && editados.length === 0 && removidosIds.length === 0) {
-				setSaveSuccess(true);
-				setTimeout(() => setSaveSuccess(false), 3000);
-				setSavingHorarios(false);
-				return;
-			}
-
-			// 4. Enviar para o backend via novo endpoint /sync
-			await axiosInstance.post("/horarios/sync", {
-				novos,
-				editados,
-				removidos: removidosIds,
-			});
+			const result = await horariosController.syncHorarios(
+				events,
+				originalHorarios,
+				selectedAnoSemestre,
+				selectedCurso,
+			);
 
 			setSaveSuccess(true);
 			setTimeout(() => setSaveSuccess(false), 3000);
 
 			// Atualizar os originais para refletir o novo estado
-			setOriginalHorarios(horariosAtuais);
+			setOriginalHorarios(result.horariosAtuais);
 
 			// Verificar conflitos após salvar
 			await detectarConflitosHorarios();
 		} catch (error) {
 			console.error("Erro ao sincronizar horários:", error);
 			setSaveError(
-				error.response?.data?.message ||
-					"Erro ao salvar horários. Tente novamente.",
+				error.message || "Erro ao salvar horários. Tente novamente.",
 			);
 			setTimeout(() => setSaveError(null), 5000);
 		} finally {
@@ -1418,23 +1125,20 @@ export default function Horarios() {
 		setLoadError(null);
 
 		try {
-			// Recarregar apenas ofertas, pois professores e disciplinas
-			// já são carregados no useEffect inicial
+			// Recarregar ofertas
 			await fetchOfertas();
 
-			const response = await axiosInstance.get("/horarios", {
-				params: {
-					ano: selectedAnoSemestre.ano,
-					semestre: selectedAnoSemestre.semestre,
-					id_curso: selectedCurso?.id || 1,
-				},
-			});
+			const result = await horariosController.loadHorarios(
+				selectedAnoSemestre,
+				selectedCurso,
+				disciplinas,
+				professores,
+			);
 
-			const horariosFromDb = response.horarios || [];
-
-			if (horariosFromDb.length === 0) {
+			if (Object.keys(result.events).length === 0) {
 				setEvents({});
 				setOriginalHorarios([]);
+
 				// Verificar se há anos/semestres anteriores disponíveis para importação
 				const anosSemestresAnteriores = anosSemestres.filter(
 					(as) =>
@@ -1449,117 +1153,24 @@ export default function Horarios() {
 				return;
 			}
 
-			const eventsFormatted = {};
-			const horariosOriginais = [];
-
-			// Agrupar horários por disciplina, dia e horário para detectar múltiplos professores
-			const groupedHorarios = {};
-
-			horariosFromDb.forEach((horario, index) => {
-				// Normalizar hora_inicio para garantir agrupamento correto
-				let horaInicio = horario.hora_inicio;
-				if (typeof horaInicio === "object" && horaInicio !== null) {
-					horaInicio = horaInicio.toString().substring(0, 5);
-				} else if (horaInicio && horaInicio.length > 5) {
-					horaInicio = horaInicio.substring(0, 5);
-				}
-
-				const key = `${horario.id_ccr}-${horario.dia_semana}-${horaInicio}-${horario.fase}`;
-
-				if (!groupedHorarios[key]) {
-					groupedHorarios[key] = [];
-				}
-				groupedHorarios[key].push({
-					...horario,
-					hora_inicio: horaInicio, // Usar hora normalizada
-				});
-			});
-
-			// Processar grupos de horários
-			Object.values(groupedHorarios).forEach((grupo, index) => {
-				const baseHorario = grupo[0];
-
-				// Validar apenas dados críticos
-				if (!baseHorario.id_ccr) {
-					return;
-				}
-
-				const event = dbToEventFormat(baseHorario, disciplinas, professores);
-
-				// Validar apenas se conversão básica foi bem sucedida
-				if (!event.dayId) {
-					return;
-				}
-
-				// Se há múltiplos professores para o mesmo horário
-				if (grupo.length > 1) {
-					// Remover duplicatas de código_docente
-					const uniqueProfessores = [
-						...new Set(grupo.map((h) => h.codigo_docente)),
-					];
-					event.professoresIds = uniqueProfessores;
-					event.professorId = grupo[0].codigo_docente; // Compatibilidade
-				} else {
-					event.professoresIds = [baseHorario.codigo_docente];
-					event.professorId = baseHorario.codigo_docente;
-				}
-
-				// Usar a fase do banco apenas para posicionamento inicial na tela
-				const phase = getInitialPhaseFromDatabase(baseHorario);
-
-				const slotKey = `${event.dayId}-${event.startTime}`;
-
-				// Organizar eventos por fase (baseado no grid da tela)
-				if (!eventsFormatted[phase]) eventsFormatted[phase] = {};
-
-				// Atualizar a fase do evento para refletir onde está no grid
-				event.fase = phase;
-
-				// Verificar se já existe evento no slot
-				if (eventsFormatted[phase][slotKey]) {
-					// Se já existe, garantir que é um array e adicionar
-					if (Array.isArray(eventsFormatted[phase][slotKey])) {
-						eventsFormatted[phase][slotKey].push(event);
-					} else {
-						// Converter para array se não for
-						eventsFormatted[phase][slotKey] = [
-							eventsFormatted[phase][slotKey],
-							event,
-						];
-					}
-				} else {
-					// CORREÇÃO: Se não existe, criar como objeto único (não array)
-					eventsFormatted[phase][slotKey] = event;
-				}
-
-				// Adicionar aos horários originais (um para cada professor)
-				grupo.forEach((horario) => {
-					horariosOriginais.push(horario);
-				});
-			});
-
 			// Aplicar correção de cores após carregamento
-			const eventsWithFixedColors =
-				fixEventColorsAfterLoading(eventsFormatted);
+			const eventsWithFixedColors = fixEventColorsAfterLoading(
+				result.events,
+			);
 
 			setEvents(eventsWithFixedColors);
-			setOriginalHorarios(horariosOriginais);
+			setOriginalHorarios(result.originalHorarios);
 		} catch (error) {
 			console.error("Erro ao recarregar dados:", error);
 
-			if (error.response?.status === 404) {
+			if (error.message?.includes("404")) {
 				setLoadError("API não está disponível");
 			} else if (error.message?.includes("ofertas")) {
 				setLoadError(
-					"Erro ao carregar ofertas. " +
-						(error.response?.data?.message ||
-							"Verifique a conexão."),
+					"Erro ao carregar ofertas. Verifique a conexão.",
 				);
 			} else {
-				setLoadError(
-					error.response?.data?.message ||
-						"Erro ao carregar dados do banco",
-				);
+				setLoadError(error.message || "Erro ao carregar dados do banco");
 			}
 			setEvents({});
 			setOriginalHorarios([]);
@@ -1570,171 +1181,17 @@ export default function Horarios() {
 
 	// Função para contar horários válidos (com disciplina e professor)
 	const getValidHorariosCount = () => {
-		let count = 0;
-		Object.keys(events).forEach((phaseNumber) => {
-			const phaseEvents = events[phaseNumber];
-			if (phaseEvents) {
-				Object.values(phaseEvents).forEach((eventArray) => {
-					const eventsInSlot = Array.isArray(eventArray)
-						? eventArray
-						: [eventArray];
-					eventsInSlot.forEach((event) => {
-						// Validar que tem disciplina e pelo menos um professor
-						const hasProfessores =
-							(event.professoresIds &&
-								Array.isArray(event.professoresIds) &&
-								event.professoresIds.length > 0) ||
-							event.professorId;
-						if (event.disciplinaId && hasProfessores) {
-							// Se tem múltiplos professores, cada um será um registro separado no banco
-							const numProfessores =
-								event.professoresIds &&
-								Array.isArray(event.professoresIds)
-									? event.professoresIds.length
-									: 1;
-							count += numProfessores;
-						}
-					});
-				});
-			}
-		});
-		return count;
+		return horariosController.getValidHorariosCount(events);
 	};
 
 	// Função para contar mudanças desde a última sincronização
 	const getChangesCount = () => {
-		// Se ainda não carregou os dados originais (null/undefined), não calcular mudanças
-		if (originalHorarios === null || originalHorarios === undefined) {
-			return { added: 0, modified: 0, removed: 0, total: 0 };
-		}
-
-		// Se originalHorarios é array vazio [], significa que carregou mas não tinha horários
-		// Neste caso, todos os eventos atuais são novos (added)
-
-		// Converter eventos atuais para formato comparável (mesma lógica do saveAllHorariosToDatabase)
-		const horariosAtuais = [];
-		Object.keys(events).forEach((phaseNumber) => {
-			const phaseEvents = events[phaseNumber];
-			if (phaseEvents) {
-				Object.values(phaseEvents).forEach((eventArray) => {
-					const eventsInSlot = Array.isArray(eventArray)
-						? eventArray
-						: [eventArray];
-					eventsInSlot.forEach((event) => {
-						// Só considerar horários válidos (com disciplina e professor)
-						const hasProfessores =
-							(event.professoresIds &&
-								Array.isArray(event.professoresIds) &&
-								event.professoresIds.length > 0) ||
-							event.professorId;
-
-						if (event.disciplinaId && hasProfessores) {
-							// Se tem múltiplos professores, criar registro separado para cada um
-							if (
-								event.professoresIds &&
-								Array.isArray(event.professoresIds)
-							) {
-								event.professoresIds.forEach(
-									(professorId, index) => {
-										let uniqueId = event.id;
-										if (event.professoresIds.length > 1) {
-											const baseId = event.id.replace(
-												/-prof\d+$/,
-												"",
-											);
-											uniqueId = `${baseId}-prof${
-												index + 1
-											}`;
-										}
-
-										const eventoCopy = {
-											...event,
-											professorId,
-											id: uniqueId,
-										};
-										const dbEvent = eventToDbFormat(
-											eventoCopy,
-											phaseNumber,
-											selectedAnoSemestre,
-											selectedCurso,
-										);
-										horariosAtuais.push(dbEvent);
-									},
-								);
-							} else if (event.professorId) {
-								const dbEvent = eventToDbFormat(
-									event,
-									phaseNumber,
-									selectedAnoSemestre,
-									selectedCurso,
-								);
-								horariosAtuais.push(dbEvent);
-							}
-						}
-					});
-				});
-			}
-		});
-
-		let added = 0,
-			modified = 0,
-			removed = 0;
-
-		// Criar mapa de horários originais por ID para busca rápida
-		const originaisPorId = {};
-		originalHorarios.forEach((original) => {
-			originaisPorId[original.id] = original;
-		});
-
-		// Função auxiliar para verificar se horário foi modificado
-		const horarioFoiModificado = (atual, original) => {
-			const hora1 = normalizeTimeFromDB(atual.hora_inicio);
-			const hora2 = normalizeTimeFromDB(original.hora_inicio);
-
-			return (
-				atual.id_ccr !== original.id_ccr ||
-				atual.codigo_docente !== original.codigo_docente ||
-				atual.dia_semana !== original.dia_semana ||
-				hora1 !== hora2 ||
-				atual.duracao !== original.duracao ||
-				atual.fase !== original.fase ||
-				(atual.comentario || "") !== (original.comentario || "")
-			);
-		};
-
-		// Set para rastrear IDs originais processados
-		const idsOriginaisProcessados = new Set();
-
-		// Processar horários atuais
-		horariosAtuais.forEach((atual) => {
-			// Verificar se o horário atual tem um ID que corresponde a um original
-			const original = originaisPorId[atual.id];
-
-			if (original) {
-				// Horário existe no banco (mesmo ID)
-				idsOriginaisProcessados.add(original.id);
-
-				if (horarioFoiModificado(atual, original)) {
-					// Foi modificado (qualquer campo) → EDITADO
-					modified++;
-				}
-				// Se não foi modificado, não fazemos nada (não tocar no banco)
-			} else {
-				// ID não existe no banco → NOVO
-				added++;
-			}
-		});
-
-		// Identificar horários removidos
-		// São os horários originais cujos IDs não foram processados
-		originalHorarios.forEach((original) => {
-			if (!idsOriginaisProcessados.has(original.id)) {
-				// Não foi processado = não existe mais → REMOVIDO
-				removed++;
-			}
-		});
-
-		return { added, modified, removed, total: added + modified + removed };
+		return horariosController.getChangesCount(
+			events,
+			originalHorarios,
+			selectedAnoSemestre,
+			selectedCurso,
+		);
 	};
 
 	// Função para verificar se há mudanças pendentes para sincronizar
@@ -1745,46 +1202,28 @@ export default function Horarios() {
 
 	// Função para importar horários de ano/semestre anterior
 	const importarHorarios = async () => {
-		if (!selectedAnoSemestreOrigem || !selectedCurso) {
-			setImportError("Selecione um ano/semestre de origem e um curso");
-			return;
-		}
-
 		setImportLoading(true);
 		setImportError(null);
 
 		try {
-			const response = await axiosInstance.post("/horarios/importar", {
-				ano_origem: selectedAnoSemestreOrigem.ano,
-				semestre_origem: selectedAnoSemestreOrigem.semestre,
-				ano_destino: selectedAnoSemestre.ano,
-				semestre_destino: selectedAnoSemestre.semestre,
-				id_curso: selectedCurso.id,
-				incluir_docentes: incluirDocentes,
-				incluir_ofertas: incluirOfertas,
-			});
+			const result = await horariosController.importHorarios(
+				selectedAnoSemestreOrigem,
+				selectedAnoSemestre,
+				selectedCurso,
+				incluirDocentes,
+				incluirOfertas,
+			);
 
-			// Em nosso axios, a resposta pode já ser os dados.
-			const data = response?.data ?? response;
+			setSnackbarMessage(result.message);
+			setSnackbarOpen(true);
+			setShowImportModal(false);
 
-			if (data) {
-				const message = `Importação realizada com sucesso! ${
-					data.horarios_importados || 0
-				} horários e ${data.ofertas_importadas || 0} ofertas criados.`;
-				setSnackbarMessage(message);
-				setSnackbarOpen(true);
-				setShowImportModal(false);
-
-				// Recarregar os horários após importação
-				await loadHorariosFromDatabase();
-			} else {
-				setImportError("Erro ao importar horários");
-			}
+			// Recarregar os horários após importação
+			await loadHorariosFromDatabase();
 		} catch (error) {
 			console.error("Erro ao importar horários:", error);
 			setImportError(
-				error.response?.data?.message ||
-					"Erro ao importar horários. Verifique a conexão.",
+				error.message || "Erro ao importar horários. Verifique a conexão.",
 			);
 		} finally {
 			setImportLoading(false);
@@ -3773,18 +3212,21 @@ export default function Horarios() {
 													: "rascunho"
 												: "rascunho";
 										})()}
-										onChange={async (e) => {
-											if (!canManageHorarios) return; // trava alteração se não tem permissão
-											const novoStatus = e.target.value;
-											const publicado =
-												novoStatus === "publicado";
+									onChange={async (e) => {
+										if (!canManageHorarios) return;
+										const novoStatus = e.target.value;
+										const publicado =
+											novoStatus === "publicado";
 
-											try {
-												await axiosInstance.patch(
-													`/ano-semestre/${selectedAnoSemestre.ano}/${selectedAnoSemestre.semestre}/publicacao`,
-													{ publicado },
+										try {
+											const result =
+												await anoSemestreController.updatePublicacaoStatus(
+													selectedAnoSemestre.ano,
+													selectedAnoSemestre.semestre,
+													publicado,
 												);
 
+											if (result.success) {
 												// Atualizar estado local dos anos/semestres
 												setAnosSemestres((prev) =>
 													prev.map((as) =>
@@ -3805,23 +3247,28 @@ export default function Horarios() {
 													() => setSaveSuccess(false),
 													4000,
 												);
-											} catch (error) {
-												console.error(
-													"Erro ao alterar status de publicação:",
-													error,
-												);
-												setSaveError(
-													"Erro ao alterar status de publicação: " +
-														(error.response?.data
-															?.message ||
-															error.message),
-												);
+											} else {
+												setSaveError(result.message);
 												setTimeout(
 													() => setSaveError(null),
 													6000,
 												);
 											}
-										}}
+										} catch (error) {
+											console.error(
+												"Erro ao alterar status de publicação:",
+												error,
+											);
+											setSaveError(
+												error.message ||
+													"Erro ao alterar status de publicação",
+											);
+											setTimeout(
+												() => setSaveError(null),
+												6000,
+											);
+										}
+									}}
 										label="Status"
 										disabled={
 											loadingAnosSemestres ||
@@ -4197,20 +3644,8 @@ export default function Horarios() {
 								(anoSemestreAtual.inicio ||
 									anoSemestreAtual.fim)
 							) {
-								const formatarData = (data) => {
-									if (!data) return "Não definida";
-									try {
-										return new Date(
-											data,
-										).toLocaleDateString("pt-BR", {
-											day: "2-digit",
-											month: "2-digit",
-											year: "numeric",
-										});
-									} catch (error) {
-										return "Data inválida";
-									}
-								};
+								const formatarData =
+									anoSemestreController.formatarData;
 
 								return (
 									<Box

@@ -52,12 +52,28 @@ export async function deleteCurso(id) {
 	}
 }
 
+// GET - Buscar cursos de um usuário específico
+export async function getCursosByUsuario(userId) {
+	try {
+		const response = await axiosInstance.get(`/usuarios/${userId}/cursos`);
+		return response.cursos || [];
+	} catch (error) {
+		console.error("Erro ao buscar cursos do usuário:", error);
+		throw new Error(
+			error.response?.data?.message ||
+				error.message ||
+				"Erro ao buscar cursos do usuário",
+		);
+	}
+}
+
 // Exportação padrão para manter compatibilidade
 const cursosService = {
 	getCursos,
 	createCurso,
 	updateCurso,
 	deleteCurso,
+	getCursosByUsuario,
 };
 
 export default cursosService;

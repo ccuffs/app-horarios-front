@@ -1,11 +1,15 @@
 import axiosInstance from "../auth/axios.js";
 
 // GET - Buscar todas as ofertas
-export async function getOfertas() {
+export async function getOfertas(params = {}) {
   try {
-    const response = await axiosInstance.get("/ofertas");
+    const response = await axiosInstance.get("/ofertas", { params });
 
-    // Remove duplicatas baseadas na chave primária composta
+    console.log(`[ofertas-service] Total de ofertas recebidas da API: ${response.ofertas.length}`);
+
+    // Remove duplicatas baseadas na chave primária composta (incluindo turno)
+    // IMPORTANTE: Uma mesma fase pode ter múltiplos turnos, então o turno
+    // deve ser parte da chave única
     const uniqueOfertas = response.ofertas.filter(
       (oferta, index, self) =>
         index ===
@@ -14,9 +18,24 @@ export async function getOfertas() {
             o.ano === oferta.ano &&
             o.semestre === oferta.semestre &&
             o.id_curso === oferta.id_curso &&
-            o.fase === oferta.fase,
+            o.fase === oferta.fase &&
+            o.turno === oferta.turno, // Incluído turno na verificação
         ),
     );
+
+    console.log(`[ofertas-service] Ofertas após remover duplicatas: ${uniqueOfertas.length}`);
+
+    // Agrupar por fase para mostrar turnos múltiplos
+    const porFase = uniqueOfertas.reduce((acc, oferta) => {
+      const key = `${oferta.ano}/${oferta.semestre} - Fase ${oferta.fase}`;
+      if (!acc[key]) {
+        acc[key] = [];
+      }
+      acc[key].push(oferta.turno);
+      return acc;
+    }, {});
+
+    console.log('[ofertas-service] Turnos por fase:', porFase);
 
     return uniqueOfertas;
   } catch (error) {
