@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from "react";
-import axiosInstance from "../auth/axios";
-
 import {
 	Alert,
 	Box,
@@ -21,6 +19,8 @@ import {
 	TextField,
 } from "@mui/material";
 import CustomDataGrid from "./CustomDataGrid.jsx";
+import ccrsController from "../controllers/ccrs-controller.js";
+import ccrsService from "../services/ccrs-service.js";
 
 const ITEM_HEIGHT = 48;
 const ITEM_PADDING_TOP = 8;
@@ -52,36 +52,35 @@ export default function CCRs() {
 	const [idDelete, setIdDelete] = React.useState(-1);
 
 	useEffect(() => {
-		getData();
-		getCursos();
+		loadData();
 	}, []);
+
+	const loadData = async () => {
+		try {
+			const { ccrs: ccrsData, cursos: cursosData } =
+				await ccrsController.loadCCRsAndCursos();
+			setCCRs(ccrsData);
+			setCursos(cursosData);
+		} catch (error) {
+			setCCRs([]);
+			setCursos([]);
+		}
+	};
 
 	async function getData() {
 		try {
-			const res = await axiosInstance.get("/ccrs");
-			setCCRs(res.ccrs);
+			const ccrsData = await ccrsService.getCCRs();
+			setCCRs(ccrsData);
 		} catch (error) {
 			console.log("Não foi possível retornar a lista de CCRs: ", error);
 			setCCRs([]);
 		}
 	}
 
-	async function getCursos() {
-		try {
-			const res = await axiosInstance.get("/cursos");
-			setCursos(res.cursos);
-		} catch (error) {
-			console.log("Não foi possível retornar a lista de cursos: ", error);
-			setCursos([]);
-		}
-	}
-
 	function handleEdit(data) {
-		setFormData(data);
-		// Extrair os IDs dos cursos associados
-		const cursosIds = data.cursos
-			? data.cursos.map((curso) => curso.id)
-			: [];
+		const editData = ccrsController.prepareEditData(data);
+		const cursosIds = ccrsController.prepareCursosSelecionados(data);
+		setFormData(editData);
 		setCursosSelecionados(cursosIds);
 		setEdit(true);
 	}
@@ -105,56 +104,42 @@ export default function CCRs() {
 	}
 
 	async function handleAddOrUpdate() {
-		try {
-			if (edit) {
-				await axiosInstance.put("/ccrs/", {
-					formData: formData,
-					cursosSelecionados: cursosSelecionados,
-				});
-				setMessageText("CCR atualizado com sucesso!");
-			} else {
-				await axiosInstance.post("/ccrs", {
-					formData: {
-						codigo: formData.codigo,
-						nome: formData.nome,
-						creditos: formData.creditos,
-						ementa: formData.ementa,
-					},
-					cursosSelecionados: cursosSelecionados,
-				});
+		const validation = ccrsController.validateFormData(formData, edit);
 
-				setMessageText("CCR inserido com sucesso!");
-			}
-			setMessageSeverity("success");
-			setFormData({
-				id: "",
-				codigo: "",
-				nome: "",
-				creditos: 4,
-				ementa: "",
-			});
-			setCursosSelecionados([]);
-			setEdit(false);
-		} catch (error) {
-			console.log("Nao foi possível inserir o CCR no banco de dados");
-			setMessageText("Falha ao gravar CCR!");
+		if (!validation.isValid) {
+			setMessageText(validation.message);
 			setMessageSeverity("error");
-		} finally {
 			setOpenMessage(true);
-			await getData();
+			return;
 		}
+
+		const result = await ccrsController.saveOrUpdateCCR(
+			formData,
+			cursosSelecionados,
+			edit,
+		);
+
+		if (result.success) {
+			setMessageText(result.message);
+			setMessageSeverity("success");
+			setFormData(ccrsController.getResetFormData());
+			setCursosSelecionados(
+				ccrsController.getResetCursosSelecionados(),
+			);
+			setEdit(false);
+		} else {
+			setMessageText(result.message);
+			setMessageSeverity("error");
+		}
+
+		setOpenMessage(true);
+		await getData();
 	}
 
 	function handleCancelClick() {
 		setEdit(false);
-		setFormData({
-			id: "",
-			codigo: "",
-			nome: "",
-			creditos: 4,
-			ementa: "",
-		});
-		setCursosSelecionados([]);
+		setFormData(ccrsController.getResetFormData());
+		setCursosSelecionados(ccrsController.getResetCursosSelecionados());
 	}
 
 	function handleCloseMessage(_, reason) {
@@ -169,21 +154,20 @@ export default function CCRs() {
 	}
 
 	async function handleDeleteClick() {
-		try {
-			console.log(idDelete);
-			await axiosInstance.delete(`/ccrs/${idDelete}`);
-			setMessageText("CCR removido com sucesso!");
+		const result = await ccrsController.removeCCR(idDelete);
+
+		if (result.success) {
+			setMessageText(result.message);
 			setMessageSeverity("success");
-		} catch (error) {
-			console.log("Nao foi possível remover o CCR no banco de dados");
-			setMessageText("Falha ao remover CCR!");
+		} else {
+			setMessageText(result.message);
 			setMessageSeverity("error");
-		} finally {
-			setFormData({ id: "", codigo: "", nome: "", creditos: 4, ementa: "" });
-			setOpenDialog(false);
-			setOpenMessage(true);
-			await getData();
 		}
+
+		setFormData(ccrsController.getResetFormData());
+		setOpenDialog(false);
+		setOpenMessage(true);
+		await getData();
 	}
 
 	function handleNoDeleteClick() {
@@ -291,10 +275,7 @@ export default function CCRs() {
 							value={cursosSelecionados}
 							onChange={handleCursosChange}
 							input={
-								<OutlinedInput
-									id="select-cursos"
-									label="Cursos"
-								/>
+								<OutlinedInput id="select-cursos" label="Cursos" />
 							}
 							renderValue={(selected) => (
 								<Box
