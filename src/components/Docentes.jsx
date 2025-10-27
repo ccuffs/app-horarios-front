@@ -12,7 +12,7 @@ import {
 	Stack,
 	TextField,
 } from "@mui/material";
-import { DataGrid } from "@mui/x-data-grid";
+import CustomDataGrid from "./CustomDataGrid.jsx";
 import docentesController from "../controllers/docentes-controller.js";
 import docentesService from "../services/docentes-service.js";
 
@@ -257,7 +257,7 @@ export default function Docentes() {
 					</Dialog>
 				</Stack>
 				<Box style={{ height: "500px" }}>
-					<DataGrid
+					<CustomDataGrid
 						rows={docentes}
 						columns={columns}
 						pageSize={5}
