@@ -1,6 +1,4 @@
 import React, { useState, useEffect } from "react";
-import axiosInstance from "../auth/axios";
-
 import {
 	Alert,
 	Box,
@@ -19,6 +17,8 @@ import {
 	TextField,
 } from "@mui/material";
 import { DataGrid } from "@mui/x-data-grid";
+import cursosController from "../controllers/cursos-controller.js";
+import cursosService from "../services/cursos-service.js";
 
 export default function Cursos() {
 	const [cursos, setCursos] = useState([]);
@@ -42,8 +42,8 @@ export default function Cursos() {
 
 	async function getData() {
 		try {
-			const res = await axiosInstance.get("/cursos");
-			setCursos(res.cursos);
+			const cursosData = await cursosService.getCursos();
+			setCursos(cursosData);
 		} catch (error) {
 			console.log("Não foi possível retornar a lista de cursos: ", error);
 			setCursos([]);
@@ -51,8 +51,10 @@ export default function Cursos() {
 	}
 
 	function handleEdit(data) {
-		setFormData(data);
-		setSelectTurno(data.turno);
+		const editData = cursosController.prepareEditData(data);
+		const turno = cursosController.getTurnoFromData(data);
+		setFormData(editData);
+		setSelectTurno(turno);
 		setEdit(true);
 	}
 
@@ -71,42 +73,36 @@ export default function Cursos() {
 	}
 
 	async function handleAddOrUpdate() {
-		console.log(formData);
-		try {
-			if (edit) {
-				await axiosInstance.put("/cursos/", {
-					formData: formData,
-				});
-				setMessageText("Curso atualizado com sucesso!");
-			} else {
-				await axiosInstance.post("/cursos/", {
-					formData: {
-						codigo: formData.codigo,
-						nome: formData.nome,
-						turno: formData.turno,
-					},
-				});
+		const validation = cursosController.validateFormData(formData, edit);
 
-				setMessageText("Curso inserido com sucesso!");
-			}
-			setMessageSeverity("success");
-			setFormData({ id: "", codigo: "", nome: "", turno: "" });
-			setSelectTurno("");
-			setEdit(false);
-		} catch (error) {
-			console.log("Nao foi possível inserir o curso no banco de dados");
-			setMessageText("Falha ao gravar curso!");
+		if (!validation.isValid) {
+			setMessageText(validation.message);
 			setMessageSeverity("error");
-		} finally {
 			setOpenMessage(true);
-			await getData();
+			return;
 		}
+
+		const result = await cursosController.saveOrUpdateCurso(formData, edit);
+
+		if (result.success) {
+			setMessageText(result.message);
+			setMessageSeverity("success");
+			setFormData(cursosController.getResetFormData());
+			setSelectTurno(cursosController.getResetTurno());
+			setEdit(false);
+		} else {
+			setMessageText(result.message);
+			setMessageSeverity("error");
+		}
+
+		setOpenMessage(true);
+		await getData();
 	}
 
 	function handleCancelClick() {
 		setEdit(false);
-		setFormData({ id: "", codigo: "", nome: "", turno: "" });
-		setSelectTurno("");
+		setFormData(cursosController.getResetFormData());
+		setSelectTurno(cursosController.getResetTurno());
 	}
 
 	function handleCloseMessage(_, reason) {
@@ -121,21 +117,21 @@ export default function Cursos() {
 	}
 
 	async function handleDeleteClick() {
-		try {
-			console.log(idDelete);
-			await axiosInstance.delete(`/cursos/${idDelete}`);
-			setMessageText("Curso removido com sucesso!");
+		const result = await cursosController.removeCurso(idDelete);
+
+		if (result.success) {
+			setMessageText(result.message);
 			setMessageSeverity("success");
-		} catch (error) {
-			console.log("Nao foi possível remover o curso no banco de dados");
-			setMessageText("Falha ao remover curso!");
+		} else {
+			setMessageText(result.message);
 			setMessageSeverity("error");
-		} finally {
-			setFormData({ id: "", codigo: "", nome: "", turno: "" });
-			setOpenDialog(false);
-			setOpenMessage(true);
-			await getData();
 		}
+
+		setFormData(cursosController.getResetFormData());
+		setSelectTurno(cursosController.getResetTurno());
+		setOpenDialog(false);
+		setOpenMessage(true);
+		await getData();
 	}
 
 	function handleNoDeleteClick() {
@@ -258,10 +254,10 @@ export default function Cursos() {
 						</DialogContent>
 						<DialogActions>
 							<Button onClick={handleNoDeleteClick}>
-								Disagree
+								Cancelar
 							</Button>
 							<Button onClick={handleDeleteClick} autoFocus>
-								Agree
+								Confirmar
 							</Button>
 						</DialogActions>
 					</Dialog>
