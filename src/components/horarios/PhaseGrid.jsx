@@ -7,7 +7,7 @@ import {
 	timeSlotsNoturno,
 	daysOfWeek,
 	formatTimeForDisplay,
-} from "./utils";
+} from "../../utils/horariosUtils";
 
 const PhaseGrid = ({
 	phaseNumber,

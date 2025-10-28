@@ -13,7 +13,7 @@ import {
 import { useAuth } from "../../contexts/AuthContext";
 import Permissoes from "../../enums/permissoes";
 import permissoesService from "../../services/permissoesService";
-import { formatTimeForDisplay, getEndTime } from "./utils";
+import { formatTimeForDisplay, getEndTime } from "../../utils/horariosUtils";
 
 const CalendarEvent = ({
 	event,

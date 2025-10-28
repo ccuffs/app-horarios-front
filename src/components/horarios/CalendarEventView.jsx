@@ -1,6 +1,6 @@
 import React from "react";
 import { Typography, Box, Paper, Tooltip, useTheme } from "@mui/material";
-import { formatTimeForDisplay } from "./utils";
+import { formatTimeForDisplay } from "../../utils/horariosUtils";
 
 // Função auxiliar para calcular o horário final de um evento
 const getEndTime = (startTime, duration, timeSlots) => {

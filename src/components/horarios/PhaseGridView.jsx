@@ -1,13 +1,13 @@
 import React from "react";
 import { Typography, Box, Chip, useTheme } from "@mui/material";
 import {
+	daysOfWeek,
 	timeSlotsMatutino,
 	timeSlotsVespertino,
 	timeSlotsNoturno,
 	formatTimeForDisplay,
-} from "./utils";
+} from "../../utils/horariosUtils";
 import TimeSlotView from "./TimeSlotView";
-import { daysOfWeek } from "./utils";
 
 // Componente para grid de uma fase (apenas visualização)
 const PhaseGridView = ({

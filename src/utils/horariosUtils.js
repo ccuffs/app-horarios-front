@@ -1,4 +1,4 @@
-import { customColors } from "../CustomThemeProvider";
+import { customColors } from "../components/CustomThemeProvider";
 
 export const timeSlotsMatutino = [
 	"07:30:00",

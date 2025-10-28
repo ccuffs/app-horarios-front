@@ -16,28 +16,23 @@ import {
 	normalizeTimeFromDB,
 	fixEventColorsAfterLoading,
 	initialEvents,
-} from "./horarios/utils";
+} from "./utils/horariosUtils";
 
 export default function HorariosView() {
-	const [selectedAnoSemestre, setSelectedAnoSemestre] = useState({
-		ano: new Date().getFullYear(),
-		semestre: 1,
-	});
-	const [selectedCurso, setSelectedCurso] = useState(null);
-	const [cursos, setCursos] = useState([]);
-	const [loadingCursos, setLoadingCursos] = useState(true);
-	const [errorCursos, setErrorCursos] = useState(null);
-	const [events, setEvents] = useState(initialEvents);
-	const [professores, setProfessores] = useState([]);
-	const [loadingProfessores, setLoadingProfessores] = useState(true);
-	const [disciplinas, setDisciplinas] = useState([]);
-	const [loadingDisciplinas, setLoadingDisciplinas] = useState(true);
-	const [loadingHorarios, setLoadingHorarios] = useState(false);
-	const [loadError, setLoadError] = useState(null);
-	const [anosSemestres, setAnosSemestres] = useState([]);
-	const [loadingAnosSemestres, setLoadingAnosSemestres] = useState(true);
-	const [ofertas, setOfertas] = useState([]);
-	const [loadingOfertas, setLoadingOfertas] = useState(true);
+	const {
+		selectedAnoSemestre,
+		setSelectedAnoSemestre,
+		selectedCurso,
+		setSelectedCurso,
+		cursos,
+		setCursos,
+		loadingCursos,
+		errorCursos,
+		events,
+		setEvents,
+		professores,
+		setProfessores,
+		loadingProfessores,
 
 	// Função para buscar cursos
 	const fetchCursos = async () => {

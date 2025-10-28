@@ -29,7 +29,7 @@ import {
 	formatTimeForDisplay,
 	getDisciplinaProfessoresFromOtherPeriod,
 	getDisciplinaProfessoresFromSamePhase,
-} from "./utils";
+} from "../../utils/horariosUtils";
 
 const EventModal = ({
 	open,

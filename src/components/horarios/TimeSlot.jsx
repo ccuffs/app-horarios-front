@@ -6,7 +6,7 @@ import permissoesService from "../../services/permissoesService";
 import {
 	timeSlotsNoturno,
 	isValidStartTimeNoturno,
-} from "./utils";
+} from "../../utils/horariosUtils";
 import CalendarEvent from "./CalendarEvent";
 
 const TimeSlot = ({

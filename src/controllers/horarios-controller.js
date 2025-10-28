@@ -8,7 +8,7 @@ import {
 	dayToNumber,
 	normalizeTimeFromDB,
 	getTurnoFromTime,
-} from "../components/horarios/utils.js";
+} from "../utils/horariosUtils.js";
 
 /**
  * Carrega todos os dados necessários para a tela de horários
