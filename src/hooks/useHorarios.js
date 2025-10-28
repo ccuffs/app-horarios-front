@@ -2254,6 +2254,19 @@ export default function useHorarios() {
 				}
 				const outroSemestre = selectedAnoSemestre.semestre === 1 ? 2 : 1;
 
+				// Verificar se há ofertas cadastradas para o outro semestre
+				const ofertasOutroSemestre = await ofertasService.getOfertas({
+					ano: selectedAnoSemestre.ano,
+					semestre: outroSemestre,
+					id_curso: selectedCurso.id,
+				});
+
+				// Se não houver ofertas cadastradas para o outro semestre, não carregar créditos
+				if (!ofertasOutroSemestre || ofertasOutroSemestre.length === 0) {
+					setCreditosOutroSemestre(new Map());
+					return;
+				}
+
 				// Fazer chamada de API para buscar horários do outro semestre
 				const result = await horariosService.getHorarios({
 					ano: selectedAnoSemestre.ano,
