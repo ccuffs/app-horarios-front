@@ -16,23 +16,26 @@ import {
 	normalizeTimeFromDB,
 	fixEventColorsAfterLoading,
 	initialEvents,
-} from "./utils/horariosUtils";
+} from "../utils/horariosUtils.js";
 
 export default function HorariosView() {
-	const {
-		selectedAnoSemestre,
-		setSelectedAnoSemestre,
-		selectedCurso,
-		setSelectedCurso,
-		cursos,
-		setCursos,
-		loadingCursos,
-		errorCursos,
-		events,
-		setEvents,
-		professores,
-		setProfessores,
-		loadingProfessores,
+	// Estados
+	const [selectedAnoSemestre, setSelectedAnoSemestre] = useState({ ano: 0, semestre: 0 });
+	const [selectedCurso, setSelectedCurso] = useState(null);
+	const [cursos, setCursos] = useState([]);
+	const [loadingCursos, setLoadingCursos] = useState(false);
+	const [errorCursos, setErrorCursos] = useState(null);
+	const [events, setEvents] = useState({});
+	const [professores, setProfessores] = useState([]);
+	const [loadingProfessores, setLoadingProfessores] = useState(false);
+	const [disciplinas, setDisciplinas] = useState([]);
+	const [loadingDisciplinas, setLoadingDisciplinas] = useState(false);
+	const [ofertas, setOfertas] = useState([]);
+	const [loadingOfertas, setLoadingOfertas] = useState(false);
+	const [anosSemestres, setAnosSemestres] = useState([]);
+	const [loadingAnosSemestres, setLoadingAnosSemestres] = useState(false);
+	const [loadingHorarios, setLoadingHorarios] = useState(false);
+	const [loadError, setLoadError] = useState(null);
 
 	// Função para buscar cursos
 	const fetchCursos = async () => {
