@@ -5,8 +5,6 @@ export async function getOfertas(params = {}) {
   try {
     const response = await axiosInstance.get("/ofertas", { params });
 
-    console.log(`[ofertas-service] Total de ofertas recebidas da API: ${response.ofertas.length}`);
-
     // Remove duplicatas baseadas na chave primária composta (incluindo turno)
     // IMPORTANTE: Uma mesma fase pode ter múltiplos turnos, então o turno
     // deve ser parte da chave única
@@ -23,8 +21,6 @@ export async function getOfertas(params = {}) {
         ),
     );
 
-    console.log(`[ofertas-service] Ofertas após remover duplicatas: ${uniqueOfertas.length}`);
-
     // Agrupar por fase para mostrar turnos múltiplos
     const porFase = uniqueOfertas.reduce((acc, oferta) => {
       const key = `${oferta.ano}/${oferta.semestre} - Fase ${oferta.fase}`;
@@ -34,8 +30,6 @@ export async function getOfertas(params = {}) {
       acc[key].push(oferta.turno);
       return acc;
     }, {});
-
-    console.log('[ofertas-service] Turnos por fase:', porFase);
 
     return uniqueOfertas;
   } catch (error) {
