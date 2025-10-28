@@ -1,11 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
-import {
-	Paper,
-	Box,
-	Typography,
-	IconButton,
-	Tooltip,
-} from "@mui/material";
+import { Paper, Box, Typography, IconButton, Tooltip } from "@mui/material";
 import {
 	Delete as DeleteIcon,
 	Warning as WarningIcon,
@@ -383,7 +377,7 @@ const CalendarEvent = ({
 												? professor.name.substring(
 														0,
 														10,
-												  ) + "..."
+													) + "..."
 												: professor.name
 											: professor.name}
 									</Typography>
@@ -455,22 +449,22 @@ const CalendarEvent = ({
 				{isMultiple
 					? `${formatTimeForDisplay(
 							event.startTime,
-					  )}-${formatTimeForDisplay(
+						)}-${formatTimeForDisplay(
 							getEndTime(
 								event.startTime,
 								event.duration,
 								timeSlots,
 							),
-					  )}`
+						)}`
 					: `${formatTimeForDisplay(
 							event.startTime,
-					  )} - ${formatTimeForDisplay(
+						)} - ${formatTimeForDisplay(
 							getEndTime(
 								event.startTime,
 								event.duration,
 								timeSlots,
 							),
-					  )}`}
+						)}`}
 			</Typography>
 
 			{/* Mostrar comentário se existir - SEMPRE mostrar quando há comentário */}

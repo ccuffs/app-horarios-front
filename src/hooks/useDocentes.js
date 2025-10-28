@@ -26,7 +26,10 @@ export function useDocentes() {
 			const docentesData = await docentesService.getDocentes();
 			setDocentes(docentesData);
 		} catch (error) {
-			console.log("Não foi possível retornar a lista de docentes: ", error);
+			console.log(
+				"Não foi possível retornar a lista de docentes: ",
+				error,
+			);
 			setDocentes([]);
 		}
 	}
@@ -131,5 +134,3 @@ export function useDocentes() {
 		handleNoDeleteClick,
 	};
 }
-
-

@@ -107,7 +107,8 @@ function Navbar() {
 				<PermissionContext
 					grupos={[
 						Permissoes.GRUPO.ADMIN,
-						Permissoes.GRUPO.COORDENADOR,						,
+						Permissoes.GRUPO.COORDENADOR,
+						,
 					]}
 					showError={false}
 				>

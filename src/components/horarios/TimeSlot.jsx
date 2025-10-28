@@ -91,13 +91,13 @@ const TimeSlot = ({
 							? "rgba(144, 202, 249, 0.16)"
 							: "#e3f2fd"
 						: timeSlotsNoturno.includes(time) &&
-						  !isValidStartTimeNoturno(time)
-						? theme.palette.mode === "dark"
-							? "rgba(255, 255, 255, 0.08)"
-							: "#f0f0f0"
-						: theme.palette.mode === "dark"
-						? "rgba(255, 255, 255, 0.12)"
-						: "#f5f5f5",
+							  !isValidStartTimeNoturno(time)
+							? theme.palette.mode === "dark"
+								? "rgba(255, 255, 255, 0.08)"
+								: "#f0f0f0"
+							: theme.palette.mode === "dark"
+								? "rgba(255, 255, 255, 0.12)"
+								: "#f5f5f5",
 				},
 				transition: "background-color 0.2s ease",
 				display: "flex",
@@ -105,9 +105,9 @@ const TimeSlot = ({
 				cursor: !canEditHorario
 					? "default"
 					: timeSlotsNoturno.includes(time) &&
-					  !isValidStartTimeNoturno(time)
-					? "not-allowed"
-					: "pointer",
+						  !isValidStartTimeNoturno(time)
+						? "not-allowed"
+						: "pointer",
 				opacity:
 					timeSlotsNoturno.includes(time) &&
 					!isValidStartTimeNoturno(time)

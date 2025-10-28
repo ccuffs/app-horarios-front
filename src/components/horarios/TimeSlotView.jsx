@@ -58,4 +58,3 @@ const TimeSlotView = ({
 };
 
 export default TimeSlotView;
-

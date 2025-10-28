@@ -44,8 +44,7 @@ export function prepareDataForApi(formData) {
 		codigo: formData.codigo,
 		nome: formData.nome,
 		email: formData.email,
-		sala:
-			formData.sala === "" ? null : parseInt(formData.sala) || null,
+		sala: formData.sala === "" ? null : parseInt(formData.sala) || null,
 	};
 }
 

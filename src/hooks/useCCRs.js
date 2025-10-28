@@ -95,9 +95,7 @@ export function useCCRs() {
 			setMessageText(result.message);
 			setMessageSeverity("success");
 			setFormData(ccrsController.getResetFormData());
-			setCursosSelecionados(
-				ccrsController.getResetCursosSelecionados(),
-			);
+			setCursosSelecionados(ccrsController.getResetCursosSelecionados());
 			setEdit(false);
 		} else {
 			setMessageText(result.message);
@@ -169,4 +167,3 @@ export function useCCRs() {
 		handleNoDeleteClick,
 	};
 }
-

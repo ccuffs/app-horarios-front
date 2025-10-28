@@ -76,10 +76,7 @@ export const secondNoturnoSlots = [
 	"22:30:00",
 ];
 
-export const allNoturnoSlots = [
-	...firstNoturnoSlots,
-	...secondNoturnoSlots,
-];
+export const allNoturnoSlots = [...firstNoturnoSlots, ...secondNoturnoSlots];
 export const allMatutinoVespertinoSlots = [
 	...firstMatutinoSlots,
 	...secondMatutinoSlots,
@@ -207,20 +204,20 @@ export const normalizeTimeFromDB = (timeFromDB) => {
  */
 export const normalizeTimeForComparison = (time) => {
 	if (!time) return "";
-	
+
 	let timeString = time;
-	
+
 	if (typeof time === "object" && time !== null) {
 		timeString = time.toString();
 	}
-	
+
 	if (typeof timeString === "string") {
 		const parts = timeString.split(":");
 		if (parts.length >= 2) {
 			return `${parts[0]}:${parts[1]}`;
 		}
 	}
-	
+
 	return timeString;
 };
 

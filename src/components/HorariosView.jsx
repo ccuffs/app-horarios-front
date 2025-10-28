@@ -20,7 +20,10 @@ import {
 
 export default function HorariosView() {
 	// Estados
-	const [selectedAnoSemestre, setSelectedAnoSemestre] = useState({ ano: 0, semestre: 0 });
+	const [selectedAnoSemestre, setSelectedAnoSemestre] = useState({
+		ano: 0,
+		semestre: 0,
+	});
 	const [selectedCurso, setSelectedCurso] = useState(null);
 	const [cursos, setCursos] = useState([]);
 	const [loadingCursos, setLoadingCursos] = useState(false);

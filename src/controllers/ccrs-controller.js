@@ -67,11 +67,7 @@ export function prepareDataForUpdate(formData) {
 /**
  * Salva ou atualiza um CCR
  */
-export async function saveOrUpdateCCR(
-	formData,
-	cursosSelecionados,
-	edit,
-) {
+export async function saveOrUpdateCCR(formData, cursosSelecionados, edit) {
 	try {
 		let dataToSend;
 		if (edit) {
@@ -151,7 +147,7 @@ export function getResetCursosSelecionados() {
 
 // Exportação padrão
 const ccrsController = {
-    prepareEditData,
+	prepareEditData,
 	prepareCursosSelecionados,
 	validateFormData,
 	prepareDataForCreate,

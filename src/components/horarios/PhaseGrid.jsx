@@ -208,7 +208,7 @@ const PhaseGrid = ({
 													"dark"
 														? "rgba(255, 255, 255, 0.3)"
 														: "#bbb"
-											  }`
+												}`
 											: "none",
 									display: "flex",
 									alignItems: "center",
@@ -317,7 +317,7 @@ const PhaseGrid = ({
 														"dark"
 															? "rgba(255, 255, 255, 0.05)"
 															: "#f5f5f5",
-											  }
+												}
 											: {}
 									}
 								/>

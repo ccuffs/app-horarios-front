@@ -10,7 +10,6 @@ import ProtectedRoute from "../contexts/ProtectedRoute";
 import { AuthProvider, useAuth } from "../contexts/AuthContext";
 import Permissoes from "../enums/permissoes.js";
 
-
 import Cursos from "./Cursos";
 import CCRs from "./CCRs";
 import Docentes from "./Docentes";

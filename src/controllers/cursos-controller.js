@@ -1,6 +1,5 @@
 import cursosService from "../services/cursos-service.js";
 
-
 /**
  * Prepara os dados de um curso para edição
  */

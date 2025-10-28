@@ -148,10 +148,10 @@ const EventModal = ({
 													)
 														? existingEvent.professoresIds
 														: existingEvent.professorId
-														? [
-																existingEvent.professorId,
-														  ]
-														: [];
+															? [
+																	existingEvent.professorId,
+																]
+															: [];
 
 												if (
 													professoresDoEvento.includes(
@@ -277,44 +277,47 @@ const EventModal = ({
 											.substring(0, 5)
 									: outroHorario.hora_inicio;
 
-						// Considerar que é o MESMO compromisso (portanto não é conflito) se todos os
-						// atributos básicos coincidirem – ignoramos diferença de duração para permitir
-						// edições que apenas alteram o tamanho da aula.
-						if (
-							horarioAtual.id_ccr === outroHorario.id_ccr &&
-							hora1 === hora2 &&
-							horarioAtual.ano === outroHorario.ano &&
-							horarioAtual.semestre ===
-								outroHorario.semestre &&
-							horarioAtual.dia_semana ===
-								outroHorario.dia_semana &&
-							horarioAtual.codigo_docente ===
-								outroHorario.codigo_docente
-						) {
-							return; // É o mesmo compromisso (possível edição), não gera conflito
-						}
+							// Considerar que é o MESMO compromisso (portanto não é conflito) se todos os
+							// atributos básicos coincidirem – ignoramos diferença de duração para permitir
+							// edições que apenas alteram o tamanho da aula.
+							if (
+								horarioAtual.id_ccr === outroHorario.id_ccr &&
+								hora1 === hora2 &&
+								horarioAtual.ano === outroHorario.ano &&
+								horarioAtual.semestre ===
+									outroHorario.semestre &&
+								horarioAtual.dia_semana ===
+									outroHorario.dia_semana &&
+								horarioAtual.codigo_docente ===
+									outroHorario.codigo_docente
+							) {
+								return; // É o mesmo compromisso (possível edição), não gera conflito
+							}
 
-						// Regra 4: Se algum dos eventos permite conflito, não acusar conflito
-						if (
-							horarioAtual.permitirConflito ||
-							outroHorario.permitirConflito
-						) {
-							return; // Pular se algum evento permitir conflito
-						}
+							// Regra 4: Se algum dos eventos permite conflito, não acusar conflito
+							if (
+								horarioAtual.permitirConflito ||
+								outroHorario.permitirConflito
+							) {
+								return; // Pular se algum evento permitir conflito
+							}
 
-						// Regra 3: Se mesmo CCR, mesmo horário/dia mas fases diferentes, não é conflito
-						if (horarioAtual.id_ccr === outroHorario.id_ccr && horarioAtual.fase !== outroHorario.fase) {
-							return; // Mesmo CCR em fases diferentes não é conflito
-						}
+							// Regra 3: Se mesmo CCR, mesmo horário/dia mas fases diferentes, não é conflito
+							if (
+								horarioAtual.id_ccr === outroHorario.id_ccr &&
+								horarioAtual.fase !== outroHorario.fase
+							) {
+								return; // Mesmo CCR em fases diferentes não é conflito
+							}
 
-						// Regra 1 e 2: Verificar sobreposição temporal
-						// Regra 1: CCRs diferentes, mesmo horário/dia, qualquer fase → CONFLITO
-						// Regra 2: Mesmo CCR, mesmo horário/dia, mesma fase → CONFLITO
-						if (
-							horarioAtual.id_ccr &&
-							outroHorario.id_ccr &&
-							horariosSeOverlapam(horarioAtual, outroHorario)
-						) {
+							// Regra 1 e 2: Verificar sobreposição temporal
+							// Regra 1: CCRs diferentes, mesmo horário/dia, qualquer fase → CONFLITO
+							// Regra 2: Mesmo CCR, mesmo horário/dia, mesma fase → CONFLITO
+							if (
+								horarioAtual.id_ccr &&
+								outroHorario.id_ccr &&
+								horariosSeOverlapam(horarioAtual, outroHorario)
+							) {
 								// Criar ID único para evitar duplicatas
 								const conflict1 = `${
 									horarioAtual.id_ccr || "null"
@@ -1210,10 +1213,10 @@ const EventModal = ({
 								{timeSlotsMatutino.includes(event.startTime)
 									? "Matutino"
 									: timeSlotsVespertino.includes(
-											event.startTime,
-									  )
-									? "Vespertino"
-									: "Noturno"}
+												event.startTime,
+										  )
+										? "Vespertino"
+										: "Noturno"}
 							</Typography>
 						</Box>
 					)}

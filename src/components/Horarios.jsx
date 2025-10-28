@@ -199,7 +199,7 @@ export default function Horarios() {
 								hasPendingChanges()
 									? `Há ${
 											getChangesCount().total
-									  } mudança(s) não sincronizada(s). Clique para ver opções.`
+										} mudança(s) não sincronizada(s). Clique para ver opções.`
 									: "Recarregar dados do banco de dados"
 							}
 						>
@@ -221,8 +221,8 @@ export default function Horarios() {
 									{loadingHorarios
 										? "Carregando..."
 										: hasPendingChanges()
-										? "Recarregar*"
-										: "Recarregar"}
+											? "Recarregar*"
+											: "Recarregar"}
 								</Button>
 							</span>
 						</Tooltip>
@@ -450,63 +450,69 @@ export default function Horarios() {
 													: "rascunho"
 												: "rascunho";
 										})()}
-									onChange={async (e) => {
-										if (!canManageHorarios) return;
-										const novoStatus = e.target.value;
-										const publicado =
-											novoStatus === "publicado";
+										onChange={async (e) => {
+											if (!canManageHorarios) return;
+											const novoStatus = e.target.value;
+											const publicado =
+												novoStatus === "publicado";
 
-										try {
-											const result =
-												await anoSemestreController.updatePublicacaoStatus(
-													selectedAnoSemestre.ano,
-													selectedAnoSemestre.semestre,
-													publicado,
-												);
+											try {
+												const result =
+													await anoSemestreController.updatePublicacaoStatus(
+														selectedAnoSemestre.ano,
+														selectedAnoSemestre.semestre,
+														publicado,
+													);
 
-											if (result.success) {
-												// Atualizar estado local dos anos/semestres
-												setAnosSemestres((prev) =>
-													prev.map((as) =>
-														as.ano ===
-															selectedAnoSemestre.ano &&
-														as.semestre ===
-															selectedAnoSemestre.semestre
-															? {
-																	...as,
-																	publicado,
-															  }
-															: as,
-													),
-												);
+												if (result.success) {
+													// Atualizar estado local dos anos/semestres
+													setAnosSemestres((prev) =>
+														prev.map((as) =>
+															as.ano ===
+																selectedAnoSemestre.ano &&
+															as.semestre ===
+																selectedAnoSemestre.semestre
+																? {
+																		...as,
+																		publicado,
+																	}
+																: as,
+														),
+													);
 
-												setSaveSuccess(true);
-												setTimeout(
-													() => setSaveSuccess(false),
-													4000,
+													setSaveSuccess(true);
+													setTimeout(
+														() =>
+															setSaveSuccess(
+																false,
+															),
+														4000,
+													);
+												} else {
+													setSaveError(
+														result.message,
+													);
+													setTimeout(
+														() =>
+															setSaveError(null),
+														6000,
+													);
+												}
+											} catch (error) {
+												console.error(
+													"Erro ao alterar status de publicação:",
+													error,
 												);
-											} else {
-												setSaveError(result.message);
+												setSaveError(
+													error.message ||
+														"Erro ao alterar status de publicação",
+												);
 												setTimeout(
 													() => setSaveError(null),
 													6000,
 												);
 											}
-										} catch (error) {
-											console.error(
-												"Erro ao alterar status de publicação:",
-												error,
-											);
-											setSaveError(
-												error.message ||
-													"Erro ao alterar status de publicação",
-											);
-											setTimeout(
-												() => setSaveError(null),
-												6000,
-											);
-										}
-									}}
+										}}
 										label="Status"
 										disabled={
 											loadingAnosSemestres ||
@@ -707,14 +713,14 @@ export default function Horarios() {
 							{loadingCursos
 								? "Carregando cursos do usuário..."
 								: loadingProfessores
-								? "Carregando dados dos professores..."
-								: loadingDisciplinas
-								? "Carregando dados das disciplinas..."
-								: loadingAnosSemestres
-								? "Carregando anos/semestres disponíveis..."
-								: loadingOfertas
-								? "Carregando ofertas de curso..."
-								: "Carregando horários salvos..."}
+									? "Carregando dados dos professores..."
+									: loadingDisciplinas
+										? "Carregando dados das disciplinas..."
+										: loadingAnosSemestres
+											? "Carregando anos/semestres disponíveis..."
+											: loadingOfertas
+												? "Carregando ofertas de curso..."
+												: "Carregando horários salvos..."}
 						</Typography>
 						{loadingOfertas && (
 							<Typography
@@ -1166,7 +1172,7 @@ export default function Horarios() {
 												)
 													? linha.mediaAnual.toFixed(
 															1,
-													  )
+														)
 													: "0.0"}
 											</TableCell>
 										</TableRow>
@@ -1178,22 +1184,22 @@ export default function Horarios() {
 				</Box>
 			</Drawer>
 
-		<EventModal
-			open={modalOpen}
-			onClose={handleModalClose}
-			event={selectedEvent}
-			onSave={handleSaveEvent}
-			professores={professores}
-			disciplinas={disciplinas}
-			events={events}
-			selectedPhase={selectedPhase}
-			anosSemestres={anosSemestres}
-			selectedAnoSemestre={selectedAnoSemestre}
-			selectedCurso={selectedCurso}
-			horariosSeOverlapam={horariosSeOverlapam}
-			dayToNumber={dayToNumber}
-			daysOfWeek={daysOfWeek}
-		/>
+			<EventModal
+				open={modalOpen}
+				onClose={handleModalClose}
+				event={selectedEvent}
+				onSave={handleSaveEvent}
+				professores={professores}
+				disciplinas={disciplinas}
+				events={events}
+				selectedPhase={selectedPhase}
+				anosSemestres={anosSemestres}
+				selectedAnoSemestre={selectedAnoSemestre}
+				selectedCurso={selectedCurso}
+				horariosSeOverlapam={horariosSeOverlapam}
+				dayToNumber={dayToNumber}
+				daysOfWeek={daysOfWeek}
+			/>
 
 			{/* Modal de Confirmação para Recarregar */}
 			<Dialog
@@ -1322,7 +1328,10 @@ export default function Horarios() {
 						<>
 							<Typography variant="body1" sx={{ mb: 2 }}>
 								Você está prestes a sincronizar{" "}
-								<strong>{sumarioAlteracoes.totais.total} alteração(ões)</strong>{" "}
+								<strong>
+									{sumarioAlteracoes.totais.total}{" "}
+									alteração(ões)
+								</strong>{" "}
 								com o banco de dados:
 							</Typography>
 
@@ -1330,31 +1339,75 @@ export default function Horarios() {
 								<Box sx={{ mb: 3 }}>
 									<Typography
 										variant="h6"
-										sx={{ mb: 1, color: "success.main", fontWeight: "medium" }}
+										sx={{
+											mb: 1,
+											color: "success.main",
+											fontWeight: "medium",
+										}}
 									>
-										✓ Inclusões ({sumarioAlteracoes.totais.inclusoes})
+										✓ Inclusões (
+										{sumarioAlteracoes.totais.inclusoes})
 									</Typography>
-									<TableContainer component={Paper} variant="outlined">
+									<TableContainer
+										component={Paper}
+										variant="outlined"
+									>
 										<Table size="small">
 											<TableHead>
 												<TableRow>
-													<TableCell sx={{ fontWeight: "bold" }}>Docente</TableCell>
-													<TableCell sx={{ fontWeight: "bold" }}>CCR</TableCell>
-													<TableCell sx={{ fontWeight: "bold" }}>Dia</TableCell>
-													<TableCell sx={{ fontWeight: "bold" }}>Horário</TableCell>
+													<TableCell
+														sx={{
+															fontWeight: "bold",
+														}}
+													>
+														Docente
+													</TableCell>
+													<TableCell
+														sx={{
+															fontWeight: "bold",
+														}}
+													>
+														CCR
+													</TableCell>
+													<TableCell
+														sx={{
+															fontWeight: "bold",
+														}}
+													>
+														Dia
+													</TableCell>
+													<TableCell
+														sx={{
+															fontWeight: "bold",
+														}}
+													>
+														Horário
+													</TableCell>
 												</TableRow>
 											</TableHead>
 											<TableBody>
-												{sumarioAlteracoes.alteracoes.inclusoes.map((inc, idx) => (
-													<TableRow key={idx} hover>
-														<TableCell>{inc.docente}</TableCell>
-														<TableCell>{inc.ccr}</TableCell>
-														<TableCell>{inc.diaSemana}</TableCell>
-														<TableCell>
-															{inc.horaInicio} - {inc.horaFim}
-														</TableCell>
-													</TableRow>
-												))}
+												{sumarioAlteracoes.alteracoes.inclusoes.map(
+													(inc, idx) => (
+														<TableRow
+															key={idx}
+															hover
+														>
+															<TableCell>
+																{inc.docente}
+															</TableCell>
+															<TableCell>
+																{inc.ccr}
+															</TableCell>
+															<TableCell>
+																{inc.diaSemana}
+															</TableCell>
+															<TableCell>
+																{inc.horaInicio}{" "}
+																- {inc.horaFim}
+															</TableCell>
+														</TableRow>
+													),
+												)}
 											</TableBody>
 										</Table>
 									</TableContainer>
@@ -1365,46 +1418,99 @@ export default function Horarios() {
 								<Box sx={{ mb: 3 }}>
 									<Typography
 										variant="h6"
-										sx={{ mb: 1, color: "warning.main", fontWeight: "medium" }}
+										sx={{
+											mb: 1,
+											color: "warning.main",
+											fontWeight: "medium",
+										}}
 									>
-										⟳ Atualizações ({sumarioAlteracoes.totais.atualizacoes})
+										⟳ Atualizações (
+										{sumarioAlteracoes.totais.atualizacoes})
 									</Typography>
-									<TableContainer component={Paper} variant="outlined">
+									<TableContainer
+										component={Paper}
+										variant="outlined"
+									>
 										<Table size="small">
 											<TableHead>
 												<TableRow>
-													<TableCell sx={{ fontWeight: "bold" }}>CCR</TableCell>
-													<TableCell sx={{ fontWeight: "bold" }}>Dia</TableCell>
-													<TableCell sx={{ fontWeight: "bold" }}>Horário</TableCell>
-													<TableCell sx={{ fontWeight: "bold" }}>
+													<TableCell
+														sx={{
+															fontWeight: "bold",
+														}}
+													>
+														CCR
+													</TableCell>
+													<TableCell
+														sx={{
+															fontWeight: "bold",
+														}}
+													>
+														Dia
+													</TableCell>
+													<TableCell
+														sx={{
+															fontWeight: "bold",
+														}}
+													>
+														Horário
+													</TableCell>
+													<TableCell
+														sx={{
+															fontWeight: "bold",
+														}}
+													>
 														Docente Anterior
 													</TableCell>
-													<TableCell sx={{ fontWeight: "bold" }}>
+													<TableCell
+														sx={{
+															fontWeight: "bold",
+														}}
+													>
 														Docente Novo
 													</TableCell>
 												</TableRow>
 											</TableHead>
 											<TableBody>
-												{sumarioAlteracoes.alteracoes.atualizacoes.map((atu, idx) => (
-													<TableRow key={idx} hover>
-														<TableCell>{atu.ccr}</TableCell>
-														<TableCell>{atu.diaSemana}</TableCell>
-														<TableCell>
-															{atu.horaInicio} - {atu.horaFim}
-														</TableCell>
-														<TableCell
-															sx={{
-																textDecoration: "line-through",
-																color: "text.secondary",
-															}}
+												{sumarioAlteracoes.alteracoes.atualizacoes.map(
+													(atu, idx) => (
+														<TableRow
+															key={idx}
+															hover
 														>
-															{atu.docenteAntigo}
-														</TableCell>
-														<TableCell sx={{ color: "success.main" }}>
-															{atu.docenteNovo}
-														</TableCell>
-													</TableRow>
-												))}
+															<TableCell>
+																{atu.ccr}
+															</TableCell>
+															<TableCell>
+																{atu.diaSemana}
+															</TableCell>
+															<TableCell>
+																{atu.horaInicio}{" "}
+																- {atu.horaFim}
+															</TableCell>
+															<TableCell
+																sx={{
+																	textDecoration:
+																		"line-through",
+																	color: "text.secondary",
+																}}
+															>
+																{
+																	atu.docenteAntigo
+																}
+															</TableCell>
+															<TableCell
+																sx={{
+																	color: "success.main",
+																}}
+															>
+																{
+																	atu.docenteNovo
+																}
+															</TableCell>
+														</TableRow>
+													),
+												)}
 											</TableBody>
 										</Table>
 									</TableContainer>
@@ -1415,31 +1521,75 @@ export default function Horarios() {
 								<Box sx={{ mb: 2 }}>
 									<Typography
 										variant="h6"
-										sx={{ mb: 1, color: "error.main", fontWeight: "medium" }}
+										sx={{
+											mb: 1,
+											color: "error.main",
+											fontWeight: "medium",
+										}}
 									>
-										✗ Remoções ({sumarioAlteracoes.totais.remocoes})
+										✗ Remoções (
+										{sumarioAlteracoes.totais.remocoes})
 									</Typography>
-									<TableContainer component={Paper} variant="outlined">
+									<TableContainer
+										component={Paper}
+										variant="outlined"
+									>
 										<Table size="small">
 											<TableHead>
 												<TableRow>
-													<TableCell sx={{ fontWeight: "bold" }}>Docente</TableCell>
-													<TableCell sx={{ fontWeight: "bold" }}>CCR</TableCell>
-													<TableCell sx={{ fontWeight: "bold" }}>Dia</TableCell>
-													<TableCell sx={{ fontWeight: "bold" }}>Horário</TableCell>
+													<TableCell
+														sx={{
+															fontWeight: "bold",
+														}}
+													>
+														Docente
+													</TableCell>
+													<TableCell
+														sx={{
+															fontWeight: "bold",
+														}}
+													>
+														CCR
+													</TableCell>
+													<TableCell
+														sx={{
+															fontWeight: "bold",
+														}}
+													>
+														Dia
+													</TableCell>
+													<TableCell
+														sx={{
+															fontWeight: "bold",
+														}}
+													>
+														Horário
+													</TableCell>
 												</TableRow>
 											</TableHead>
 											<TableBody>
-												{sumarioAlteracoes.alteracoes.remocoes.map((rem, idx) => (
-													<TableRow key={idx} hover>
-														<TableCell>{rem.docente}</TableCell>
-														<TableCell>{rem.ccr}</TableCell>
-														<TableCell>{rem.diaSemana}</TableCell>
-														<TableCell>
-															{rem.horaInicio} - {rem.horaFim}
-														</TableCell>
-													</TableRow>
-												))}
+												{sumarioAlteracoes.alteracoes.remocoes.map(
+													(rem, idx) => (
+														<TableRow
+															key={idx}
+															hover
+														>
+															<TableCell>
+																{rem.docente}
+															</TableCell>
+															<TableCell>
+																{rem.ccr}
+															</TableCell>
+															<TableCell>
+																{rem.diaSemana}
+															</TableCell>
+															<TableCell>
+																{rem.horaInicio}{" "}
+																- {rem.horaFim}
+															</TableCell>
+														</TableRow>
+													),
+												)}
 											</TableBody>
 										</Table>
 									</TableContainer>
@@ -1450,70 +1600,184 @@ export default function Horarios() {
 								<Box sx={{ mb: 2 }}>
 									<Typography
 										variant="h6"
-										sx={{ mb: 1, color: "info.main", fontWeight: "medium" }}
+										sx={{
+											mb: 1,
+											color: "info.main",
+											fontWeight: "medium",
+										}}
 									>
-										✎ Modificações ({sumarioAlteracoes.totais.modificacoes})
+										✎ Modificações (
+										{sumarioAlteracoes.totais.modificacoes})
 									</Typography>
-									<TableContainer component={Paper} variant="outlined">
+									<TableContainer
+										component={Paper}
+										variant="outlined"
+									>
 										<Table size="small">
 											<TableHead>
 												<TableRow>
-													<TableCell sx={{ fontWeight: "bold" }}>Docente</TableCell>
-													<TableCell sx={{ fontWeight: "bold" }}>CCR</TableCell>
-													<TableCell sx={{ fontWeight: "bold" }}>Alteração</TableCell>
+													<TableCell
+														sx={{
+															fontWeight: "bold",
+														}}
+													>
+														Docente
+													</TableCell>
+													<TableCell
+														sx={{
+															fontWeight: "bold",
+														}}
+													>
+														CCR
+													</TableCell>
+													<TableCell
+														sx={{
+															fontWeight: "bold",
+														}}
+													>
+														Alteração
+													</TableCell>
 												</TableRow>
 											</TableHead>
 											<TableBody>
-												{sumarioAlteracoes.alteracoes.modificacoes.map((mod, idx) => (
-													<TableRow key={idx} hover>
-														<TableCell>{mod.docente}</TableCell>
-														<TableCell>{mod.ccr}</TableCell>
-														<TableCell>
-															{mod.mudouDia && (
-																<Box sx={{ mb: 0.5 }}>
-																	<Typography variant="caption" display="block">
-																		<strong>Dia:</strong>{" "}
-																		<span style={{ textDecoration: "line-through", color: "text.secondary" }}>
-																			{mod.diaSemanaAntigo}
-																		</span>
-																		{" → "}
-																		<span style={{ color: "green" }}>
-																			{mod.diaSemana}
-																		</span>
-																	</Typography>
-																</Box>
-															)}
-															{mod.mudouHorario && (
-																<Box sx={{ mb: 0.5 }}>
-																	<Typography variant="caption" display="block">
-																		<strong>Horário:</strong>{" "}
-																		<span style={{ textDecoration: "line-through", color: "text.secondary" }}>
-																			{mod.horaInicioAntigo}
-																		</span>
-																		{" → "}
-																		<span style={{ color: "green" }}>
-																			{mod.horaInicio}
-																		</span>
-																	</Typography>
-																</Box>
-															)}
-															{mod.mudouDuracao && (
-																<Box>
-																	<Typography variant="caption" display="block">
-																		<strong>Duração:</strong>{" "}
-																		<span style={{ textDecoration: "line-through", color: "text.secondary" }}>
-																			{mod.horaInicioAntigo} - {mod.horaFimAntigo}
-																		</span>
-																		{" → "}
-																		<span style={{ color: "green" }}>
-																			{mod.horaInicio} - {mod.horaFim}
-																		</span>
-																	</Typography>
-																</Box>
-															)}
-														</TableCell>
-													</TableRow>
-												))}
+												{sumarioAlteracoes.alteracoes.modificacoes.map(
+													(mod, idx) => (
+														<TableRow
+															key={idx}
+															hover
+														>
+															<TableCell>
+																{mod.docente}
+															</TableCell>
+															<TableCell>
+																{mod.ccr}
+															</TableCell>
+															<TableCell>
+																{mod.mudouDia && (
+																	<Box
+																		sx={{
+																			mb: 0.5,
+																		}}
+																	>
+																		<Typography
+																			variant="caption"
+																			display="block"
+																		>
+																			<strong>
+																				Dia:
+																			</strong>{" "}
+																			<span
+																				style={{
+																					textDecoration:
+																						"line-through",
+																					color: "text.secondary",
+																				}}
+																			>
+																				{
+																					mod.diaSemanaAntigo
+																				}
+																			</span>
+																			{
+																				" → "
+																			}
+																			<span
+																				style={{
+																					color: "green",
+																				}}
+																			>
+																				{
+																					mod.diaSemana
+																				}
+																			</span>
+																		</Typography>
+																	</Box>
+																)}
+																{mod.mudouHorario && (
+																	<Box
+																		sx={{
+																			mb: 0.5,
+																		}}
+																	>
+																		<Typography
+																			variant="caption"
+																			display="block"
+																		>
+																			<strong>
+																				Horário:
+																			</strong>{" "}
+																			<span
+																				style={{
+																					textDecoration:
+																						"line-through",
+																					color: "text.secondary",
+																				}}
+																			>
+																				{
+																					mod.horaInicioAntigo
+																				}
+																			</span>
+																			{
+																				" → "
+																			}
+																			<span
+																				style={{
+																					color: "green",
+																				}}
+																			>
+																				{
+																					mod.horaInicio
+																				}
+																			</span>
+																		</Typography>
+																	</Box>
+																)}
+																{mod.mudouDuracao && (
+																	<Box>
+																		<Typography
+																			variant="caption"
+																			display="block"
+																		>
+																			<strong>
+																				Duração:
+																			</strong>{" "}
+																			<span
+																				style={{
+																					textDecoration:
+																						"line-through",
+																					color: "text.secondary",
+																				}}
+																			>
+																				{
+																					mod.horaInicioAntigo
+																				}{" "}
+																				-{" "}
+																				{
+																					mod.horaFimAntigo
+																				}
+																			</span>
+																			{
+																				" → "
+																			}
+																			<span
+																				style={{
+																					color: "green",
+																				}}
+																			>
+																				{
+																					mod.horaInicio
+																				}{" "}
+																				-{" "}
+																				{
+																					mod.horaFim
+																				}
+																			</span>
+																		</Typography>
+																	</Box>
+																)}
+															</TableCell>
+														</TableRow>
+													),
+												)}
 											</TableBody>
 										</Table>
 									</TableContainer>
@@ -1534,10 +1798,18 @@ export default function Horarios() {
 						onClick={executeSyncToDatabase}
 						variant="contained"
 						color="primary"
-						startIcon={savingHorarios ? <CircularProgress size={20} /> : <SaveIcon />}
+						startIcon={
+							savingHorarios ? (
+								<CircularProgress size={20} />
+							) : (
+								<SaveIcon />
+							)
+						}
 						disabled={savingHorarios}
 					>
-						{savingHorarios ? "Sincronizando..." : "Confirmar e Sincronizar"}
+						{savingHorarios
+							? "Sincronizando..."
+							: "Confirmar e Sincronizar"}
 					</Button>
 				</DialogActions>
 			</Dialog>

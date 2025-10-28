@@ -176,7 +176,10 @@ export default function CCRs() {
 							value={cursosSelecionados}
 							onChange={handleCursosChange}
 							input={
-								<OutlinedInput id="select-cursos" label="Cursos" />
+								<OutlinedInput
+									id="select-cursos"
+									label="Cursos"
+								/>
 							}
 							renderValue={(selected) => (
 								<Box

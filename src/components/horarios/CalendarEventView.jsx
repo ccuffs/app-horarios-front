@@ -384,4 +384,3 @@ const CalendarEventView = ({
 };
 
 export default CalendarEventView;
-
