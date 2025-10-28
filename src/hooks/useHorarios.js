@@ -1,9 +1,12 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useAuth } from "../contexts/AuthContext";
-import axiosInstance from "../auth/axios";
 import Permissoes from "../enums/permissoes";
 import permissoesService from "../services/permissoesService";
 import horariosController from "../controllers/horarios-controller";
+import horariosService from "../services/horarios-service";
+import docentesService from "../services/docentes-service";
+import ccrsService from "../services/ccrs-service";
+import ofertasService from "../services/ofertas-service";
 import anoSemestreController from "../controllers/ano-semestre-controller";
 import usuariosCursosController from "../controllers/usuarios-cursos-controller";
 import {
@@ -158,35 +161,69 @@ export default function useHorarios() {
 
 	// Função para buscar professores da API
 	const fetchProfessores = useCallback(async () => {
-		const userId = getCurrentUserId();
-		await horariosController.fetchProfessores(
-			userId,
-			setLoadingProfessores,
-			setErrorProfessores,
-			setProfessores,
-		);
+		try {
+			setLoadingProfessores(true);
+			setErrorProfessores(null);
+
+			const professoresData = await docentesService.getDocentes();
+			const professoresFormatados = horariosController.formatProfessores(professoresData);
+
+			setProfessores(professoresFormatados);
+		} catch (error) {
+			console.error("Erro ao buscar professores:", error);
+			setErrorProfessores("Erro ao carregar professores. Usando dados locais.");
+		} finally {
+			setLoadingProfessores(false);
+		}
 	}, []);
 
 	// Função para buscar disciplinas (CCRs) da API
 	const fetchDisciplinas = useCallback(async () => {
-		const userId = getCurrentUserId();
-		await horariosController.fetchDisciplinas(
-			userId,
-			setLoadingDisciplinas,
-			setErrorDisciplinas,
-			setDisciplinas,
-		);
+		try {
+			setLoadingDisciplinas(true);
+			setErrorDisciplinas(null);
+
+			const disciplinasData = await ccrsService.getCCRs();
+
+			setDisciplinas(disciplinasData);
+		} catch (error) {
+			console.error("Erro ao buscar disciplinas:", error);
+			setErrorDisciplinas("Erro ao carregar disciplinas.");
+			setDisciplinas([]);
+		} finally {
+			setLoadingDisciplinas(false);
+		}
 	}, []);
 
 	// Função para buscar ofertas da API
 	const fetchOfertas = useCallback(async () => {
-		await horariosController.fetchOfertas(
-			selectedAnoSemestre,
-			selectedCurso,
-			setLoadingOfertas,
-			setErrorOfertas,
-			setOfertas,
-		);
+		try {
+			setLoadingOfertas(true);
+			setErrorOfertas(null);
+
+			const params = {};
+			if (
+				selectedAnoSemestre?.ano &&
+				selectedAnoSemestre?.semestre &&
+				selectedCurso?.id
+			) {
+				params.ano = selectedAnoSemestre.ano;
+				params.semestre = selectedAnoSemestre.semestre;
+				params.id_curso = selectedCurso.id;
+			} else if (selectedCurso?.id) {
+				params.id_curso = selectedCurso.id;
+			}
+
+			const ofertasData = await ofertasService.getOfertas(params);
+
+			setOfertas(ofertasData);
+		} catch (error) {
+			console.error("Erro ao buscar ofertas:", error);
+			setErrorOfertas("Erro ao carregar ofertas. Usando lógica padrão de turnos.");
+			setOfertas([]);
+		} finally {
+			setLoadingOfertas(false);
+		}
 	}, [selectedAnoSemestre, selectedCurso]);
 
 	// Função para converter horário string para minutos desde meia-noite
@@ -373,8 +410,8 @@ export default function useHorarios() {
 		try {
 			setConflitosHorarios([]);
 
+			// Identificar professores com horários
 			const professoresComHorarios = new Set();
-
 			Object.keys(events).forEach((phaseNumber) => {
 				const phaseEvents = events[phaseNumber];
 				if (phaseEvents) {
@@ -405,8 +442,8 @@ export default function useHorarios() {
 				}
 			});
 
-			const conflitos = [];
-			const conflitosProcessados = new Set();
+			// Buscar horários salvos de todos os anos/semestres usando o serviço
+			const horariosSalvosPorProfessor = {};
 
 			for (const codigoProfessor of professoresComHorarios) {
 				if (codigoProfessor !== "sem.professor") {
@@ -414,14 +451,12 @@ export default function useHorarios() {
 						const allHorariosResponse = await Promise.all(
 							anosSemestres.map(async (anoSem) => {
 								try {
-									const response = await axiosInstance.get("/horarios", {
-										params: {
-											ano: anoSem.ano,
-											semestre: anoSem.semestre,
-											id_curso: selectedCurso?.id || 1,
-										},
+									const result = await horariosService.getHorarios({
+										ano: anoSem.ano,
+										semestre: anoSem.semestre,
+										id_curso: selectedCurso?.id || 1,
 									});
-									return response.horarios || [];
+									return result.horarios || [];
 								} catch (error) {
 									console.warn(
 										`Erro ao buscar horários para ${anoSem.ano}/${anoSem.semestre}:`,
@@ -432,7 +467,8 @@ export default function useHorarios() {
 							}),
 						);
 
-						const horariosSalvos = allHorariosResponse
+						// Filtrar horários do professor e marcar como salvos
+						horariosSalvosPorProfessor[codigoProfessor] = allHorariosResponse
 							.flat()
 							.filter(
 								(h) =>
@@ -446,267 +482,6 @@ export default function useHorarios() {
 								eventoId: h.id,
 								tipo: "salvo",
 							}));
-
-						const horariosTemporarios = [];
-						Object.keys(events).forEach((phaseNumber) => {
-							const phaseEvents = events[phaseNumber];
-							if (phaseEvents) {
-								Object.values(phaseEvents).forEach((eventArray) => {
-									const eventsInSlot = Array.isArray(eventArray)
-										? eventArray
-										: [eventArray];
-									eventsInSlot.forEach((event) => {
-										const professoresDoEvento =
-											event.professoresIds &&
-											Array.isArray(event.professoresIds)
-												? event.professoresIds
-												: event.professorId
-												? [event.professorId]
-												: [];
-
-										if (
-											professoresDoEvento.includes(codigoProfessor)
-										) {
-											const jaExisteNoSalvo = horariosSalvos.some(
-												(salvo) => {
-													return (
-														salvo.id_ccr ===
-															event.disciplinaId &&
-														salvo.dia_semana ===
-															dayToNumber[event.dayId] &&
-														salvo.hora_inicio ===
-															event.startTime &&
-														salvo.codigo_docente ===
-															codigoProfessor &&
-														salvo.ano ===
-															selectedAnoSemestre.ano &&
-														salvo.semestre ===
-															selectedAnoSemestre.semestre
-													);
-												},
-											);
-
-											if (
-												!jaExisteNoSalvo &&
-												event.disciplinaId &&
-												!event.permitirConflito
-											) {
-												horariosTemporarios.push({
-													codigo_docente: codigoProfessor,
-													dia_semana:
-														dayToNumber[event.dayId],
-													hora_inicio: event.startTime,
-													duracao: event.duration || 2,
-													ano: selectedAnoSemestre.ano,
-													semestre:
-														selectedAnoSemestre.semestre,
-													id_ccr: event.disciplinaId,
-													disciplinaNome: event.title,
-													tipo: "temporario",
-													eventoId: event.id,
-													uniqueKey: `temp-${event.id}`,
-													permitirConflito:
-														event.permitirConflito || false,
-												});
-											}
-										}
-									});
-								});
-							}
-						});
-
-						const todosHorarios = [...horariosSalvos, ...horariosTemporarios];
-
-						const eventosUnicos = new Map();
-						const chavesDuplicacao = new Set();
-
-						todosHorarios.forEach((horario) => {
-							let horaInicio = horario.hora_inicio;
-							if (typeof horaInicio === "object") {
-								horaInicio = horaInicio.toString().substring(0, 5);
-							}
-							if (horaInicio && horaInicio.includes(":")) {
-								horaInicio = horaInicio.split(":").slice(0, 2).join(":");
-							}
-
-							const chaveCompleta = `${codigoProfessor}-${horario.id_ccr}-${horario.dia_semana}-${horaInicio}-${horario.duracao}-${horario.ano}-${horario.semestre}`;
-
-							if (chavesDuplicacao.has(chaveCompleta)) {
-								return;
-							}
-							chavesDuplicacao.add(chaveCompleta);
-
-							const eventoId = horario.eventoId || horario.id;
-							if (eventoId) {
-								const prioridade =
-									horario.tipo === "novo"
-										? 3
-										: horario.tipo === "temporario"
-										? 2
-										: 1;
-								const existente = eventosUnicos.get(eventoId);
-
-								if (!existente || prioridade > existente.prioridade) {
-									eventosUnicos.set(eventoId, {
-										...horario,
-										prioridade,
-										hora_inicio: horaInicio,
-									});
-								}
-							} else {
-								eventosUnicos.set(chaveCompleta, {
-									...horario,
-									hora_inicio: horaInicio,
-								});
-							}
-						});
-
-						const horariosFinais = Array.from(eventosUnicos.values());
-
-						const horariosPorDia = {};
-						horariosFinais.forEach((horario) => {
-							const dia = horario.dia_semana;
-							if (!horariosPorDia[dia]) {
-								horariosPorDia[dia] = [];
-							}
-							horariosPorDia[dia].push(horario);
-						});
-
-						Object.entries(horariosPorDia).forEach(([dia, horariosNoDia]) => {
-							horariosNoDia.sort((a, b) => {
-								const horaA =
-									typeof a.hora_inicio === "object"
-										? a.hora_inicio.toString()
-										: a.hora_inicio;
-								const horaB =
-									typeof b.hora_inicio === "object"
-										? b.hora_inicio.toString()
-										: b.hora_inicio;
-								return horaA.localeCompare(horaB);
-							});
-
-							for (let i = 0; i < horariosNoDia.length; i++) {
-								for (let j = i + 1; j < horariosNoDia.length; j++) {
-									const h1 = horariosNoDia[i];
-									const h2 = horariosNoDia[j];
-
-									const evento1Id = h1.eventoId || h1.id;
-									const evento2Id = h2.eventoId || h2.id;
-
-									if (evento1Id && evento2Id && evento1Id === evento2Id) {
-										continue;
-									}
-
-									if (h1.ano !== h2.ano || h1.semestre !== h2.semestre) {
-										continue;
-									}
-
-									const hora1 =
-										typeof h1.hora_inicio === "object"
-											? h1.hora_inicio.toString().substring(0, 5)
-											: h1.hora_inicio;
-									const hora2 =
-										typeof h2.hora_inicio === "object"
-											? h2.hora_inicio.toString().substring(0, 5)
-											: h2.hora_inicio;
-
-									const hora1Normalizada = hora1
-										?.split(":")
-										.slice(0, 2)
-										.join(":");
-									const hora2Normalizada = hora2
-										?.split(":")
-										.slice(0, 2)
-										.join(":");
-
-									const saoOMesmoHorario =
-										h1.id_ccr === h2.id_ccr &&
-										hora1Normalizada === hora2Normalizada &&
-										h1.ano === h2.ano &&
-										h1.semestre === h2.semestre &&
-										h1.dia_semana === h2.dia_semana &&
-										h1.codigo_docente === h2.codigo_docente;
-
-									if (saoOMesmoHorario) {
-										continue;
-									}
-
-									if (h1.permitirConflito || h2.permitirConflito) {
-										continue;
-									}
-
-									if (h1.id_ccr === h2.id_ccr && h1.fase !== h2.fase) {
-										continue;
-									}
-
-									if (
-										h1.id_ccr &&
-										h2.id_ccr &&
-										horariosSeOverlapam(h1, h2)
-									) {
-										const conflict1 = `${h1.id_ccr}-${h1.ano}-${h1.semestre}-${hora1}-${h1.duracao}`;
-										const conflict2 = `${h2.id_ccr}-${h2.ano}-${h2.semestre}-${hora2}-${h2.duracao}`;
-										const sortedConflicts = [conflict1, conflict2].sort();
-										const conflictId = `${codigoProfessor}-${dia}-${sortedConflicts.join(
-											"---",
-										)}`;
-
-										if (conflitosProcessados.has(conflictId)) {
-											continue;
-										}
-										conflitosProcessados.add(conflictId);
-
-										const professor = professores.find(
-											(p) => p.codigo === codigoProfessor,
-										);
-										const disciplina1 = disciplinas.find(
-											(d) => d.id === h1.id_ccr,
-										);
-										const disciplina2 = disciplinas.find(
-											(d) => d.id === h2.id_ccr,
-										);
-
-										const novoConflito = {
-											id: conflictId,
-											professor: professor
-												? professor.name
-												: codigoProfessor,
-											codigoProfessor,
-											dia: dia,
-											diaNome:
-												daysOfWeek.find(
-													(d) =>
-														dayToNumber[d.id] === parseInt(dia),
-												)?.title || `Dia ${dia}`,
-											horario1: {
-												...h1,
-												disciplinaNome:
-													h1.disciplinaNome ||
-													(disciplina1
-														? disciplina1.nome
-														: "Disciplina não encontrada"),
-												hora_inicio: hora1,
-												ano_semestre: `${h1.ano}/${h1.semestre}`,
-												tipo: h1.tipo || "salvo",
-											},
-											horario2: {
-												...h2,
-												disciplinaNome:
-													h2.disciplinaNome ||
-													(disciplina2
-														? disciplina2.nome
-														: "Disciplina não encontrada"),
-												hora_inicio: hora2,
-												ano_semestre: `${h2.ano}/${h2.semestre}`,
-												tipo: h2.tipo || "salvo",
-											},
-										};
-
-										conflitos.push(novoConflito);
-									}
-								}
-							}
-						});
 					} catch (error) {
 						console.error(
 							`Erro ao verificar conflitos para professor ${codigoProfessor}:`,
@@ -715,6 +490,19 @@ export default function useHorarios() {
 					}
 				}
 			}
+
+			// Usar o controller para processar e detectar conflitos
+			const conflitos = horariosController.detectarConflitos(
+				events,
+				horariosSalvosPorProfessor,
+				professores,
+				disciplinas,
+				anosSemestres,
+				selectedAnoSemestre,
+				horariosSeOverlapam,
+				dayToNumber,
+				daysOfWeek,
+			);
 
 			setConflitosHorarios(conflitos);
 			return conflitos;
@@ -739,17 +527,29 @@ export default function useHorarios() {
 		setSaveSuccess(false);
 
 		try {
-			const result = await horariosController.syncHorarios(
-				events,
-				originalHorarios,
-				selectedAnoSemestre,
-				selectedCurso,
-			);
+			// Preparar dados de sincronização usando o controller
+			const { novos, editados, removidosIds, horariosAtuais, hasChanges } =
+				horariosController.prepareSyncData(
+					events,
+					originalHorarios,
+					selectedAnoSemestre,
+					selectedCurso,
+				);
+
+			// Se não há mudanças, não fazer chamada de API
+			if (!hasChanges) {
+				setSaveSuccess(true);
+				setTimeout(() => setSaveSuccess(false), 3000);
+				return;
+			}
+
+			// Fazer chamada de API para sincronizar
+			await horariosService.syncHorarios(novos, editados, removidosIds);
 
 			setSaveSuccess(true);
 			setTimeout(() => setSaveSuccess(false), 3000);
 
-			setOriginalHorarios(result.horariosAtuais);
+			setOriginalHorarios(horariosAtuais);
 
 			await detectarConflitosHorarios();
 		} catch (error) {
@@ -790,14 +590,23 @@ export default function useHorarios() {
 		try {
 			await fetchOfertas();
 
-			const result = await horariosController.loadHorarios(
-				selectedAnoSemestre,
-				selectedCurso,
+			// Fazer chamada de API para buscar horários
+			const result = await horariosService.getHorarios({
+				ano: selectedAnoSemestre.ano,
+				semestre: selectedAnoSemestre.semestre,
+				id_curso: selectedCurso?.id || 1,
+			});
+
+			const horariosFromDb = result.horarios;
+
+			// Usar o controller para processar os dados
+			const processedResult = horariosController.processHorarios(
+				horariosFromDb,
 				disciplinas,
 				professores,
 			);
 
-			if (Object.keys(result.events).length === 0) {
+			if (Object.keys(processedResult.events).length === 0) {
 				setEvents({});
 				setOriginalHorarios([]);
 
@@ -814,10 +623,10 @@ export default function useHorarios() {
 				return;
 			}
 
-			const eventsWithFixedColors = fixEventColorsAfterLoading(result.events);
+			const eventsWithFixedColors = fixEventColorsAfterLoading(processedResult.events);
 
 			setEvents(eventsWithFixedColors);
-			setOriginalHorarios(result.originalHorarios);
+			setOriginalHorarios(processedResult.originalHorarios);
 		} catch (error) {
 			console.error("Erro ao recarregar dados:", error);
 
@@ -840,6 +649,7 @@ export default function useHorarios() {
 		professores,
 		anosSemestres,
 		fetchOfertas,
+		fixEventColorsAfterLoading,
 	]);
 
 	// Função para lidar com o clique do botão recarregar
@@ -890,15 +700,26 @@ export default function useHorarios() {
 		setImportError(null);
 
 		try {
-			const result = await horariosController.importHorarios(
-				selectedAnoSemestreOrigem,
-				selectedAnoSemestre,
-				selectedCurso,
+			if (!selectedAnoSemestreOrigem || !selectedCurso) {
+				throw new Error("Selecione um ano/semestre de origem e um curso");
+			}
+
+			// Fazer chamada de API para importar horários
+			const result = await horariosService.importarHorarios(
+				selectedAnoSemestreOrigem.ano,
+				selectedAnoSemestreOrigem.semestre,
+				selectedAnoSemestre.ano,
+				selectedAnoSemestre.semestre,
+				selectedCurso.id,
 				incluirDocentes,
 				incluirOfertas,
 			);
 
-			setSnackbarMessage(result.message);
+			const message = `Importação realizada com sucesso! ${
+				result.horarios_importados || 0
+			} horários e ${result.ofertas_importadas || 0} ofertas criados.`;
+
+			setSnackbarMessage(message);
 			setSnackbarOpen(true);
 			setShowImportModal(false);
 
@@ -2370,9 +2191,22 @@ export default function useHorarios() {
 	useEffect(() => {
 		const carregarOutroSemestre = async () => {
 			try {
-				const mapa = await horariosController.calcularCreditosOutroSemestre(
-					selectedCurso,
-					selectedAnoSemestre,
+				if (!selectedCurso?.id || !selectedAnoSemestre?.ano) {
+					setCreditosOutroSemestre(new Map());
+					return;
+				}
+				const outroSemestre = selectedAnoSemestre.semestre === 1 ? 2 : 1;
+
+				// Fazer chamada de API para buscar horários do outro semestre
+				const result = await horariosService.getHorarios({
+					ano: selectedAnoSemestre.ano,
+					semestre: outroSemestre,
+					id_curso: selectedCurso.id,
+				});
+
+				// Usar o controller para calcular créditos a partir dos horários
+				const mapa = horariosController.calcularCreditosOutroSemestre(
+					result.horarios,
 					disciplinas,
 				);
 				setCreditosOutroSemestre(mapa);

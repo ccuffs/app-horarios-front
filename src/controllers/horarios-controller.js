@@ -1,7 +1,3 @@
-import horariosService from "../services/horarios-service.js";
-import docentesService from "../services/docentes-service.js";
-import ccrsService from "../services/ccrs-service.js";
-import ofertasService from "../services/ofertas-service.js";
 import {
 	eventToDbFormat,
 	dbToEventFormat,
@@ -11,80 +7,27 @@ import {
 } from "../utils/horariosUtils.js";
 
 /**
- * Carrega todos os dados necessários para a tela de horários
+ * Formata professores da API para o formato da aplicação
  */
-export async function loadAllData(userId) {
-	try {
-		const [professores, disciplinas] = await Promise.all([
-			docentesService.getDocentes(),
-			ccrsService.getCCRs(),
-		]);
-
-		// Formatar professores
-		const professoresFormatados = professores.map((prof) => ({
-			id: prof.codigo,
-			codigo: prof.codigo,
-			name: prof.nome,
-			email: prof.email,
-			sala: prof.sala,
-		}));
-
-		return {
-			professores: professoresFormatados,
-			disciplinas,
-		};
-	} catch (error) {
-		console.error("Erro ao carregar dados:", error);
-		throw error;
-	}
+export function formatProfessores(professores) {
+	return professores.map((prof) => ({
+		id: prof.codigo,
+		codigo: prof.codigo,
+		name: prof.nome,
+		email: prof.email,
+		sala: prof.sala,
+	}));
 }
 
 /**
- * Carrega ofertas com filtros opcionais
+ * Processa e formata horários do banco de dados com agrupamento por professores
  */
-export async function loadOfertas(
-	selectedAnoSemestre = null,
-	selectedCurso = null,
-) {
-	try {
-		const params = {};
-		if (
-			selectedAnoSemestre?.ano &&
-			selectedAnoSemestre?.semestre &&
-			selectedCurso?.id
-		) {
-			params.ano = selectedAnoSemestre.ano;
-			params.semestre = selectedAnoSemestre.semestre;
-			params.id_curso = selectedCurso.id;
-		} else if (selectedCurso?.id) {
-			params.id_curso = selectedCurso.id;
-		}
-
-		const ofertas = await ofertasService.getOfertas(params);
-		return ofertas;
-	} catch (error) {
-		console.error("Erro ao carregar ofertas:", error);
-		throw error;
-	}
-}
-
-/**
- * Carrega horários do banco de dados com agrupamento por professores
- */
-export async function loadHorarios(
-	selectedAnoSemestre,
-	selectedCurso,
+export function processHorarios(
+	horariosFromDb,
 	disciplinas,
 	professores,
 ) {
 	try {
-		const result = await horariosService.getHorarios({
-			ano: selectedAnoSemestre.ano,
-			semestre: selectedAnoSemestre.semestre,
-			id_curso: selectedCurso?.id || 1,
-		});
-
-		const horariosFromDb = result.horarios;
 
 		if (horariosFromDb.length === 0) {
 			return {
@@ -191,186 +134,130 @@ export async function loadHorarios(
 }
 
 /**
- * Sincroniza horários com o banco de dados
+ * Prepara dados de horários para sincronização (identifica novos, editados e removidos)
  */
-export async function syncHorarios(
+export function prepareSyncData(
 	events,
 	originalHorarios,
 	selectedAnoSemestre,
 	selectedCurso,
 ) {
-	try {
-		// 1. Montar lista de horários atuais
-		const horariosAtuais = [];
-		Object.keys(events).forEach((phaseNumber) => {
-			const phaseEvents = events[phaseNumber];
-			if (phaseEvents) {
-				Object.values(phaseEvents).forEach((eventArray) => {
-					const eventsInSlot = Array.isArray(eventArray)
-						? eventArray
-						: [eventArray];
-					eventsInSlot.forEach((event) => {
-						const hasProfessores =
-							(event.professoresIds &&
-								Array.isArray(event.professoresIds) &&
-								event.professoresIds.length > 0) ||
-							event.professorId;
+	// 1. Montar lista de horários atuais
+	const horariosAtuais = [];
+	Object.keys(events).forEach((phaseNumber) => {
+		const phaseEvents = events[phaseNumber];
+		if (phaseEvents) {
+			Object.values(phaseEvents).forEach((eventArray) => {
+				const eventsInSlot = Array.isArray(eventArray)
+					? eventArray
+					: [eventArray];
+				eventsInSlot.forEach((event) => {
+					const hasProfessores =
+						(event.professoresIds &&
+							Array.isArray(event.professoresIds) &&
+							event.professoresIds.length > 0) ||
+						event.professorId;
 
-						if (event.disciplinaId && hasProfessores) {
-							if (
-								event.professoresIds &&
-								Array.isArray(event.professoresIds)
-							) {
-								event.professoresIds.forEach(
-									(professorId, index) => {
-										let uniqueId = event.id;
-										if (event.professoresIds.length > 1) {
-											const baseId = event.id.replace(
-												/-prof\d+$/,
-												"",
-											);
-											uniqueId = `${baseId}-prof${
-												index + 1
-											}`;
-										}
-
-										const eventoCopy = {
-											...event,
-											professorId,
-											id: uniqueId,
-										};
-										const dbEvent = eventToDbFormat(
-											eventoCopy,
-											phaseNumber,
-											selectedAnoSemestre,
-											selectedCurso,
+					if (event.disciplinaId && hasProfessores) {
+						if (
+							event.professoresIds &&
+							Array.isArray(event.professoresIds)
+						) {
+							event.professoresIds.forEach(
+								(professorId, index) => {
+									let uniqueId = event.id;
+									if (event.professoresIds.length > 1) {
+										const baseId = event.id.replace(
+											/-prof\d+$/,
+											"",
 										);
-										horariosAtuais.push(dbEvent);
-									},
-								);
-							} else if (event.professorId) {
-								const dbEvent = eventToDbFormat(
-									event,
-									phaseNumber,
-									selectedAnoSemestre,
-									selectedCurso,
-								);
-								horariosAtuais.push(dbEvent);
-							}
+										uniqueId = `${baseId}-prof${
+											index + 1
+										}`;
+									}
+
+									const eventoCopy = {
+										...event,
+										professorId,
+										id: uniqueId,
+									};
+									const dbEvent = eventToDbFormat(
+										eventoCopy,
+										phaseNumber,
+										selectedAnoSemestre,
+										selectedCurso,
+									);
+									horariosAtuais.push(dbEvent);
+								},
+							);
+						} else if (event.professorId) {
+							const dbEvent = eventToDbFormat(
+								event,
+								phaseNumber,
+								selectedAnoSemestre,
+								selectedCurso,
+							);
+							horariosAtuais.push(dbEvent);
 						}
-					});
+					}
 				});
-			}
-		});
-
-		// 2. Identificar mudanças
-		const novos = [];
-		const editados = [];
-		const removidosIds = [];
-
-		const originaisPorId = {};
-		originalHorarios.forEach((original) => {
-			originaisPorId[original.id] = original;
-		});
-
-		const horarioFoiModificado = (atual, original) => {
-			const hora1 = normalizeTimeFromDB(atual.hora_inicio);
-			const hora2 = normalizeTimeFromDB(original.hora_inicio);
-
-			return (
-				atual.id_ccr !== original.id_ccr ||
-				atual.codigo_docente !== original.codigo_docente ||
-				atual.dia_semana !== original.dia_semana ||
-				hora1 !== hora2 ||
-				atual.duracao !== original.duracao ||
-				atual.fase !== original.fase ||
-				(atual.comentario || "") !== (original.comentario || "")
-			);
-		};
-
-		const idsOriginaisProcessados = new Set();
-
-		horariosAtuais.forEach((atual) => {
-			const original = originaisPorId[atual.id];
-
-			if (original) {
-				idsOriginaisProcessados.add(original.id);
-				if (horarioFoiModificado(atual, original)) {
-					editados.push(atual);
-				}
-			} else {
-				novos.push(atual);
-			}
-		});
-
-		originalHorarios.forEach((original) => {
-			if (!idsOriginaisProcessados.has(original.id)) {
-				removidosIds.push(original.id);
-			}
-		});
-
-		// 3. Sincronizar apenas se há mudanças
-		if (
-			novos.length === 0 &&
-			editados.length === 0 &&
-			removidosIds.length === 0
-		) {
-			return {
-				success: true,
-				message: "Nenhuma mudança para sincronizar",
-				horariosAtuais,
-			};
+			});
 		}
+	});
 
-		// 4. Enviar para o backend
-		await horariosService.syncHorarios(novos, editados, removidosIds);
+	// 2. Identificar mudanças
+	const novos = [];
+	const editados = [];
+	const removidosIds = [];
 
-		return {
-			success: true,
-			message: "Horários sincronizados com sucesso!",
-			horariosAtuais,
-		};
-	} catch (error) {
-		console.error("Erro ao sincronizar horários:", error);
-		throw error;
-	}
-}
+	const originaisPorId = {};
+	originalHorarios.forEach((original) => {
+		originaisPorId[original.id] = original;
+	});
 
-/**
- * Importa horários de outro período
- */
-export async function importHorarios(
-	selectedAnoSemestreOrigem,
-	selectedAnoSemestre,
-	selectedCurso,
-	incluirDocentes,
-	incluirOfertas,
-) {
-	try {
-		if (!selectedAnoSemestreOrigem || !selectedCurso) {
-			throw new Error("Selecione um ano/semestre de origem e um curso");
-		}
+	const horarioFoiModificado = (atual, original) => {
+		const hora1 = normalizeTimeFromDB(atual.hora_inicio);
+		const hora2 = normalizeTimeFromDB(original.hora_inicio);
 
-		const result = await horariosService.importarHorarios(
-			selectedAnoSemestreOrigem.ano,
-			selectedAnoSemestreOrigem.semestre,
-			selectedAnoSemestre.ano,
-			selectedAnoSemestre.semestre,
-			selectedCurso.id,
-			incluirDocentes,
-			incluirOfertas,
+		return (
+			atual.id_ccr !== original.id_ccr ||
+			atual.codigo_docente !== original.codigo_docente ||
+			atual.dia_semana !== original.dia_semana ||
+			hora1 !== hora2 ||
+			atual.duracao !== original.duracao ||
+			atual.fase !== original.fase ||
+			(atual.comentario || "") !== (original.comentario || "")
 		);
+	};
 
-		return {
-			success: true,
-			message: `Importação realizada com sucesso! ${
-				result.horarios_importados || 0
-			} horários e ${result.ofertas_importadas || 0} ofertas criados.`,
-		};
-	} catch (error) {
-		console.error("Erro ao importar horários:", error);
-		throw error;
-	}
+	const idsOriginaisProcessados = new Set();
+
+	horariosAtuais.forEach((atual) => {
+		const original = originaisPorId[atual.id];
+
+		if (original) {
+			idsOriginaisProcessados.add(original.id);
+			if (horarioFoiModificado(atual, original)) {
+				editados.push(atual);
+			}
+		} else {
+			novos.push(atual);
+		}
+	});
+
+	originalHorarios.forEach((original) => {
+		if (!idsOriginaisProcessados.has(original.id)) {
+			removidosIds.push(original.id);
+		}
+	});
+
+	return {
+		novos,
+		editados,
+		removidosIds,
+		horariosAtuais,
+		hasChanges: novos.length > 0 || editados.length > 0 || removidosIds.length > 0,
+	};
 }
 
 /**
@@ -575,148 +462,313 @@ export function calcularCreditosSemestreAtual(events, disciplinas) {
 }
 
 /**
- * Calcula créditos de outro semestre para média anual
+ * Calcula créditos de outro semestre a partir dos horários fornecidos
  */
-export async function calcularCreditosOutroSemestre(
-	selectedCurso,
-	selectedAnoSemestre,
+export function calcularCreditosOutroSemestre(
+	horarios,
 	disciplinas,
 ) {
-	try {
-		if (!selectedCurso?.id || !selectedAnoSemestre?.ano) {
-			return new Map();
-		}
-		const outroSemestre = selectedAnoSemestre.semestre === 1 ? 2 : 1;
+	const creditosPorCcr = new Map(
+		disciplinas.map((d) => [String(d.id), Number(d.creditos) || 0]),
+	);
 
-		const result = await horariosService.getHorarios({
-			ano: selectedAnoSemestre.ano,
-			semestre: outroSemestre,
-			id_curso: selectedCurso.id,
-		});
+	const mapa = new Map();
+	const vistos = new Set();
 
-		const horarios = result.horarios;
-		const creditosPorCcr = new Map(
-			disciplinas.map((d) => [String(d.id), Number(d.creditos) || 0]),
-		);
+	horarios.forEach((h) => {
+		if (!h?.id_ccr || !h?.codigo_docente) return;
+		const docente = String(h.codigo_docente);
+		const turno = getTurnoFromTime(h.hora_inicio);
+		const par = `${docente}-${String(h.id_ccr)}-${turno}`;
+		if (vistos.has(par)) return;
+		vistos.add(par);
+		const creditos = creditosPorCcr.get(String(h.id_ccr)) || 0;
+		const atual = mapa.get(docente) || 0;
+		mapa.set(docente, atual + creditos);
+	});
 
-		const mapa = new Map();
-		const vistos = new Set();
-
-		horarios.forEach((h) => {
-			if (!h?.id_ccr || !h?.codigo_docente) return;
-			const docente = String(h.codigo_docente);
-			const turno = getTurnoFromTime(h.hora_inicio);
-			const par = `${docente}-${String(h.id_ccr)}-${turno}`;
-			if (vistos.has(par)) return;
-			vistos.add(par);
-			const creditos = creditosPorCcr.get(String(h.id_ccr)) || 0;
-			const atual = mapa.get(docente) || 0;
-			mapa.set(docente, atual + creditos);
-		});
-
-		return mapa;
-	} catch (e) {
-		console.error("Erro ao carregar créditos do outro semestre:", e);
-		return new Map();
-	}
+	return mapa;
 }
 
-/**
- * Função para buscar professores da API
- */
-export async function fetchProfessores(
-	userId,
-	setLoadingProfessores,
-	setErrorProfessores,
-	setProfessores,
-) {
-	try {
-		setLoadingProfessores(true);
-		setErrorProfessores(null);
-
-		const { professores: professoresData } = await loadAllData(userId);
-
-		setProfessores(professoresData);
-	} catch (error) {
-		console.error("Erro ao buscar professores:", error);
-		setErrorProfessores(
-			"Erro ao carregar professores. Usando dados locais.",
-		);
-	} finally {
-		setLoadingProfessores(false);
-	}
-}
 
 /**
- * Função para buscar disciplinas (CCRs) da API
+ * Detecta e formata conflitos de horários entre professores
  */
-export async function fetchDisciplinas(
-	userId,
-	setLoadingDisciplinas,
-	setErrorDisciplinas,
-	setDisciplinas,
-) {
-	try {
-		setLoadingDisciplinas(true);
-		setErrorDisciplinas(null);
-
-		const { disciplinas: disciplinasData } = await loadAllData(userId);
-
-		setDisciplinas(disciplinasData);
-	} catch (error) {
-		console.error("Erro ao buscar disciplinas:", error);
-		setErrorDisciplinas("Erro ao carregar disciplinas.");
-		setDisciplinas([]);
-	} finally {
-		setLoadingDisciplinas(false);
-	}
-}
-
-/**
- * Função para buscar ofertas da API
- */
-export async function fetchOfertas(
+export function detectarConflitos(
+	events,
+	horariosSalvosPorProfessor,
+	professores,
+	disciplinas,
+	anosSemestres,
 	selectedAnoSemestre,
-	selectedCurso,
-	setLoadingOfertas,
-	setErrorOfertas,
-	setOfertas,
+	horariosSeOverlapam,
+	dayToNumber,
+	daysOfWeek,
 ) {
-	try {
-		setLoadingOfertas(true);
-		setErrorOfertas(null);
+	const conflitos = [];
+	const conflitosProcessados = new Set();
 
-		const ofertasData = await loadOfertas(
-			selectedAnoSemestre,
-			selectedCurso,
-		);
+	// Processar cada professor
+	for (const [codigoProfessor, horariosSalvos] of Object.entries(horariosSalvosPorProfessor)) {
+		if (codigoProfessor === "sem.professor") continue;
 
-		setOfertas(ofertasData);
-	} catch (error) {
-		console.error("Erro ao buscar ofertas:", error);
-		setErrorOfertas(
-			"Erro ao carregar ofertas. Usando lógica padrão de turnos.",
-		);
-		setOfertas([]);
-	} finally {
-		setLoadingOfertas(false);
+		try {
+			// Coletar horários temporários (não salvos ou modificados)
+			const horariosTemporarios = [];
+			Object.keys(events).forEach((phaseNumber) => {
+				const phaseEvents = events[phaseNumber];
+				if (phaseEvents) {
+					Object.values(phaseEvents).forEach((eventArray) => {
+						const eventsInSlot = Array.isArray(eventArray)
+							? eventArray
+							: [eventArray];
+						eventsInSlot.forEach((event) => {
+							const professoresDoEvento =
+								event.professoresIds &&
+								Array.isArray(event.professoresIds)
+									? event.professoresIds
+									: event.professorId
+									? [event.professorId]
+									: [];
+
+							if (professoresDoEvento.includes(codigoProfessor)) {
+								const jaExisteNoSalvo = horariosSalvos.some(
+									(salvo) => {
+										return (
+											salvo.id_ccr === event.disciplinaId &&
+											salvo.dia_semana === dayToNumber[event.dayId] &&
+											salvo.hora_inicio === event.startTime &&
+											salvo.codigo_docente === codigoProfessor &&
+											salvo.ano === selectedAnoSemestre.ano &&
+											salvo.semestre === selectedAnoSemestre.semestre
+										);
+									},
+								);
+
+								if (
+									!jaExisteNoSalvo &&
+									event.disciplinaId &&
+									!event.permitirConflito
+								) {
+									horariosTemporarios.push({
+										codigo_docente: codigoProfessor,
+										dia_semana: dayToNumber[event.dayId],
+										hora_inicio: event.startTime,
+										duracao: event.duration || 2,
+										ano: selectedAnoSemestre.ano,
+										semestre: selectedAnoSemestre.semestre,
+										id_ccr: event.disciplinaId,
+										disciplinaNome: event.title,
+										tipo: "temporario",
+										eventoId: event.id,
+										uniqueKey: `temp-${event.id}`,
+										permitirConflito: event.permitirConflito || false,
+									});
+								}
+							}
+						});
+					});
+				}
+			});
+
+			// Combinar horários salvos e temporários
+			const todosHorarios = [...horariosSalvos, ...horariosTemporarios];
+
+			// Remover duplicatas
+			const eventosUnicos = new Map();
+			const chavesDuplicacao = new Set();
+
+			todosHorarios.forEach((horario) => {
+				let horaInicio = horario.hora_inicio;
+				if (typeof horaInicio === "object") {
+					horaInicio = horaInicio.toString().substring(0, 5);
+				}
+				if (horaInicio && horaInicio.includes(":")) {
+					horaInicio = horaInicio.split(":").slice(0, 2).join(":");
+				}
+
+				const chaveCompleta = `${codigoProfessor}-${horario.id_ccr}-${horario.dia_semana}-${horaInicio}-${horario.duracao}-${horario.ano}-${horario.semestre}`;
+
+				if (chavesDuplicacao.has(chaveCompleta)) {
+					return;
+				}
+				chavesDuplicacao.add(chaveCompleta);
+
+				const eventoId = horario.eventoId || horario.id;
+				if (eventoId) {
+					const prioridade =
+						horario.tipo === "novo"
+							? 3
+							: horario.tipo === "temporario"
+							? 2
+							: 1;
+					const existente = eventosUnicos.get(eventoId);
+
+					if (!existente || prioridade > existente.prioridade) {
+						eventosUnicos.set(eventoId, {
+							...horario,
+							prioridade,
+							hora_inicio: horaInicio,
+						});
+					}
+				} else {
+					eventosUnicos.set(chaveCompleta, {
+						...horario,
+						hora_inicio: horaInicio,
+					});
+				}
+			});
+
+			const horariosFinais = Array.from(eventosUnicos.values());
+
+			// Agrupar por dia
+			const horariosPorDia = {};
+			horariosFinais.forEach((horario) => {
+				const dia = horario.dia_semana;
+				if (!horariosPorDia[dia]) {
+					horariosPorDia[dia] = [];
+				}
+				horariosPorDia[dia].push(horario);
+			});
+
+			// Verificar conflitos dentro de cada dia
+			Object.entries(horariosPorDia).forEach(([dia, horariosNoDia]) => {
+				horariosNoDia.sort((a, b) => {
+					const horaA =
+						typeof a.hora_inicio === "object"
+							? a.hora_inicio.toString()
+							: a.hora_inicio;
+					const horaB =
+						typeof b.hora_inicio === "object"
+							? b.hora_inicio.toString()
+							: b.hora_inicio;
+					return horaA.localeCompare(horaB);
+				});
+
+				for (let i = 0; i < horariosNoDia.length; i++) {
+					for (let j = i + 1; j < horariosNoDia.length; j++) {
+						const h1 = horariosNoDia[i];
+						const h2 = horariosNoDia[j];
+
+						const evento1Id = h1.eventoId || h1.id;
+						const evento2Id = h2.eventoId || h2.id;
+
+						if (evento1Id && evento2Id && evento1Id === evento2Id) {
+							continue;
+						}
+
+						if (h1.ano !== h2.ano || h1.semestre !== h2.semestre) {
+							continue;
+						}
+
+						const hora1 =
+							typeof h1.hora_inicio === "object"
+								? h1.hora_inicio.toString().substring(0, 5)
+								: h1.hora_inicio;
+						const hora2 =
+							typeof h2.hora_inicio === "object"
+								? h2.hora_inicio.toString().substring(0, 5)
+								: h2.hora_inicio;
+
+						const hora1Normalizada = hora1?.split(":").slice(0, 2).join(":");
+						const hora2Normalizada = hora2?.split(":").slice(0, 2).join(":");
+
+						const saoOMesmoHorario =
+							h1.id_ccr === h2.id_ccr &&
+							hora1Normalizada === hora2Normalizada &&
+							h1.ano === h2.ano &&
+							h1.semestre === h2.semestre &&
+							h1.dia_semana === h2.dia_semana &&
+							h1.codigo_docente === h2.codigo_docente;
+
+						if (saoOMesmoHorario) {
+							continue;
+						}
+
+						if (h1.permitirConflito || h2.permitirConflito) {
+							continue;
+						}
+
+						if (h1.id_ccr === h2.id_ccr && h1.fase !== h2.fase) {
+							continue;
+						}
+
+						if (h1.id_ccr && h2.id_ccr && horariosSeOverlapam(h1, h2)) {
+							const conflict1 = `${h1.id_ccr}-${h1.ano}-${h1.semestre}-${hora1}-${h1.duracao}`;
+							const conflict2 = `${h2.id_ccr}-${h2.ano}-${h2.semestre}-${hora2}-${h2.duracao}`;
+							const sortedConflicts = [conflict1, conflict2].sort();
+							const conflictId = `${codigoProfessor}-${dia}-${sortedConflicts.join("---")}`;
+
+							if (conflitosProcessados.has(conflictId)) {
+								continue;
+							}
+							conflitosProcessados.add(conflictId);
+
+							const professor = professores.find(
+								(p) => p.codigo === codigoProfessor,
+							);
+							const disciplina1 = disciplinas.find((d) => d.id === h1.id_ccr);
+							const disciplina2 = disciplinas.find((d) => d.id === h2.id_ccr);
+
+							const novoConflito = {
+								id: conflictId,
+								professor: professor ? professor.name : codigoProfessor,
+								codigoProfessor,
+								dia: dia,
+								diaNome:
+									daysOfWeek.find(
+										(d) => dayToNumber[d.id] === parseInt(dia),
+									)?.title || `Dia ${dia}`,
+								horario1: {
+									...h1,
+									disciplinaNome:
+										h1.disciplinaNome ||
+										(disciplina1
+											? disciplina1.nome
+											: "Disciplina não encontrada"),
+									hora_inicio: hora1,
+									ano_semestre: `${h1.ano}/${h1.semestre}`,
+									tipo: h1.tipo || "salvo",
+								},
+								horario2: {
+									...h2,
+									disciplinaNome:
+										h2.disciplinaNome ||
+										(disciplina2
+											? disciplina2.nome
+											: "Disciplina não encontrada"),
+									hora_inicio: hora2,
+									ano_semestre: `${h2.ano}/${h2.semestre}`,
+									tipo: h2.tipo || "salvo",
+								},
+							};
+
+							conflitos.push(novoConflito);
+						}
+					}
+				}
+			});
+		} catch (error) {
+			console.error(
+				`Erro ao verificar conflitos para professor ${codigoProfessor}:`,
+				error,
+			);
+		}
 	}
+
+	return conflitos;
 }
 
 // Exportação padrão
 const horariosController = {
-	loadAllData,
-	loadOfertas,
-	loadHorarios,
-	syncHorarios,
-	importHorarios,
+	formatProfessores,
+	processHorarios,
+	prepareSyncData,
 	getChangesCount,
 	getValidHorariosCount,
 	calcularCreditosSemestreAtual,
 	calcularCreditosOutroSemestre,
-	fetchProfessores,
-	fetchDisciplinas,
-	fetchOfertas,
+	detectarConflitos,
 };
 
 export default horariosController;
