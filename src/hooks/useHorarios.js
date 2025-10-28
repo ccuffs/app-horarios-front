@@ -1672,7 +1672,7 @@ export default function useHorarios() {
 			const ano = selectedAnoSemestre.ano;
 			const semestre = selectedAnoSemestre.semestre;
 
-			const newEventId = `horario-${phaseNumber}-${Date.now()}`;
+			const newEventId = `horario-${phaseNumber}-${Date.now()}-prof1`;
 			const newEvent = {
 				id: newEventId,
 				title: "",
@@ -1804,22 +1804,33 @@ export default function useHorarios() {
 						? newEvents[selectedPhase][existingEventKey]
 						: [newEvents[selectedPhase][existingEventKey]];
 
+					// Função auxiliar para normalizar IDs garantindo consistência
+					const normalizeEventId = (baseEventId, professorIndex) => {
+						// Remove qualquer sufixo -prof existente
+						const cleanId = baseEventId.replace(/-prof\d+$/, "");
+						// Adiciona o sufixo correto
+						return `${cleanId}-prof${professorIndex + 1}`;
+					};
+
 					const updatedEvents = eventArray.map((event) => {
 						if (event.id === eventData.id) {
 							const ano = selectedAnoSemestre.ano;
 							const semestre = selectedAnoSemestre.semestre;
 
+							// Obter lista de professores
+							const professoresAtuais = eventData.professoresIds ||
+								[eventData.professorId].filter(Boolean);
+
+							// Atualizar o ID base removendo o sufixo antigo e gerando um novo
+							const baseId = event.id.replace(/-prof\d+$/, "");
+
 							const updatedEvent = {
 								...event,
+								id: normalizeEventId(baseId, 0), // Primeiro evento sempre tem prof1
 								title: eventData.title || "",
 								disciplinaId: eventData.disciplinaId,
-								professoresIds:
-									eventData.professoresIds ||
-									[eventData.professorId].filter(Boolean),
-								professorId:
-									eventData.professorId ||
-									(eventData.professoresIds && eventData.professoresIds[0]) ||
-									"",
+								professoresIds: professoresAtuais,
+								professorId: professoresAtuais[0] || "",
 								comentario: eventData.comentario || "",
 								permitirConflito: eventData.permitirConflito || false,
 								startTime: eventData.startTime || event.startTime,
@@ -1827,10 +1838,7 @@ export default function useHorarios() {
 								dayId: eventData.dayId || event.dayId,
 								color: event.color,
 								id_ccr: eventData.disciplinaId || eventData.id_ccr,
-								codigo_docente:
-									(eventData.professoresIds && eventData.professoresIds[0]) ||
-									eventData.professorId ||
-									eventData.codigo_docente,
+								codigo_docente: professoresAtuais[0] || eventData.codigo_docente,
 								dia_semana: dayToNumber[eventData.dayId] || eventData.dia_semana,
 								ano: ano,
 								semestre: semestre,

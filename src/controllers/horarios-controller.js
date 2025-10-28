@@ -77,51 +77,57 @@ export function processHorarios(
 				professores,
 			);
 
-			// Validar apenas se conversão básica foi bem sucedida
-			if (!event.dayId) {
-				return;
-			}
+		// Validar apenas se conversão básica foi bem sucedida
+		if (!event.dayId) {
+			return;
+		}
 
-			// Se há múltiplos professores para o mesmo horário
-			if (grupo.length > 1) {
-				// Remover duplicatas de código_docente
-				const uniqueProfessores = [
-					...new Set(grupo.map((h) => h.codigo_docente)),
+		// Se há múltiplos professores para o mesmo horário
+		if (grupo.length > 1) {
+			// Remover duplicatas de código_docente
+			const uniqueProfessores = [
+				...new Set(grupo.map((h) => h.codigo_docente)),
+			];
+			event.professoresIds = uniqueProfessores;
+			event.professorId = grupo[0].codigo_docente;
+		} else {
+			event.professoresIds = [baseHorario.codigo_docente];
+			event.professorId = baseHorario.codigo_docente;
+		}
+
+		// Garantir que o ID sempre tenha o sufixo -prof1 ao carregar do banco
+		// (caso seja um evento antigo que ainda não tinha o sufixo)
+		if (!event.id.includes('-prof')) {
+			event.id = `${event.id}-prof1`;
+		}
+
+		// Usar a fase do banco para posicionamento
+		const phase = baseHorario.fase || 1;
+		const slotKey = `${event.dayId}-${event.startTime}`;
+
+		// Organizar eventos por fase
+		if (!eventsFormatted[phase]) eventsFormatted[phase] = {};
+		event.fase = phase;
+
+		// Verificar se já existe evento no slot
+		if (eventsFormatted[phase][slotKey]) {
+			if (Array.isArray(eventsFormatted[phase][slotKey])) {
+				eventsFormatted[phase][slotKey].push(event);
+			} else {
+				eventsFormatted[phase][slotKey] = [
+					eventsFormatted[phase][slotKey],
+					event,
 				];
-				event.professoresIds = uniqueProfessores;
-				event.professorId = grupo[0].codigo_docente;
-			} else {
-				event.professoresIds = [baseHorario.codigo_docente];
-				event.professorId = baseHorario.codigo_docente;
 			}
+		} else {
+			eventsFormatted[phase][slotKey] = event;
+		}
 
-			// Usar a fase do banco para posicionamento
-			const phase = baseHorario.fase || 1;
-			const slotKey = `${event.dayId}-${event.startTime}`;
-
-			// Organizar eventos por fase
-			if (!eventsFormatted[phase]) eventsFormatted[phase] = {};
-			event.fase = phase;
-
-			// Verificar se já existe evento no slot
-			if (eventsFormatted[phase][slotKey]) {
-				if (Array.isArray(eventsFormatted[phase][slotKey])) {
-					eventsFormatted[phase][slotKey].push(event);
-				} else {
-					eventsFormatted[phase][slotKey] = [
-						eventsFormatted[phase][slotKey],
-						event,
-					];
-				}
-			} else {
-				eventsFormatted[phase][slotKey] = event;
-			}
-
-			// Adicionar aos horários originais (um para cada professor)
-			grupo.forEach((horario) => {
-				horariosOriginais.push(horario);
-			});
+		// Adicionar aos horários originais (um para cada professor)
+		grupo.forEach((horario) => {
+			horariosOriginais.push(horario);
 		});
+	});
 
 		return {
 			events: eventsFormatted,
@@ -165,16 +171,11 @@ export function prepareSyncData(
 						) {
 							event.professoresIds.forEach(
 								(professorId, index) => {
-									let uniqueId = event.id;
-									if (event.professoresIds.length > 1) {
-										const baseId = event.id.replace(
-											/-prof\d+$/,
-											"",
-										);
-										uniqueId = `${baseId}-prof${
-											index + 1
-										}`;
-									}
+									const baseId = event.id.replace(
+										/-prof\d+$/,
+										"",
+									);
+									const uniqueId = `${baseId}-prof${index + 1}`;
 
 									const eventoCopy = {
 										...event,
@@ -191,8 +192,20 @@ export function prepareSyncData(
 								},
 							);
 						} else if (event.professorId) {
+							// Garantir que o ID tenha -prof1 mesmo com apenas 1 professor
+							const baseId = event.id.replace(
+								/-prof\d+$/,
+								"",
+							);
+							const uniqueId = `${baseId}-prof1`;
+
+							const eventoCopy = {
+								...event,
+								professorId: event.professorId,
+								id: uniqueId,
+							};
 							const dbEvent = eventToDbFormat(
-								event,
+								eventoCopy,
 								phaseNumber,
 								selectedAnoSemestre,
 								selectedCurso,
@@ -295,14 +308,11 @@ export function getChangesCount(
 						) {
 							event.professoresIds.forEach(
 								(professorId, index) => {
-									let uniqueId = event.id;
-									if (event.professoresIds.length > 1) {
-										const baseId = event.id.replace(
-											/-prof\d+$/,
-											"",
-										);
-										uniqueId = `${baseId}-prof${index + 1}`;
-									}
+									const baseId = event.id.replace(
+										/-prof\d+$/,
+										"",
+									);
+									const uniqueId = `${baseId}-prof${index + 1}`;
 
 									const eventoCopy = {
 										...event,
@@ -319,8 +329,20 @@ export function getChangesCount(
 								},
 							);
 						} else if (event.professorId) {
+							// Garantir que o ID tenha -prof1 mesmo com apenas 1 professor
+							const baseId = event.id.replace(
+								/-prof\d+$/,
+								"",
+							);
+							const uniqueId = `${baseId}-prof1`;
+
+							const eventoCopy = {
+								...event,
+								professorId: event.professorId,
+								id: uniqueId,
+							};
 							const dbEvent = eventToDbFormat(
-								event,
+								eventoCopy,
 								phaseNumber,
 								selectedAnoSemestre,
 								selectedCurso,
