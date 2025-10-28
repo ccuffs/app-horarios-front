@@ -1445,6 +1445,80 @@ export default function Horarios() {
 									</TableContainer>
 								</Box>
 							)}
+
+							{sumarioAlteracoes.totais.modificacoes > 0 && (
+								<Box sx={{ mb: 2 }}>
+									<Typography
+										variant="h6"
+										sx={{ mb: 1, color: "info.main", fontWeight: "medium" }}
+									>
+										✎ Modificações ({sumarioAlteracoes.totais.modificacoes})
+									</Typography>
+									<TableContainer component={Paper} variant="outlined">
+										<Table size="small">
+											<TableHead>
+												<TableRow>
+													<TableCell sx={{ fontWeight: "bold" }}>Docente</TableCell>
+													<TableCell sx={{ fontWeight: "bold" }}>CCR</TableCell>
+													<TableCell sx={{ fontWeight: "bold" }}>Alteração</TableCell>
+												</TableRow>
+											</TableHead>
+											<TableBody>
+												{sumarioAlteracoes.alteracoes.modificacoes.map((mod, idx) => (
+													<TableRow key={idx} hover>
+														<TableCell>{mod.docente}</TableCell>
+														<TableCell>{mod.ccr}</TableCell>
+														<TableCell>
+															{mod.mudouDia && (
+																<Box sx={{ mb: 0.5 }}>
+																	<Typography variant="caption" display="block">
+																		<strong>Dia:</strong>{" "}
+																		<span style={{ textDecoration: "line-through", color: "text.secondary" }}>
+																			{mod.diaSemanaAntigo}
+																		</span>
+																		{" → "}
+																		<span style={{ color: "green" }}>
+																			{mod.diaSemana}
+																		</span>
+																	</Typography>
+																</Box>
+															)}
+															{mod.mudouHorario && (
+																<Box sx={{ mb: 0.5 }}>
+																	<Typography variant="caption" display="block">
+																		<strong>Horário:</strong>{" "}
+																		<span style={{ textDecoration: "line-through", color: "text.secondary" }}>
+																			{mod.horaInicioAntigo}
+																		</span>
+																		{" → "}
+																		<span style={{ color: "green" }}>
+																			{mod.horaInicio}
+																		</span>
+																	</Typography>
+																</Box>
+															)}
+															{mod.mudouDuracao && (
+																<Box>
+																	<Typography variant="caption" display="block">
+																		<strong>Duração:</strong>{" "}
+																		<span style={{ textDecoration: "line-through", color: "text.secondary" }}>
+																			{mod.horaInicioAntigo} - {mod.horaFimAntigo}
+																		</span>
+																		{" → "}
+																		<span style={{ color: "green" }}>
+																			{mod.horaInicio} - {mod.horaFim}
+																		</span>
+																	</Typography>
+																</Box>
+															)}
+														</TableCell>
+													</TableRow>
+												))}
+											</TableBody>
+										</Table>
+									</TableContainer>
+								</Box>
+							)}
 						</>
 					)}
 				</DialogContent>

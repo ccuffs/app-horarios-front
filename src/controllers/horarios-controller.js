@@ -867,6 +867,7 @@ export function gerarSumarioAlteracoes(
 		inclusoes: [],
 		atualizacoes: [],
 		remocoes: [],
+		modificacoes: [], // Mudanças de atributos (duração, horário, etc.)
 	};
 
 	// Mapear professores e disciplinas para facilitar busca
@@ -1080,13 +1081,60 @@ export function gerarSumarioAlteracoes(
 
 	alteracoes.atualizacoes = atualizacoesDetectadas;
 
+	// Detectar MODIFICAÇÕES de atributos (duração, horário, dia, etc.)
+	// Quando o mesmo professor permanece mas os atributos do horário mudam
+	const modificacoesDetectadas = [];
+
+	horariosOriginaisPorEvento.forEach((originais, key) => {
+		const atuais = horariosAtuaisPorEvento.get(key) || [];
+
+		// Para cada professor que está tanto no original quanto no atual
+		originais.forEach((horarioOriginal) => {
+			const horarioAtual = atuais.find(h => h.codigo_docente === horarioOriginal.codigo_docente);
+
+			if (horarioAtual) {
+				// Verificar se algum atributo mudou
+				const horaInicioOriginal = normalizeTimeForComparison(horarioOriginal.hora_inicio);
+				const horaInicioAtual = normalizeTimeForComparison(horarioAtual.hora_inicio);
+
+				const mudouDuracao = horarioOriginal.duracao !== horarioAtual.duracao;
+				const mudouHorario = horaInicioOriginal !== horaInicioAtual;
+				const mudouDia = horarioOriginal.dia_semana !== horarioAtual.dia_semana;
+
+				if (mudouDuracao || mudouHorario || mudouDia) {
+					const professor = professoresMap.get(String(horarioOriginal.codigo_docente));
+					const disciplina = disciplinasMap.get(String(horarioOriginal.id_ccr));
+
+					const modificacao = {
+						docente: professor ? professor.name || professor.nome : horarioOriginal.codigo_docente,
+						ccr: disciplina ? `${disciplina.codigo} - ${disciplina.nome}` : horarioOriginal.id_ccr,
+						diaSemanaAntigo: diasSemana[horarioOriginal.dia_semana] || `Dia ${horarioOriginal.dia_semana}`,
+						diaSemana: diasSemana[horarioAtual.dia_semana] || `Dia ${horarioAtual.dia_semana}`,
+						horaInicioAntigo: formatarHora(horarioOriginal.hora_inicio),
+						horaInicio: formatarHora(horarioAtual.hora_inicio),
+						horaFimAntigo: calcularHoraFim(horarioOriginal.hora_inicio, horarioOriginal.duracao),
+						horaFim: calcularHoraFim(horarioAtual.hora_inicio, horarioAtual.duracao),
+						mudouDia,
+						mudouHorario,
+						mudouDuracao,
+					};
+
+					modificacoesDetectadas.push(modificacao);
+				}
+			}
+		});
+	});
+
+	alteracoes.modificacoes = modificacoesDetectadas;
+
 	return {
 		alteracoes,
 		totais: {
 			inclusoes: alteracoes.inclusoes.length,
 			atualizacoes: alteracoes.atualizacoes.length,
 			remocoes: alteracoes.remocoes.length,
-			total: alteracoes.inclusoes.length + alteracoes.atualizacoes.length + alteracoes.remocoes.length,
+			modificacoes: alteracoes.modificacoes.length,
+			total: alteracoes.inclusoes.length + alteracoes.atualizacoes.length + alteracoes.remocoes.length + alteracoes.modificacoes.length,
 		},
 	};
 }
