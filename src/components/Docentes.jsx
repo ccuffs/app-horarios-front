@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import {
 	Alert,
 	Box,
@@ -13,124 +13,27 @@ import {
 	TextField,
 } from "@mui/material";
 import CustomDataGrid from "./CustomDataGrid.jsx";
-import docentesController from "../controllers/docentes-controller.js";
-import docentesService from "../services/docentes-service.js";
+import { useDocentes } from "../hooks/useDocentes.js";
 
 export default function Docentes() {
-	const [docentes, setDocentes] = useState([]);
-	const [formData, setFormData] = useState({
-		codigo: "",
-		nome: "",
-		email: "",
-		sala: "",
-	});
-	const [edit, setEdit] = useState(false);
-	const [openMessage, setOpenMessage] = React.useState(false);
-	const [openDialog, setOpenDialog] = React.useState(false);
-	const [messageText, setMessageText] = React.useState("");
-	const [messageSeverity, setMessageSeverity] = React.useState("success");
-	const [idDelete, setIdDelete] = React.useState("");
-
-	useEffect(() => {
-		getData();
-	}, []);
-
-	async function getData() {
-		try {
-			const docentesData = await docentesService.getDocentes();
-			setDocentes(docentesData);
-		} catch (error) {
-			console.log(
-				"Não foi possível retornar a lista de docentes: ",
-				error,
-			);
-			setDocentes([]);
-		}
-	}
-
-	function handleEdit(data) {
-		const editData = docentesController.prepareEditData(data);
-		setFormData(editData);
-		setEdit(true);
-	}
-
-	function handleDelete(row) {
-		setIdDelete(row.codigo);
-		setOpenDialog(true);
-	}
-
-	function handleInputChange(e) {
-		setFormData({ ...formData, [e.target.name]: e.target.value });
-	}
-
-	async function handleAddOrUpdate() {
-		const validation = docentesController.validateFormData(
-			formData,
-			edit,
-		);
-
-		if (!validation.isValid) {
-			setMessageText(validation.message);
-			setMessageSeverity("error");
-			setOpenMessage(true);
-			return;
-		}
-
-		const result = await docentesController.saveOrUpdateDocente(
-			formData,
-			edit,
-		);
-
-		if (result.success) {
-			setMessageText(result.message);
-			setMessageSeverity("success");
-			setFormData(docentesController.getResetFormData());
-			setEdit(false);
-		} else {
-			setMessageText(result.message);
-			setMessageSeverity("error");
-		}
-
-		setOpenMessage(true);
-		await getData();
-	}
-
-	function handleCancelClick() {
-		setEdit(false);
-		setFormData(docentesController.getResetFormData());
-	}
-
-	function handleCloseMessage(_, reason) {
-		if (reason === "clickaway") {
-			return;
-		}
-		setOpenMessage(false);
-	}
-
-	function handleClose() {
-		setOpenDialog(false);
-	}
-
-	async function handleDeleteClick() {
-		const result = await docentesController.removeDocente(idDelete);
-
-		if (result.success) {
-			setMessageText(result.message);
-			setMessageSeverity("success");
-		} else {
-			setMessageText(result.message);
-			setMessageSeverity("error");
-		}
-
-		setFormData(docentesController.getResetFormData());
-		setOpenDialog(false);
-		setOpenMessage(true);
-		await getData();
-	}
-
-	function handleNoDeleteClick() {
-		setOpenDialog(false);
-	}
+	const {
+		docentes,
+		formData,
+		edit,
+		openMessage,
+		openDialog,
+		messageText,
+		messageSeverity,
+		handleEdit,
+		handleDelete,
+		handleInputChange,
+		handleAddOrUpdate,
+		handleCancelClick,
+		handleCloseMessage,
+		handleClose,
+		handleDeleteClick,
+		handleNoDeleteClick,
+	} = useDocentes();
 
 	const columns = [
 		{ field: "codigo", headerName: "Código", width: 150 },

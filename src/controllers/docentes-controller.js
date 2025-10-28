@@ -3,15 +3,7 @@ import docentesService from "../services/docentes-service.js";
 /**
  * Carrega docentes
  */
-export async function loadDocentes() {
-	try {
-		const docentes = await docentesService.getDocentes();
-		return docentes;
-	} catch (error) {
-		console.error("Erro ao carregar docentes:", error);
-		throw error;
-	}
-}
+//
 
 /**
  * Prepara os dados de um docente para edição
@@ -131,7 +123,6 @@ export function getResetFormData() {
 
 // Exportação padrão
 const docentesController = {
-	loadDocentes,
 	prepareEditData,
 	validateFormData,
 	prepareDataForApi,
