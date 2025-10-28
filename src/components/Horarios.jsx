@@ -90,7 +90,7 @@ import {
 	dbToEventFormat,
 	initialEvents,
 	getColorByDay,
-} from "./horarios/utils";
+} from "../utils/horariosUtils.js";
 
 export default function Horarios() {
 	const { permissoesUsuario } = useAuth();
