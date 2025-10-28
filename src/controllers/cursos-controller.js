@@ -140,7 +140,6 @@ export function getResetTurno() {
 
 // Exportação padrão
 const cursosController = {
-	loadCursos,
 	prepareEditData,
 	getTurnoFromData,
 	validateFormData,
