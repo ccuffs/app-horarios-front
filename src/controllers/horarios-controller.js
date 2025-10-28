@@ -140,6 +140,89 @@ export function processHorarios(
 }
 
 /**
+ * Função auxiliar para mapear professores aos sufixos corretos
+ * Mantém o histórico de qual professor tinha qual sufixo (-prof1 ou -prof2)
+ * Novos professores ocupam a primeira posição disponível
+ */
+function mapProfessoresToSuffixos(event, originalHorarios) {
+	const professoresAtuais =
+		event.professoresIds && Array.isArray(event.professoresIds)
+			? event.professoresIds
+			: event.professorId
+			? [event.professorId]
+			: [];
+
+	// Validar que não há mais de 2 professores
+	if (professoresAtuais.length > 2) {
+		console.warn(
+			`Mais de 2 professores no evento ${event.id}. Limitando a 2.`
+		);
+		professoresAtuais.splice(2);
+	}
+
+	// Buscar o ID base (sem sufixo)
+	const baseId = event.id.replace(/-prof\d+$/, "");
+
+	// Mapear histórico de sufixos para cada professor
+	const historicoSuffixos = new Map(); // professorId -> sufixo (1 ou 2)
+
+	// Buscar no histórico de horários originais
+	originalHorarios.forEach((original) => {
+		// Extrair o baseId do original
+		const originalBaseId = original.id.replace(/-prof\d+$/, "");
+
+		// Se for do mesmo evento base
+		if (originalBaseId === baseId) {
+			// Extrair o sufixo
+			const match = original.id.match(/-prof(\d+)$/);
+			if (match) {
+				const sufixo = parseInt(match[1], 10);
+				// Mapear o professor ao sufixo que ele tinha
+				if (!historicoSuffixos.has(original.codigo_docente)) {
+					historicoSuffixos.set(original.codigo_docente, sufixo);
+				}
+			}
+		}
+	});
+
+	// Criar lista de sufixos disponíveis (ordenado: 1, 2)
+	const sufixosDisponiveis = [1, 2];
+
+	// Primeiro, preservar sufixos de professores que já existem
+	const resultado = [];
+	const professoresProcessados = new Set();
+
+	professoresAtuais.forEach((professorId) => {
+		const sufixoHistorico = historicoSuffixos.get(professorId);
+		if (sufixoHistorico && (sufixoHistorico === 1 || sufixoHistorico === 2)) {
+			// Mantém o sufixo histórico
+			resultado.push({ professorId, sufixo: sufixoHistorico.toString() });
+			professoresProcessados.add(professorId);
+		}
+	});
+
+	// Depois, atribuir sufixos disponíveis aos professores restantes
+	professoresAtuais.forEach((professorId) => {
+		// Se este professor ainda não foi processado
+		if (!professoresProcessados.has(professorId)) {
+			// Pegar o primeiro sufixo disponível que não foi usado
+			const sufixosUsados = resultado.map((r) => parseInt(r.sufixo, 10));
+			for (const sufixo of sufixosDisponiveis) {
+				if (!sufixosUsados.includes(sufixo)) {
+					resultado.push({ professorId, sufixo: sufixo.toString() });
+					break;
+				}
+			}
+		}
+	});
+
+	// Ordenar por sufixo para garantir consistência
+	resultado.sort((a, b) => parseInt(a.sufixo, 10) - parseInt(b.sufixo, 10));
+
+	return resultado;
+}
+
+/**
  * Prepara dados de horários para sincronização (identifica novos, editados e removidos)
  */
 export function prepareSyncData(
@@ -165,43 +248,19 @@ export function prepareSyncData(
 						event.professorId;
 
 					if (event.disciplinaId && hasProfessores) {
-						if (
-							event.professoresIds &&
-							Array.isArray(event.professoresIds)
-						) {
-							event.professoresIds.forEach(
-								(professorId, index) => {
-									const baseId = event.id.replace(
-										/-prof\d+$/,
-										"",
-									);
-									const uniqueId = `${baseId}-prof${index + 1}`;
+						// Usar a nova lógica de mapeamento de sufixos
+						const mapeamentoProfessores = mapProfessoresToSuffixos(
+							event,
+							originalHorarios
+						);
 
-									const eventoCopy = {
-										...event,
-										professorId,
-										id: uniqueId,
-									};
-									const dbEvent = eventToDbFormat(
-										eventoCopy,
-										phaseNumber,
-										selectedAnoSemestre,
-										selectedCurso,
-									);
-									horariosAtuais.push(dbEvent);
-								},
-							);
-						} else if (event.professorId) {
-							// Garantir que o ID tenha -prof1 mesmo com apenas 1 professor
-							const baseId = event.id.replace(
-								/-prof\d+$/,
-								"",
-							);
-							const uniqueId = `${baseId}-prof1`;
+						mapeamentoProfessores.forEach(({ professorId, sufixo }) => {
+							const baseId = event.id.replace(/-prof\d+$/, "");
+							const uniqueId = `${baseId}-prof${sufixo}`;
 
 							const eventoCopy = {
 								...event,
-								professorId: event.professorId,
+								professorId,
 								id: uniqueId,
 							};
 							const dbEvent = eventToDbFormat(
@@ -211,7 +270,7 @@ export function prepareSyncData(
 								selectedCurso,
 							);
 							horariosAtuais.push(dbEvent);
-						}
+						});
 					}
 				});
 			});
@@ -302,43 +361,19 @@ export function getChangesCount(
 						event.professorId;
 
 					if (event.disciplinaId && hasProfessores) {
-						if (
-							event.professoresIds &&
-							Array.isArray(event.professoresIds)
-						) {
-							event.professoresIds.forEach(
-								(professorId, index) => {
-									const baseId = event.id.replace(
-										/-prof\d+$/,
-										"",
-									);
-									const uniqueId = `${baseId}-prof${index + 1}`;
+						// Usar a mesma lógica de mapeamento de sufixos
+						const mapeamentoProfessores = mapProfessoresToSuffixos(
+							event,
+							originalHorarios
+						);
 
-									const eventoCopy = {
-										...event,
-										professorId,
-										id: uniqueId,
-									};
-									const dbEvent = eventToDbFormat(
-										eventoCopy,
-										phaseNumber,
-										selectedAnoSemestre,
-										selectedCurso,
-									);
-									horariosAtuais.push(dbEvent);
-								},
-							);
-						} else if (event.professorId) {
-							// Garantir que o ID tenha -prof1 mesmo com apenas 1 professor
-							const baseId = event.id.replace(
-								/-prof\d+$/,
-								"",
-							);
-							const uniqueId = `${baseId}-prof1`;
+						mapeamentoProfessores.forEach(({ professorId, sufixo }) => {
+							const baseId = event.id.replace(/-prof\d+$/, "");
+							const uniqueId = `${baseId}-prof${sufixo}`;
 
 							const eventoCopy = {
 								...event,
-								professorId: event.professorId,
+								professorId,
 								id: uniqueId,
 							};
 							const dbEvent = eventToDbFormat(
@@ -348,7 +383,7 @@ export function getChangesCount(
 								selectedCurso,
 							);
 							horariosAtuais.push(dbEvent);
-						}
+						});
 					}
 				});
 			});
