@@ -310,68 +310,37 @@ export default function Horarios() {
 		autoSelect();
 	}, [anosSemestres, selectedCurso, hasAutoSelectedAnoSemestre]);
 
-	// Função para buscar professores e disciplinas da API
+	// Função para buscar professores da API
 	const fetchProfessores = async () => {
-		try {
-			setLoadingProfessores(true);
-			setErrorProfessores(null);
-
-			const userId = getCurrentUserId();
-			const { professores: professoresData } =
-				await horariosController.loadAllData(userId);
-
-			setProfessores(professoresData);
-		} catch (error) {
-			console.error("Erro ao buscar professores:", error);
-			setErrorProfessores(
-				"Erro ao carregar professores. Usando dados locais.",
-			);
-		} finally {
-			setLoadingProfessores(false);
-		}
+		const userId = getCurrentUserId();
+		await horariosController.fetchProfessores(
+			userId,
+			setLoadingProfessores,
+			setErrorProfessores,
+			setProfessores,
+		);
 	};
 
 	// Função para buscar disciplinas (CCRs) da API
 	const fetchDisciplinas = async () => {
-		try {
-			setLoadingDisciplinas(true);
-			setErrorDisciplinas(null);
-
-			const userId = getCurrentUserId();
-			const { disciplinas: disciplinasData } =
-				await horariosController.loadAllData(userId);
-
-			setDisciplinas(disciplinasData);
-		} catch (error) {
-			console.error("Erro ao buscar disciplinas:", error);
-			setErrorDisciplinas("Erro ao carregar disciplinas.");
-			setDisciplinas([]);
-		} finally {
-			setLoadingDisciplinas(false);
-		}
+		const userId = getCurrentUserId();
+		await horariosController.fetchDisciplinas(
+			userId,
+			setLoadingDisciplinas,
+			setErrorDisciplinas,
+			setDisciplinas,
+		);
 	};
 
 	// Função para buscar ofertas da API
 	const fetchOfertas = async () => {
-		try {
-			setLoadingOfertas(true);
-			setErrorOfertas(null);
-
-			const ofertasData = await horariosController.loadOfertas(
-				selectedAnoSemestre,
-				selectedCurso,
-			);
-
-			setOfertas(ofertasData);
-		} catch (error) {
-			console.error("Erro ao buscar ofertas:", error);
-			setErrorOfertas(
-				"Erro ao carregar ofertas. Usando lógica padrão de turnos.",
-			);
-			setOfertas([]);
-		} finally {
-			setLoadingOfertas(false);
-		}
+		await horariosController.fetchOfertas(
+			selectedAnoSemestre,
+			selectedCurso,
+			setLoadingOfertas,
+			setErrorOfertas,
+			setOfertas,
+		);
 	};
 
 	// Função para converter horário string para minutos desde meia-noite
@@ -1060,12 +1029,6 @@ export default function Horarios() {
 		} finally {
 			setSavingHorarios(false);
 		}
-	};
-
-	// Função para obter a fase do banco para posicionamento inicial na tela
-	const getInitialPhaseFromDatabase = (dbEvent) => {
-		// Usar a fase do banco para posicionamento inicial, mas depois será controlada pela interface
-		return dbEvent.fase || 1; // Fase padrão se não especificada
 	};
 
 	// Função para lidar com o clique do botão recarregar
@@ -2908,10 +2871,10 @@ export default function Horarios() {
 			<Box
 				sx={{
 					display: "flex",
-					flexDirection: { xs: "column", lg: "row" },
-					justifyContent: { xs: "center", lg: "space-between" },
-					alignItems: { xs: "center", lg: "center" },
-					gap: { xs: 3, lg: 0 },
+					flexDirection: "column",
+					justifyContent: "flex-start",
+					alignItems: "stretch",
+					gap: 2,
 					mb: 4,
 				}}
 			>
@@ -2919,7 +2882,6 @@ export default function Horarios() {
 				<Box
 					sx={{
 						textAlign: { xs: "center", lg: "left" },
-						order: { xs: 1, lg: 1 },
 					}}
 				>
 					<Typography
@@ -2936,25 +2898,26 @@ export default function Horarios() {
 					</Typography>
 				</Box>
 
-				{/* Seção dos controles - empilha em mobile, linha em desktop */}
+				{/* Seção dos controles - responsiva na linha abaixo */}
 				<Box
 					sx={{
 						display: "flex",
-						flexDirection: { xs: "column", md: "row" },
+						flexDirection: "row",
+						flexWrap: "wrap",
 						alignItems: "center",
-						gap: { xs: 2, md: 2 },
-						width: { xs: "100%", md: "auto" },
-						order: { xs: 2, lg: 2 },
+						gap: 2,
+						width: "100%",
 					}}
 				>
-					{/* Primeira linha de botões em mobile, inline em desktop */}
+					{/* Grupo de botões */}
 					<Box
 						sx={{
 							display: "flex",
 							flexDirection: { xs: "column", sm: "row" },
 							alignItems: "center",
 							gap: 2,
-							width: { xs: "100%", sm: "auto" },
+							width: "100%",
+							flex: "1 1 320px",
 						}}
 					>
 						<Tooltip
@@ -3081,14 +3044,15 @@ export default function Horarios() {
 						)}
 					</Box>
 
-					{/* Segunda linha de seletores em mobile, inline em desktop */}
+					{/* Grupo de filtros/seletores */}
 					<Box
 						sx={{
 							display: "flex",
 							flexDirection: { xs: "column", sm: "row" },
 							alignItems: "center",
 							gap: 2,
-							width: { xs: "100%", sm: "auto" },
+							width: "100%",
+							flex: "2 1 480px",
 						}}
 					>
 						<FormControl

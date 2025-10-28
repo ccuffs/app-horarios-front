@@ -348,9 +348,7 @@ export async function importHorarios(
 ) {
 	try {
 		if (!selectedAnoSemestreOrigem || !selectedCurso) {
-			throw new Error(
-				"Selecione um ano/semestre de origem e um curso",
-			);
+			throw new Error("Selecione um ano/semestre de origem e um curso");
 		}
 
 		const result = await horariosService.importarHorarios(
@@ -556,8 +554,8 @@ export function calcularCreditosSemestreAtual(events, disciplinas) {
 				const professoresIds = Array.isArray(ev.professoresIds)
 					? ev.professoresIds
 					: ev.professorId
-					? [ev.professorId]
-					: [];
+						? [ev.professorId]
+						: [];
 				professoresIds.forEach((cod) => {
 					const docente = String(cod);
 					const turno = getTurnoFromTime(ev.startTime);
@@ -623,6 +621,88 @@ export async function calcularCreditosOutroSemestre(
 	}
 }
 
+/**
+ * Função para buscar professores da API
+ */
+export async function fetchProfessores(
+	userId,
+	setLoadingProfessores,
+	setErrorProfessores,
+	setProfessores,
+) {
+	try {
+		setLoadingProfessores(true);
+		setErrorProfessores(null);
+
+		const { professores: professoresData } = await loadAllData(userId);
+
+		setProfessores(professoresData);
+	} catch (error) {
+		console.error("Erro ao buscar professores:", error);
+		setErrorProfessores(
+			"Erro ao carregar professores. Usando dados locais.",
+		);
+	} finally {
+		setLoadingProfessores(false);
+	}
+}
+
+/**
+ * Função para buscar disciplinas (CCRs) da API
+ */
+export async function fetchDisciplinas(
+	userId,
+	setLoadingDisciplinas,
+	setErrorDisciplinas,
+	setDisciplinas,
+) {
+	try {
+		setLoadingDisciplinas(true);
+		setErrorDisciplinas(null);
+
+		const { disciplinas: disciplinasData } = await loadAllData(userId);
+
+		setDisciplinas(disciplinasData);
+	} catch (error) {
+		console.error("Erro ao buscar disciplinas:", error);
+		setErrorDisciplinas("Erro ao carregar disciplinas.");
+		setDisciplinas([]);
+	} finally {
+		setLoadingDisciplinas(false);
+	}
+}
+
+/**
+ * Função para buscar ofertas da API
+ */
+export async function fetchOfertas(
+	selectedAnoSemestre,
+	selectedCurso,
+	setLoadingOfertas,
+	setErrorOfertas,
+	setOfertas,
+) {
+	try {
+		setLoadingOfertas(true);
+		setErrorOfertas(null);
+
+		const ofertasData = await loadOfertas(
+			selectedAnoSemestre,
+			selectedCurso,
+		);
+
+		setOfertas(ofertasData);
+	} catch (error) {
+		console.error("Erro ao buscar ofertas:", error);
+		setErrorOfertas(
+			"Erro ao carregar ofertas. Usando lógica padrão de turnos.",
+		);
+		setOfertas([]);
+	} finally {
+		setLoadingOfertas(false);
+	}
+}
+
 // Exportação padrão
 const horariosController = {
 	loadAllData,
@@ -634,7 +714,9 @@ const horariosController = {
 	getValidHorariosCount,
 	calcularCreditosSemestreAtual,
 	calcularCreditosOutroSemestre,
+	fetchProfessores,
+	fetchDisciplinas,
+	fetchOfertas,
 };
 
 export default horariosController;
-
