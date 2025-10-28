@@ -345,8 +345,8 @@ export default function Ofertas() {
 						pageSize={5}
 						checkboxSelection={false}
 						disableSelectionOnClick
-						getRowId={(row, index) =>
-							`${row.ano}-${row.semestre}-${row.id_curso}-${row.fase}-${index}`
+						getRowId={(row) =>
+							`${row.ano}-${row.semestre}-${row.id_curso}-${row.fase}-${row.turno}`
 						}
 					/>
 				</Box>
