@@ -201,6 +201,29 @@ export const normalizeTimeFromDB = (timeFromDB) => {
 	return timeString;
 };
 
+/**
+ * Normaliza hora para formato HH:MM para comparações
+ * Remove os segundos para padronizar comparações
+ */
+export const normalizeTimeForComparison = (time) => {
+	if (!time) return "";
+	
+	let timeString = time;
+	
+	if (typeof time === "object" && time !== null) {
+		timeString = time.toString();
+	}
+	
+	if (typeof timeString === "string") {
+		const parts = timeString.split(":");
+		if (parts.length >= 2) {
+			return `${parts[0]}:${parts[1]}`;
+		}
+	}
+	
+	return timeString;
+};
+
 export const isValidStartTimeNoturno = (time) => {
 	return time !== "22:30:00";
 };

@@ -3,6 +3,7 @@ import {
 	dbToEventFormat,
 	dayToNumber,
 	normalizeTimeFromDB,
+	normalizeTimeForComparison,
 	getTurnoFromTime,
 } from "../utils/horariosUtils.js";
 
@@ -44,12 +45,7 @@ export function processHorarios(
 
 		horariosFromDb.forEach((horario) => {
 			// Normalizar hora_inicio para garantir agrupamento correto
-			let horaInicio = horario.hora_inicio;
-			if (typeof horaInicio === "object" && horaInicio !== null) {
-				horaInicio = horaInicio.toString().substring(0, 5);
-			} else if (horaInicio && horaInicio.length > 5) {
-				horaInicio = horaInicio.substring(0, 5);
-			}
+			const horaInicio = normalizeTimeForComparison(horario.hora_inicio);
 
 			const key = `${horario.id_ccr}-${horario.dia_semana}-${horaInicio}-${horario.fase}`;
 
@@ -636,13 +632,7 @@ export function detectarConflitos(
 			const chavesDuplicacao = new Set();
 
 			todosHorarios.forEach((horario) => {
-				let horaInicio = horario.hora_inicio;
-				if (typeof horaInicio === "object") {
-					horaInicio = horaInicio.toString().substring(0, 5);
-				}
-				if (horaInicio && horaInicio.includes(":")) {
-					horaInicio = horaInicio.split(":").slice(0, 2).join(":");
-				}
+				const horaInicio = normalizeTimeForComparison(horario.hora_inicio);
 
 				const chaveCompleta = `${codigoProfessor}-${horario.id_ccr}-${horario.dia_semana}-${horaInicio}-${horario.duracao}-${horario.ano}-${horario.semestre}`;
 
@@ -691,14 +681,8 @@ export function detectarConflitos(
 			// Verificar conflitos dentro de cada dia
 			Object.entries(horariosPorDia).forEach(([dia, horariosNoDia]) => {
 				horariosNoDia.sort((a, b) => {
-					const horaA =
-						typeof a.hora_inicio === "object"
-							? a.hora_inicio.toString()
-							: a.hora_inicio;
-					const horaB =
-						typeof b.hora_inicio === "object"
-							? b.hora_inicio.toString()
-							: b.hora_inicio;
+					const horaA = normalizeTimeForComparison(a.hora_inicio);
+					const horaB = normalizeTimeForComparison(b.hora_inicio);
 					return horaA.localeCompare(horaB);
 				});
 
@@ -718,17 +702,8 @@ export function detectarConflitos(
 							continue;
 						}
 
-						const hora1 =
-							typeof h1.hora_inicio === "object"
-								? h1.hora_inicio.toString().substring(0, 5)
-								: h1.hora_inicio;
-						const hora2 =
-							typeof h2.hora_inicio === "object"
-								? h2.hora_inicio.toString().substring(0, 5)
-								: h2.hora_inicio;
-
-						const hora1Normalizada = hora1?.split(":").slice(0, 2).join(":");
-						const hora2Normalizada = hora2?.split(":").slice(0, 2).join(":");
+						const hora1Normalizada = normalizeTimeForComparison(h1.hora_inicio);
+						const hora2Normalizada = normalizeTimeForComparison(h2.hora_inicio);
 
 						const saoOMesmoHorario =
 							h1.id_ccr === h2.id_ccr &&
@@ -751,8 +726,8 @@ export function detectarConflitos(
 						}
 
 						if (h1.id_ccr && h2.id_ccr && horariosSeOverlapam(h1, h2)) {
-							const conflict1 = `${h1.id_ccr}-${h1.ano}-${h1.semestre}-${hora1}-${h1.duracao}`;
-							const conflict2 = `${h2.id_ccr}-${h2.ano}-${h2.semestre}-${hora2}-${h2.duracao}`;
+							const conflict1 = `${h1.id_ccr}-${h1.ano}-${h1.semestre}-${hora1Normalizada}-${h1.duracao}`;
+							const conflict2 = `${h2.id_ccr}-${h2.ano}-${h2.semestre}-${hora2Normalizada}-${h2.duracao}`;
 							const sortedConflicts = [conflict1, conflict2].sort();
 							const conflictId = `${codigoProfessor}-${dia}-${sortedConflicts.join("---")}`;
 
@@ -783,7 +758,7 @@ export function detectarConflitos(
 										(disciplina1
 											? disciplina1.nome
 											: "Disciplina não encontrada"),
-									hora_inicio: hora1,
+									hora_inicio: hora1Normalizada,
 									ano_semestre: `${h1.ano}/${h1.semestre}`,
 									tipo: h1.tipo || "salvo",
 								},
@@ -794,7 +769,7 @@ export function detectarConflitos(
 										(disciplina2
 											? disciplina2.nome
 											: "Disciplina não encontrada"),
-									hora_inicio: hora2,
+									hora_inicio: hora2Normalizada,
 									ano_semestre: `${h2.ano}/${h2.semestre}`,
 									tipo: h2.tipo || "salvo",
 								},
