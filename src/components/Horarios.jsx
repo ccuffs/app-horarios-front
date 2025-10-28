@@ -98,6 +98,9 @@ export default function Horarios() {
 		openCreditosDrawer,
 		setOpenCreditosDrawer,
 		linhasCreditos,
+		showSumarioModal,
+		setShowSumarioModal,
+		sumarioAlteracoes,
 
 		isEvenSemester,
 
@@ -111,6 +114,7 @@ export default function Horarios() {
 		verificarSeEventoTemConflito,
 		obterConflitosDoEvento,
 		saveAllHorariosToDatabase,
+		executeSyncToDatabase,
 		getValidHorariosCount,
 		getChangesCount,
 		hasPendingChanges,
@@ -1298,6 +1302,171 @@ export default function Horarios() {
 					{snackbarMessage}
 				</Alert>
 			</Snackbar>
+
+			{/* Modal de Sumário de Alterações */}
+			<Dialog
+				open={showSumarioModal}
+				onClose={() => setShowSumarioModal(false)}
+				maxWidth="md"
+				fullWidth
+				scroll="paper"
+			>
+				<DialogTitle>
+					<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+						<SaveIcon color="primary" />
+						Sumário de Alterações
+					</Box>
+				</DialogTitle>
+				<DialogContent dividers>
+					{sumarioAlteracoes && (
+						<>
+							<Typography variant="body1" sx={{ mb: 2 }}>
+								Você está prestes a sincronizar{" "}
+								<strong>{sumarioAlteracoes.totais.total} alteração(ões)</strong>{" "}
+								com o banco de dados:
+							</Typography>
+
+							{sumarioAlteracoes.totais.inclusoes > 0 && (
+								<Box sx={{ mb: 3 }}>
+									<Typography
+										variant="h6"
+										sx={{ mb: 1, color: "success.main", fontWeight: "medium" }}
+									>
+										✓ Inclusões ({sumarioAlteracoes.totais.inclusoes})
+									</Typography>
+									<TableContainer component={Paper} variant="outlined">
+										<Table size="small">
+											<TableHead>
+												<TableRow>
+													<TableCell sx={{ fontWeight: "bold" }}>Docente</TableCell>
+													<TableCell sx={{ fontWeight: "bold" }}>CCR</TableCell>
+													<TableCell sx={{ fontWeight: "bold" }}>Dia</TableCell>
+													<TableCell sx={{ fontWeight: "bold" }}>Horário</TableCell>
+												</TableRow>
+											</TableHead>
+											<TableBody>
+												{sumarioAlteracoes.alteracoes.inclusoes.map((inc, idx) => (
+													<TableRow key={idx} hover>
+														<TableCell>{inc.docente}</TableCell>
+														<TableCell>{inc.ccr}</TableCell>
+														<TableCell>{inc.diaSemana}</TableCell>
+														<TableCell>
+															{inc.horaInicio} - {inc.horaFim}
+														</TableCell>
+													</TableRow>
+												))}
+											</TableBody>
+										</Table>
+									</TableContainer>
+								</Box>
+							)}
+
+							{sumarioAlteracoes.totais.atualizacoes > 0 && (
+								<Box sx={{ mb: 3 }}>
+									<Typography
+										variant="h6"
+										sx={{ mb: 1, color: "warning.main", fontWeight: "medium" }}
+									>
+										⟳ Atualizações ({sumarioAlteracoes.totais.atualizacoes})
+									</Typography>
+									<TableContainer component={Paper} variant="outlined">
+										<Table size="small">
+											<TableHead>
+												<TableRow>
+													<TableCell sx={{ fontWeight: "bold" }}>CCR</TableCell>
+													<TableCell sx={{ fontWeight: "bold" }}>Dia</TableCell>
+													<TableCell sx={{ fontWeight: "bold" }}>Horário</TableCell>
+													<TableCell sx={{ fontWeight: "bold" }}>
+														Docente Anterior
+													</TableCell>
+													<TableCell sx={{ fontWeight: "bold" }}>
+														Docente Novo
+													</TableCell>
+												</TableRow>
+											</TableHead>
+											<TableBody>
+												{sumarioAlteracoes.alteracoes.atualizacoes.map((atu, idx) => (
+													<TableRow key={idx} hover>
+														<TableCell>{atu.ccr}</TableCell>
+														<TableCell>{atu.diaSemana}</TableCell>
+														<TableCell>
+															{atu.horaInicio} - {atu.horaFim}
+														</TableCell>
+														<TableCell
+															sx={{
+																textDecoration: "line-through",
+																color: "text.secondary",
+															}}
+														>
+															{atu.docenteAntigo}
+														</TableCell>
+														<TableCell sx={{ color: "success.main" }}>
+															{atu.docenteNovo}
+														</TableCell>
+													</TableRow>
+												))}
+											</TableBody>
+										</Table>
+									</TableContainer>
+								</Box>
+							)}
+
+							{sumarioAlteracoes.totais.remocoes > 0 && (
+								<Box sx={{ mb: 2 }}>
+									<Typography
+										variant="h6"
+										sx={{ mb: 1, color: "error.main", fontWeight: "medium" }}
+									>
+										✗ Remoções ({sumarioAlteracoes.totais.remocoes})
+									</Typography>
+									<TableContainer component={Paper} variant="outlined">
+										<Table size="small">
+											<TableHead>
+												<TableRow>
+													<TableCell sx={{ fontWeight: "bold" }}>Docente</TableCell>
+													<TableCell sx={{ fontWeight: "bold" }}>CCR</TableCell>
+													<TableCell sx={{ fontWeight: "bold" }}>Dia</TableCell>
+													<TableCell sx={{ fontWeight: "bold" }}>Horário</TableCell>
+												</TableRow>
+											</TableHead>
+											<TableBody>
+												{sumarioAlteracoes.alteracoes.remocoes.map((rem, idx) => (
+													<TableRow key={idx} hover>
+														<TableCell>{rem.docente}</TableCell>
+														<TableCell>{rem.ccr}</TableCell>
+														<TableCell>{rem.diaSemana}</TableCell>
+														<TableCell>
+															{rem.horaInicio} - {rem.horaFim}
+														</TableCell>
+													</TableRow>
+												))}
+											</TableBody>
+										</Table>
+									</TableContainer>
+								</Box>
+							)}
+						</>
+					)}
+				</DialogContent>
+				<DialogActions sx={{ p: 2, gap: 1 }}>
+					<Button
+						onClick={() => setShowSumarioModal(false)}
+						variant="outlined"
+						disabled={savingHorarios}
+					>
+						Cancelar
+					</Button>
+					<Button
+						onClick={executeSyncToDatabase}
+						variant="contained"
+						color="primary"
+						startIcon={savingHorarios ? <CircularProgress size={20} /> : <SaveIcon />}
+						disabled={savingHorarios}
+					>
+						{savingHorarios ? "Sincronizando..." : "Confirmar e Sincronizar"}
+					</Button>
+				</DialogActions>
+			</Dialog>
 		</Box>
 	);
 }

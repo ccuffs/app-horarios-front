@@ -137,8 +137,12 @@ export function processHorarios(
 
 /**
  * Função auxiliar para mapear professores aos sufixos corretos
- * Mantém o histórico de qual professor tinha qual sufixo (-prof1 ou -prof2)
- * Novos professores ocupam a primeira posição disponível
+ * Implementa as regras de sufixos conforme especificado:
+ * 1. Primeiro docente adicionado possui sufixo -prof1
+ * 2. Caso haja um docente no evento, o segundo docente adicionado recebe sufixo -prof2
+ * 3. Caso docente -prof2 seja removido, o próximo docente adicionado recebe sufixo -prof2
+ * 4. Caso docente -prof1 seja removido e haja um -prof2, -prof2 se mantém e ao adicionar um novo docente, este recebe -prof1
+ * 5. Caso ambos -prof1 e -prof2 sejam removidos, partimos da regra 1
  */
 function mapProfessoresToSuffixos(event, originalHorarios) {
 	const professoresAtuais =
@@ -159,7 +163,7 @@ function mapProfessoresToSuffixos(event, originalHorarios) {
 	// Buscar o ID base (sem sufixo)
 	const baseId = event.id.replace(/-prof\d+$/, "");
 
-	// Mapear histórico de sufixos para cada professor
+	// Mapear histórico de sufixos para cada professor nos originais
 	const historicoSuffixos = new Map(); // professorId -> sufixo (1 ou 2)
 
 	// Buscar no histórico de horários originais
@@ -181,41 +185,91 @@ function mapProfessoresToSuffixos(event, originalHorarios) {
 		}
 	});
 
-	// Criar lista de sufixos disponíveis (ordenado: 1, 2)
-	const sufixosDisponiveis = [1, 2];
+	// Se não há professores atuais, retornar array vazio
+	if (professoresAtuais.length === 0) {
+		return [];
+	}
 
-	// Primeiro, preservar sufixos de professores que já existem
-	const resultado = [];
-	const professoresProcessados = new Set();
+	// CASO 1: Apenas 1 professor atual
+	if (professoresAtuais.length === 1) {
+		const profId = professoresAtuais[0];
+		const sufixoHistorico = historicoSuffixos.get(profId);
 
-	professoresAtuais.forEach((professorId) => {
-		const sufixoHistorico = historicoSuffixos.get(professorId);
-		if (sufixoHistorico && (sufixoHistorico === 1 || sufixoHistorico === 2)) {
-			// Mantém o sufixo histórico
-			resultado.push({ professorId, sufixo: sufixoHistorico.toString() });
-			professoresProcessados.add(professorId);
+		if (sufixoHistorico) {
+			// Professor já existia, mantém seu sufixo
+			return [{ professorId: profId, sufixo: sufixoHistorico.toString() }];
 		}
-	});
 
-	// Depois, atribuir sufixos disponíveis aos professores restantes
-	professoresAtuais.forEach((professorId) => {
-		// Se este professor ainda não foi processado
-		if (!professoresProcessados.has(professorId)) {
-			// Pegar o primeiro sufixo disponível que não foi usado
-			const sufixosUsados = resultado.map((r) => parseInt(r.sufixo, 10));
-			for (const sufixo of sufixosDisponiveis) {
-				if (!sufixosUsados.includes(sufixo)) {
-					resultado.push({ professorId, sufixo: sufixo.toString() });
-					break;
-				}
+		// Professor novo - precisa determinar qual sufixo dar
+		// Se não há histórico (evento novo), dá -prof1
+		if (historicoSuffixos.size === 0) {
+			return [{ professorId: profId, sufixo: "1" }];
+		}
+
+		// Se há histórico mas este professor não está nele, é um professor novo
+		// Descobrir qual sufixo estava ocupado e dar o disponível
+		const sufixosOcupados = new Set(historicoSuffixos.values());
+
+		// IMPORTANTE: Regra do usuário - quando substitui um docente (atualização),
+		// o novo docente sempre recebe -prof1 pois substitui o registro existente
+		// Mesmo que -prof1 tenha sido removido, o novo docente assume -prof1
+
+		// Se havia apenas -prof1 no histórico e foi removido
+		if (sufixosOcupados.has(1) && !sufixosOcupados.has(2)) {
+			// Novo professor recebe -prof1 (substitui o que foi removido)
+			return [{ professorId: profId, sufixo: "1" }];
+		}
+
+		// Se havia apenas -prof2 no histórico e foi removido
+		if (sufixosOcupados.has(2) && !sufixosOcupados.has(1)) {
+			// Novo professor também recebe -prof1 (substitui e passa a ser o primeiro)
+			return [{ professorId: profId, sufixo: "1" }];
+		}
+
+		// Se ambos foram removidos (caso de 2 professores removidos e 1 adicionado)
+		// Novo professor recebe -prof1
+		return [{ professorId: profId, sufixo: "1" }];
+	}
+
+	// CASO 2: 2 professores atuais
+	if (professoresAtuais.length === 2) {
+		const resultado = [];
+		const sufixosUsados = new Set();
+
+		// PRIMEIRO PASSO: Manter sufixos dos professores que já existiam
+		professoresAtuais.forEach((profId) => {
+			const sufixoHistorico = historicoSuffixos.get(profId);
+			if (sufixoHistorico) {
+				resultado.push({ professorId: profId, sufixo: sufixoHistorico.toString() });
+				sufixosUsados.add(sufixoHistorico);
 			}
-		}
-	});
+		});
 
-	// Ordenar por sufixo para garantir consistência
-	resultado.sort((a, b) => parseInt(a.sufixo, 10) - parseInt(b.sufixo, 10));
+		// SEGUNDO PASSO: Atribuir sufixos aos professores novos
+		professoresAtuais.forEach((profId) => {
+			// Se já foi processado, pular
+			if (resultado.some(r => r.professorId === profId)) {
+				return;
+			}
 
-	return resultado;
+			// Professor novo - atribuir primeiro sufixo disponível (1 ou 2)
+			if (!sufixosUsados.has(1)) {
+				resultado.push({ professorId: profId, sufixo: "1" });
+				sufixosUsados.add(1);
+			} else if (!sufixosUsados.has(2)) {
+				resultado.push({ professorId: profId, sufixo: "2" });
+				sufixosUsados.add(2);
+			}
+		});
+
+		// Ordenar por sufixo para consistência
+		resultado.sort((a, b) => parseInt(a.sufixo, 10) - parseInt(b.sufixo, 10));
+
+		return resultado;
+	}
+
+	// Por padrão, primeiro professor recebe -prof1
+	return [{ professorId: professoresAtuais[0], sufixo: "1" }];
 }
 
 /**
@@ -791,6 +845,252 @@ export function detectarConflitos(
 	return conflitos;
 }
 
+/**
+ * Gera sumário detalhado das alterações antes de sincronizar
+ */
+export function gerarSumarioAlteracoes(
+	events,
+	originalHorarios,
+	selectedAnoSemestre,
+	selectedCurso,
+	professores,
+	disciplinas,
+) {
+	const { novos, editados, removidosIds } = prepareSyncData(
+		events,
+		originalHorarios,
+		selectedAnoSemestre,
+		selectedCurso,
+	);
+
+	const alteracoes = {
+		inclusoes: [],
+		atualizacoes: [],
+		remocoes: [],
+	};
+
+	// Mapear professores e disciplinas para facilitar busca
+	const professoresMap = new Map(
+		professores.map((p) => [String(p.codigo || p.id), p])
+	);
+	const disciplinasMap = new Map(
+		disciplinas.map((d) => [String(d.id), d])
+	);
+
+	// Mapear dia da semana para nome
+	const diasSemana = {
+		1: "Segunda-feira",
+		2: "Terça-feira",
+		3: "Quarta-feira",
+		4: "Quinta-feira",
+		5: "Sexta-feira",
+		6: "Sábado",
+		7: "Domingo",
+	};
+
+	// Função auxiliar para formatar hora
+	const formatarHora = (hora) => {
+		if (!hora) return "";
+		const normalizada = normalizeTimeFromDB(hora);
+		return normalizada.substring(0, 5); // Retorna HH:MM
+	};
+
+	// Função auxiliar para calcular hora fim
+	const calcularHoraFim = (horaInicio, duracao) => {
+		const hora = normalizeTimeFromDB(horaInicio);
+		const [horas, minutos] = hora.split(":").map(Number);
+		const totalMinutos = horas * 60 + minutos + duracao * 30;
+		const horasFim = Math.floor(totalMinutos / 60);
+		const minutosFim = totalMinutos % 60;
+		return `${String(horasFim).padStart(2, "0")}:${String(minutosFim).padStart(2, "0")}`;
+	};
+
+	// Criar uma estrutura para agrupar por evento (disciplina+dia+hora)
+	// Isso nos permite ver quais professores foram adicionados/removidos em cada evento
+	const horariosOriginaisPorEvento = new Map();
+	const horariosAtuaisPorEvento = new Map();
+
+	// Agrupar horários originais
+	originalHorarios.forEach((h) => {
+		const horaInicio = normalizeTimeForComparison(h.hora_inicio);
+		const key = `${h.id_ccr}-${h.dia_semana}-${horaInicio}`;
+		if (!horariosOriginaisPorEvento.has(key)) {
+			horariosOriginaisPorEvento.set(key, []);
+		}
+		horariosOriginaisPorEvento.get(key).push(h);
+	});
+
+	// Agrupar horários atuais (novos + editados + existentes não modificados)
+	const todosHorariosAtuais = [...novos, ...editados];
+	// Adicionar os horários que não foram modificados
+	originalHorarios.forEach((original) => {
+		if (!removidosIds.includes(original.id)) {
+			const jaExiste = todosHorariosAtuais.some(h => h.id === original.id);
+			if (!jaExiste) {
+				todosHorariosAtuais.push(original);
+			}
+		}
+	});
+
+	todosHorariosAtuais.forEach((h) => {
+		const horaInicio = normalizeTimeForComparison(h.hora_inicio);
+		const key = `${h.id_ccr}-${h.dia_semana}-${horaInicio}`;
+		if (!horariosAtuaisPorEvento.has(key)) {
+			horariosAtuaisPorEvento.set(key, []);
+		}
+		horariosAtuaisPorEvento.get(key).push(h);
+	});
+
+	// Processar cada evento para detectar inclusões e remoções reais
+	const eventosProcessados = new Set();
+
+	// Detectar INCLUSÕES (professores que estão no atual mas não no original)
+	horariosAtuaisPorEvento.forEach((atuais, key) => {
+		eventosProcessados.add(key);
+		const originais = horariosOriginaisPorEvento.get(key) || [];
+
+		const professoresOriginais = new Set(originais.map(h => h.codigo_docente));
+		const professoresAtuais = new Set(atuais.map(h => h.codigo_docente));
+
+		// Professores que foram adicionados (estão no atual mas não no original)
+		professoresAtuais.forEach(professorId => {
+			if (!professoresOriginais.has(professorId)) {
+				const horario = atuais.find(h => h.codigo_docente === professorId);
+				const professor = professoresMap.get(String(professorId));
+				const disciplina = disciplinasMap.get(String(horario.id_ccr));
+
+				alteracoes.inclusoes.push({
+					docente: professor ? professor.name || professor.nome : professorId,
+					ccr: disciplina ? `${disciplina.codigo} - ${disciplina.nome}` : horario.id_ccr,
+					diaSemana: diasSemana[horario.dia_semana] || `Dia ${horario.dia_semana}`,
+					horaInicio: formatarHora(horario.hora_inicio),
+					horaFim: calcularHoraFim(horario.hora_inicio, horario.duracao),
+				});
+			}
+		});
+	});
+
+	// Detectar REMOÇÕES (professores que estão no original mas não no atual)
+	horariosOriginaisPorEvento.forEach((originais, key) => {
+		eventosProcessados.add(key);
+		const atuais = horariosAtuaisPorEvento.get(key) || [];
+
+		const professoresOriginais = new Set(originais.map(h => h.codigo_docente));
+		const professoresAtuais = new Set(atuais.map(h => h.codigo_docente));
+
+		// Professores que foram removidos (estão no original mas não no atual)
+		professoresOriginais.forEach(professorId => {
+			if (!professoresAtuais.has(professorId)) {
+				const horario = originais.find(h => h.codigo_docente === professorId);
+				const professor = professoresMap.get(String(professorId));
+				const disciplina = disciplinasMap.get(String(horario.id_ccr));
+
+				alteracoes.remocoes.push({
+					docente: professor ? professor.name || professor.nome : professorId,
+					ccr: disciplina ? `${disciplina.codigo} - ${disciplina.nome}` : horario.id_ccr,
+					diaSemana: diasSemana[horario.dia_semana] || `Dia ${horario.dia_semana}`,
+					horaInicio: formatarHora(horario.hora_inicio),
+					horaFim: calcularHoraFim(horario.hora_inicio, horario.duracao),
+				});
+			}
+		});
+	});
+
+	// Processar ATUALIZAÇÕES (apenas quando há TROCA de docentes, não adição/remoção pura)
+	// Regra 5: Removido um docente E adicionado outro no mesmo evento = 1 atualização
+	// Regra 7: Adicionado um docente em evento que já tinha outro = 1 inclusão (não é atualização!)
+	// Regra 6: Removido um docente de evento sem adicionar outro = 1 remoção (não é atualização!)
+
+	// Detectar apenas TROCAS comparando originais com atuais já agrupados
+	const atualizacoesDetectadas = [];
+
+	horariosOriginaisPorEvento.forEach((originais, key) => {
+		const atuais = horariosAtuaisPorEvento.get(key) || [];
+
+		const docentesOriginais = new Set(originais.map(h => h.codigo_docente));
+		const docentesAtuais = new Set(atuais.map(h => h.codigo_docente));
+
+		// Docentes que saíram
+		const docentesRemovidos = [...docentesOriginais].filter(d => !docentesAtuais.has(d));
+		// Docentes que entraram
+		const docentesAdicionados = [...docentesAtuais].filter(d => !docentesOriginais.has(d));
+
+		// ATUALIZAÇÃO só acontece quando:
+		// - Quantidade de docentes removidos = quantidade de docentes adicionados (troca 1:1 ou 2:2)
+		// - E ambas as quantidades são > 0
+		// Isso garante que:
+		// - 1 docente -> 2 docentes = inclusão (não é troca)
+		// - 2 docentes -> 1 docente = remoção (não é troca)
+		// - 1 docente -> 1 docente diferente = atualização (é troca 1:1)
+		// - 2 docentes -> 2 docentes diferentes = 2 atualizações (são trocas 1:1)
+		if (docentesRemovidos.length > 0 &&
+		    docentesAdicionados.length > 0 &&
+		    docentesRemovidos.length === docentesAdicionados.length) {
+
+			const horarioRef = originais[0] || atuais[0];
+
+			// Parear 1:1 os docentes removidos com os adicionados
+			for (let i = 0; i < docentesRemovidos.length; i++) {
+				const docenteRemovido = docentesRemovidos[i];
+				const docenteAdicionado = docentesAdicionados[i];
+
+				const professorAntigo = professoresMap.get(String(docenteRemovido));
+				const professorNovo = professoresMap.get(String(docenteAdicionado));
+				const disciplina = disciplinasMap.get(String(horarioRef.id_ccr));
+
+				atualizacoesDetectadas.push({
+					docenteAntigo: professorAntigo ? professorAntigo.name || professorAntigo.nome : docenteRemovido,
+					docenteNovo: professorNovo ? professorNovo.name || professorNovo.nome : docenteAdicionado,
+					ccr: disciplina ? `${disciplina.codigo} - ${disciplina.nome}` : horarioRef.id_ccr,
+					diaSemana: diasSemana[horarioRef.dia_semana] || `Dia ${horarioRef.dia_semana}`,
+					horaInicio: formatarHora(horarioRef.hora_inicio),
+					horaFim: calcularHoraFim(horarioRef.hora_inicio, horarioRef.duracao),
+				});
+
+				// Remover da lista de remoções (pois é uma troca, não remoção pura)
+				const idxRemocao = alteracoes.remocoes.findIndex(
+					r => r.docente === (professoresMap.get(String(docenteRemovido))?.name ||
+					                   professoresMap.get(String(docenteRemovido))?.nome ||
+					                   docenteRemovido) &&
+					     r.ccr === (disciplinasMap.get(String(horarioRef.id_ccr)) ?
+					               `${disciplinasMap.get(String(horarioRef.id_ccr)).codigo} - ${disciplinasMap.get(String(horarioRef.id_ccr)).nome}` :
+					               horarioRef.id_ccr)
+				);
+				if (idxRemocao >= 0) {
+					alteracoes.remocoes.splice(idxRemocao, 1);
+				}
+
+				// Remover da lista de inclusões (pois é uma troca, não inclusão pura)
+				const idxInclusao = alteracoes.inclusoes.findIndex(
+					inc => inc.docente === (professoresMap.get(String(docenteAdicionado))?.name ||
+					                       professoresMap.get(String(docenteAdicionado))?.nome ||
+					                       docenteAdicionado) &&
+					       inc.ccr === (disciplinasMap.get(String(horarioRef.id_ccr)) ?
+					                   `${disciplinasMap.get(String(horarioRef.id_ccr)).codigo} - ${disciplinasMap.get(String(horarioRef.id_ccr)).nome}` :
+					                   horarioRef.id_ccr)
+				);
+				if (idxInclusao >= 0) {
+					alteracoes.inclusoes.splice(idxInclusao, 1);
+				}
+			}
+		}
+		// Se docentesRemovidos.length !== docentesAdicionados.length, não é uma troca
+		// Então permanecem como inclusões ou remoções puras nas listas originais
+	});
+
+	alteracoes.atualizacoes = atualizacoesDetectadas;
+
+	return {
+		alteracoes,
+		totais: {
+			inclusoes: alteracoes.inclusoes.length,
+			atualizacoes: alteracoes.atualizacoes.length,
+			remocoes: alteracoes.remocoes.length,
+			total: alteracoes.inclusoes.length + alteracoes.atualizacoes.length + alteracoes.remocoes.length,
+		},
+	};
+}
+
 // Exportação padrão
 const horariosController = {
 	formatProfessores,
@@ -801,6 +1101,7 @@ const horariosController = {
 	calcularCreditosSemestreAtual,
 	calcularCreditosOutroSemestre,
 	detectarConflitos,
+	gerarSumarioAlteracoes,
 };
 
 export default horariosController;

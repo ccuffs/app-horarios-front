@@ -93,6 +93,10 @@ export default function useHorarios() {
 	// Drawer lateral: Créditos por docente
 	const [openCreditosDrawer, setOpenCreditosDrawer] = useState(false);
 
+	// Modal de sumário de alterações
+	const [showSumarioModal, setShowSumarioModal] = useState(false);
+	const [sumarioAlteracoes, setSumarioAlteracoes] = useState(null);
+
 	// Estado para armazenar créditos do semestre atual por docente
 	const creditosSemestreAtualPorDocente = useMemo(() => {
 		return horariosController.calcularCreditosSemestreAtual(events, disciplinas);
@@ -520,11 +524,33 @@ export default function useHorarios() {
 		horariosSeOverlapam,
 	]);
 
-	// Função para salvar todos os horários no banco de dados
-	const saveAllHorariosToDatabase = useCallback(async () => {
+	// Função para mostrar modal com sumário de alterações
+	const showSumarioBeforeSync = useCallback(() => {
+		const sumario = horariosController.gerarSumarioAlteracoes(
+			events,
+			originalHorarios,
+			selectedAnoSemestre,
+			selectedCurso,
+			professores,
+			disciplinas,
+		);
+
+		if (sumario.totais.total === 0) {
+			setSaveSuccess(true);
+			setTimeout(() => setSaveSuccess(false), 3000);
+			return;
+		}
+
+		setSumarioAlteracoes(sumario);
+		setShowSumarioModal(true);
+	}, [events, originalHorarios, selectedAnoSemestre, selectedCurso, professores, disciplinas]);
+
+	// Função para salvar todos os horários no banco de dados (agora interna, chamada após confirmação)
+	const executeSyncToDatabase = useCallback(async () => {
 		setSavingHorarios(true);
 		setSaveError(null);
 		setSaveSuccess(false);
+		setShowSumarioModal(false);
 
 		try {
 			// Preparar dados de sincronização usando o controller
@@ -560,6 +586,11 @@ export default function useHorarios() {
 			setSavingHorarios(false);
 		}
 	}, [events, originalHorarios, selectedAnoSemestre, selectedCurso, detectarConflitosHorarios]);
+
+	// Função pública que agora mostra o sumário primeiro
+	const saveAllHorariosToDatabase = useCallback(() => {
+		showSumarioBeforeSync();
+	}, [showSumarioBeforeSync]);
 
 	// Função para contar horários válidos
 	const getValidHorariosCount = useCallback(() => {
@@ -680,7 +711,7 @@ export default function useHorarios() {
 	// Função para sincronizar mudanças e depois recarregar
 	const handleSyncAndReload = useCallback(async () => {
 		try {
-			await saveAllHorariosToDatabase();
+			await executeSyncToDatabase();
 			setShowReloadConfirmation(false);
 			setTimeout(() => {
 				reloadAllData();
@@ -691,7 +722,7 @@ export default function useHorarios() {
 			setSnackbarOpen(true);
 			setShowReloadConfirmation(false);
 		}
-	}, [saveAllHorariosToDatabase, reloadAllData]);
+	}, [executeSyncToDatabase, reloadAllData]);
 
 	// Função para importar horários de ano/semestre anterior
 	const importarHorarios = useCallback(async () => {
@@ -1804,14 +1835,6 @@ export default function useHorarios() {
 						? newEvents[selectedPhase][existingEventKey]
 						: [newEvents[selectedPhase][existingEventKey]];
 
-					// Função auxiliar para normalizar IDs garantindo consistência
-					const normalizeEventId = (baseEventId, professorIndex) => {
-						// Remove qualquer sufixo -prof existente
-						const cleanId = baseEventId.replace(/-prof\d+$/, "");
-						// Adiciona o sufixo correto
-						return `${cleanId}-prof${professorIndex + 1}`;
-					};
-
 					const updatedEvents = eventArray.map((event) => {
 						if (event.id === eventData.id) {
 							const ano = selectedAnoSemestre.ano;
@@ -1821,12 +1844,35 @@ export default function useHorarios() {
 							const professoresAtuais = eventData.professoresIds ||
 								[eventData.professorId].filter(Boolean);
 
-							// Atualizar o ID base removendo o sufixo antigo e gerando um novo
+							// Obter histórico de IDs originais para manter os sufixos corretos
+							const historicoIds = eventArray
+								.map(e => e.id)
+								.filter(Boolean);
+
+							// Função para determinar sufixo correto baseado nas regras
+							const determineSuffix = (profIndex, professoresAtuais) => {
+								// Se é o primeiro professor (índice 0), sempre recebe -prof1
+								if (profIndex === 0) {
+									return '-prof1';
+								}
+								// Se já existe um -prof1 e este é o segundo professor
+								if (professoresAtuais.length === 2 && profIndex === 1) {
+									return '-prof2';
+								}
+								// Por padrão, sempre usar -prof1
+								return '-prof1';
+							};
+
+							// Extrair ID base (sem sufixo)
 							const baseId = event.id.replace(/-prof\d+$/, "");
+
+							// Para o primeiro evento do slot (que é sempre editado aqui),
+							// usar -prof1
+							const updatedId = `${baseId}-prof1`;
 
 							const updatedEvent = {
 								...event,
-								id: normalizeEventId(baseId, 0), // Primeiro evento sempre tem prof1
+								id: updatedId,
 								title: eventData.title || "",
 								disciplinaId: eventData.disciplinaId,
 								professoresIds: professoresAtuais,
@@ -2293,6 +2339,9 @@ export default function useHorarios() {
 		linhasCreditos,
 		isEvenSemester,
 		originalHorarios,
+		showSumarioModal,
+		setShowSumarioModal,
+		sumarioAlteracoes,
 
 		// Funções
 		getCurrentUserId,
@@ -2305,6 +2354,7 @@ export default function useHorarios() {
 		obterConflitosDoEvento,
 		detectarConflitosHorarios,
 		saveAllHorariosToDatabase,
+		executeSyncToDatabase,
 		getValidHorariosCount,
 		getChangesCount,
 		hasPendingChanges,
