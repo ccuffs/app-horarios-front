@@ -1,21 +1,6 @@
 import ccrsService from "../services/ccrs-service.js";
-import cursosService from "../services/cursos-service.js";
 
-/**
- * Carrega CCRs e cursos
- */
-export async function loadCCRsAndCursos() {
-	try {
-		const [ccrs, cursos] = await Promise.all([
-			ccrsService.getCCRs(),
-			cursosService.getCursos(),
-		]);
-		return { ccrs, cursos };
-	} catch (error) {
-		console.error("Erro ao carregar dados:", error);
-		throw error;
-	}
-}
+//
 
 /**
  * Prepara os dados de um CCR para edição
@@ -166,8 +151,7 @@ export function getResetCursosSelecionados() {
 
 // Exportação padrão
 const ccrsController = {
-	loadCCRsAndCursos,
-	prepareEditData,
+    prepareEditData,
 	prepareCursosSelecionados,
 	validateFormData,
 	prepareDataForCreate,
