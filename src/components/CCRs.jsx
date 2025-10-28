@@ -17,6 +17,7 @@ import {
 	Snackbar,
 	Stack,
 	TextField,
+	Typography,
 } from "@mui/material";
 import CustomDataGrid from "./CustomDataGrid.jsx";
 import { useCCRs } from "../hooks/useCCRs.js";
@@ -107,6 +108,25 @@ export default function CCRs() {
 
 	return (
 		<Box>
+			<Box
+				sx={{
+					mb: 2,
+					textAlign: { xs: "center", lg: "left" },
+				}}
+			>
+				<Typography
+					variant="h4"
+					sx={{
+						fontSize: {
+							xs: "1.75rem",
+							sm: "2rem",
+							lg: "2.125rem",
+						},
+					}}
+				>
+					CCRs - Componentes Curriculares
+				</Typography>
+			</Box>
 			<Stack spacing={2}>
 				<Stack spacing={2}>
 					<Stack spacing={2} direction="row">
