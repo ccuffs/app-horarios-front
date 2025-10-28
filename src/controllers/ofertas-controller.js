@@ -1,21 +1,9 @@
 import ofertasService from "../services/ofertas-service.js";
-import cursosService from "../services/cursos-service.js";
 
 /**
  * Carrega ofertas e cursos
  */
-export async function loadOfertasAndCursos() {
-  try {
-    const [ofertas, cursos] = await Promise.all([
-      ofertasService.getOfertas(),
-      cursosService.getCursos(),
-    ]);
-    return { ofertas, cursos };
-  } catch (error) {
-    console.error("Erro ao carregar dados:", error);
-    throw error;
-  }
-}
+//
 
 /**
  * Prepara os dados de uma oferta para edição
@@ -179,7 +167,6 @@ export function getResetFormData() {
 
 // Exportação padrão
 const ofertasController = {
-  loadOfertasAndCursos,
   prepareEditData,
   prepareDeleteData,
   validateFormData,

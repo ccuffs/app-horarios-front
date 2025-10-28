@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import {
 	Alert,
 	Box,
@@ -17,139 +17,28 @@ import {
 	TextField,
 } from "@mui/material";
 import CustomDataGrid from "./CustomDataGrid.jsx";
-import ofertasController from "../controllers/ofertas-controller.js";
-import ofertasService from "../services/ofertas-service.js";
+import { useOfertas } from "../hooks/useOfertas.js";
 
 export default function Ofertas() {
-	const [ofertas, setOfertas] = useState([]);
-	const [cursos, setCursos] = useState([]);
-	const [formData, setFormData] = useState({
-		ano: "",
-		semestre: "",
-		id_curso: "",
-		fase: "",
-		turno: "",
-	});
-	const [edit, setEdit] = useState(false);
-	const [oldTurno, setOldTurno] = useState("");
-	const [openMessage, setOpenMessage] = React.useState(false);
-	const [openDialog, setOpenDialog] = React.useState(false);
-	const [messageText, setMessageText] = React.useState("");
-	const [messageSeverity, setMessageSeverity] = React.useState("success");
-	const [deleteData, setDeleteData] = React.useState(null);
-
-	useEffect(() => {
-		loadData();
-	}, []);
-
-	const loadData = async () => {
-		try {
-			const { ofertas: ofertasData, cursos: cursosData } =
-				await ofertasController.loadOfertasAndCursos();
-			setOfertas(ofertasData);
-			setCursos(cursosData);
-		} catch (error) {
-			setOfertas([]);
-			setCursos([]);
-		}
-	};
-
-	async function getData() {
-		try {
-			const ofertasData = await ofertasService.getOfertas();
-			setOfertas(ofertasData);
-		} catch (error) {
-			setOfertas([]);
-		}
-	}
-
-	function handleEdit(data) {
-		const editData = ofertasController.prepareEditData(data);
-		setFormData(editData);
-		setOldTurno(data.turno || "");
-		setEdit(true);
-	}
-
-	function handleDelete(row) {
-		const deleteDataPrepared = ofertasController.prepareDeleteData(row);
-		setDeleteData(deleteDataPrepared);
-		setOpenDialog(true);
-	}
-
-	function handleInputChange(e) {
-		setFormData({ ...formData, [e.target.name]: e.target.value });
-	}
-
-	async function handleAddOrUpdate() {
-		const validation = ofertasController.validateFormData(formData);
-
-		if (!validation.isValid) {
-			setMessageText(validation.message);
-			setMessageSeverity("error");
-			setOpenMessage(true);
-			return;
-		}
-
-		const dataToSend = ofertasController.prepareDataForApi(formData);
-		const result = await ofertasController.saveOrUpdateOferta(
-			formData,
-			edit,
-			dataToSend,
-			oldTurno,
-		);
-
-		if (result.success) {
-			setMessageText(result.message);
-			setMessageSeverity("success");
-			setFormData(ofertasController.getResetFormData());
-			setEdit(false);
-			setOldTurno("");
-		} else {
-			setMessageText(result.message);
-			setMessageSeverity("error");
-		}
-
-		setOpenMessage(true);
-		await getData();
-	}
-
-	function handleCancelClick() {
-		setEdit(false);
-		setFormData(ofertasController.getResetFormData());
-		setOldTurno("");
-	}
-
-	function handleCloseMessage(_, reason) {
-		if (reason === "clickaway") {
-			return;
-		}
-		setOpenMessage(false);
-	}
-
-	function handleClose() {
-		setOpenDialog(false);
-	}
-
-	async function handleDeleteClick() {
-		const result = await ofertasController.removeOferta(deleteData);
-
-		if (result.success) {
-			setMessageText(result.message);
-			setMessageSeverity("success");
-		} else {
-			setMessageText(result.message);
-			setMessageSeverity("error");
-		}
-
-		setFormData(ofertasController.getResetFormData());
-		setOpenDialog(false);
-		setOpenMessage(true);
-		await getData();
-	}
-
-	function handleNoDeleteClick() {
-		setOpenDialog(false);
-	}
+	const {
+		ofertas,
+		cursos,
+		formData,
+		edit,
+		openMessage,
+		openDialog,
+		messageText,
+		messageSeverity,
+		handleEdit,
+		handleDelete,
+		handleInputChange,
+		handleAddOrUpdate,
+		handleCancelClick,
+		handleCloseMessage,
+		handleClose,
+		handleDeleteClick,
+		handleNoDeleteClick,
+	} = useOfertas();
 
 	const columns = [
 		{ field: "ano", headerName: "Ano", width: 100 },
