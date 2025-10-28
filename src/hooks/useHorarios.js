@@ -649,7 +649,6 @@ export default function useHorarios() {
 		professores,
 		anosSemestres,
 		fetchOfertas,
-		fixEventColorsAfterLoading,
 	]);
 
 	// Função para lidar com o clique do botão recarregar
@@ -2120,7 +2119,8 @@ export default function useHorarios() {
 		fetchProfessores();
 		fetchDisciplinas();
 		fetchAnosSemestres();
-	}, [fetchCursos, fetchProfessores, fetchDisciplinas, fetchAnosSemestres]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
 	// useEffect para auto-selecionar ano/semestre
 	useEffect(() => {
@@ -2144,7 +2144,7 @@ export default function useHorarios() {
 		};
 
 		autoSelect();
-	}, [anosSemestres, selectedCurso, hasAutoSelectedAnoSemestre]);
+	}, [anosSemestres.length, selectedCurso?.id, hasAutoSelectedAnoSemestre]);
 
 	// useEffect para carregar horários
 	useEffect(() => {
@@ -2158,19 +2158,21 @@ export default function useHorarios() {
 			setOriginalHorarios([]);
 			loadHorariosFromDatabase();
 		}
-	}, [disciplinas, selectedCurso, selectedAnoSemestre, loadHorariosFromDatabase]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [disciplinas.length, selectedCurso?.id, selectedAnoSemestre.ano, selectedAnoSemestre.semestre]);
 
 	// useEffect para recarregar ofertas
 	useEffect(() => {
 		if (selectedCurso && selectedAnoSemestre.ano && selectedAnoSemestre.semestre) {
 			fetchOfertas();
 		}
-	}, [selectedCurso, selectedAnoSemestre, fetchOfertas]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [selectedCurso?.id, selectedAnoSemestre.ano, selectedAnoSemestre.semestre]);
 
 	// useEffect para limpar erro de carregamento
 	useEffect(() => {
 		setLoadError(null);
-	}, [selectedAnoSemestre]);
+	}, [selectedAnoSemestre.ano, selectedAnoSemestre.semestre]);
 
 	// useEffect para detectar conflitos
 	useEffect(() => {
@@ -2185,7 +2187,8 @@ export default function useHorarios() {
 		};
 
 		detectConflicts();
-	}, [events, professores, disciplinas, anosSemestres, detectarConflitosHorarios]);
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [events, professores.length, disciplinas.length, anosSemestres.length]);
 
 	// useEffect para carregar créditos do outro semestre
 	useEffect(() => {
@@ -2217,7 +2220,7 @@ export default function useHorarios() {
 		};
 
 		carregarOutroSemestre();
-	}, [selectedCurso, selectedAnoSemestre, disciplinas]);
+	}, [selectedCurso?.id, selectedAnoSemestre.ano, selectedAnoSemestre.semestre, disciplinas.length]);
 
 	return {
 		// Estados
