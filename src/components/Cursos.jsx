@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React from "react";
 import {
 	Alert,
 	Box,
@@ -17,126 +17,30 @@ import {
 	TextField,
 } from "@mui/material";
 import CustomDataGrid from "./CustomDataGrid.jsx";
-import cursosController from "../controllers/cursos-controller.js";
-import cursosService from "../services/cursos-service.js";
+import { useCursos } from "../hooks/useCursos.js";
 
 export default function Cursos() {
-	const [cursos, setCursos] = useState([]);
-	const [formData, setFormData] = useState({
-		id: "",
-		codigo: "",
-		nome: "",
-		turno: "",
-	});
-	const [edit, setEdit] = useState(false);
-	const [openMessage, setOpenMessage] = React.useState(false);
-	const [openDialog, setOpenDialog] = React.useState(false);
-	const [messageText, setMessageText] = React.useState("");
-	const [messageSeverity, setMessageSeverity] = React.useState("success");
-	const [idDelete, setIdDelete] = React.useState(-1);
-	const [selectTurno, setSelectTurno] = React.useState("");
-
-	useEffect(() => {
-		getData();
-	}, []);
-
-	async function getData() {
-		try {
-			const cursosData = await cursosService.getCursos();
-			setCursos(cursosData);
-		} catch (error) {
-			console.log("Não foi possível retornar a lista de cursos: ", error);
-			setCursos([]);
-		}
-	}
-
-	function handleEdit(data) {
-		const editData = cursosController.prepareEditData(data);
-		const turno = cursosController.getTurnoFromData(data);
-		setFormData(editData);
-		setSelectTurno(turno);
-		setEdit(true);
-	}
-
-	function handleDelete(row) {
-		setIdDelete(row.id);
-		setOpenDialog(true);
-	}
-
-	function handleInputChange(e) {
-		setFormData({ ...formData, [e.target.name]: e.target.value });
-	}
-
-	function handleSelectChange(e) {
-		setSelectTurno(e.target.value);
-		setFormData({ ...formData, turno: e.target.value });
-	}
-
-	async function handleAddOrUpdate() {
-		const validation = cursosController.validateFormData(formData, edit);
-
-		if (!validation.isValid) {
-			setMessageText(validation.message);
-			setMessageSeverity("error");
-			setOpenMessage(true);
-			return;
-		}
-
-		const result = await cursosController.saveOrUpdateCurso(formData, edit);
-
-		if (result.success) {
-			setMessageText(result.message);
-			setMessageSeverity("success");
-			setFormData(cursosController.getResetFormData());
-			setSelectTurno(cursosController.getResetTurno());
-			setEdit(false);
-		} else {
-			setMessageText(result.message);
-			setMessageSeverity("error");
-		}
-
-		setOpenMessage(true);
-		await getData();
-	}
-
-	function handleCancelClick() {
-		setEdit(false);
-		setFormData(cursosController.getResetFormData());
-		setSelectTurno(cursosController.getResetTurno());
-	}
-
-	function handleCloseMessage(_, reason) {
-		if (reason === "clickaway") {
-			return;
-		}
-		setOpenMessage(false);
-	}
-
-	function handleClose() {
-		setOpenDialog(false);
-	}
-
-	async function handleDeleteClick() {
-		const result = await cursosController.removeCurso(idDelete);
-
-		if (result.success) {
-			setMessageText(result.message);
-			setMessageSeverity("success");
-		} else {
-			setMessageText(result.message);
-			setMessageSeverity("error");
-		}
-
-		setFormData(cursosController.getResetFormData());
-		setSelectTurno(cursosController.getResetTurno());
-		setOpenDialog(false);
-		setOpenMessage(true);
-		await getData();
-	}
-
-	function handleNoDeleteClick() {
-		setOpenDialog(false);
-	}
+	const {
+		cursos,
+		formData,
+		edit,
+		openMessage,
+		openDialog,
+		messageText,
+		messageSeverity,
+		idDelete,
+		selectTurno,
+		handleEdit,
+		handleDelete,
+		handleInputChange,
+		handleSelectChange,
+		handleAddOrUpdate,
+		handleCancelClick,
+		handleCloseMessage,
+		handleClose,
+		handleDeleteClick,
+		handleNoDeleteClick,
+	} = useCursos();
 
 	const columns = [
 		{ field: "codigo", headerName: "Código", width: 100 },

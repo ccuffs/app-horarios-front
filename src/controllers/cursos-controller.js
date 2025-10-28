@@ -1,17 +1,5 @@
 import cursosService from "../services/cursos-service.js";
 
-/**
- * Carrega cursos
- */
-export async function loadCursos() {
-	try {
-		const cursos = await cursosService.getCursos();
-		return cursos;
-	} catch (error) {
-		console.error("Erro ao carregar cursos:", error);
-		throw error;
-	}
-}
 
 /**
  * Prepara os dados de um curso para edição
