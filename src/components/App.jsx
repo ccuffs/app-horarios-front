@@ -17,7 +17,6 @@ import Ofertas from "./Ofertas";
 import Horarios from "./Horarios";
 import HorariosView from "./HorariosView";
 import CustomThemeProvider from "./CustomThemeProvider";
-import ThemeSwitch from "./ThemeSwitch";
 
 // baseURL e headers já configurados em src/auth/axios.js
 // axiosInstance já configurado com interceptors de autenticação
@@ -53,7 +52,6 @@ function AppContent() {
 					}}
 				>
 					<Toolbar /> {/* Spacing for AppBar */}
-					<ThemeSwitch />
 					<Container maxWidth="xl" sx={{ mt: 2 }}>
 						<Routes>
 							<Route path="/login" element={<Login />} />

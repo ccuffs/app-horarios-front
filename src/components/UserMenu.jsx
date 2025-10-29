@@ -7,13 +7,22 @@ import {
 	Typography,
 	Avatar,
 	Divider,
+	Switch,
 } from "@mui/material";
 import LogoutIcon from "@mui/icons-material/Logout";
+import LightModeIcon from "@mui/icons-material/LightMode";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
+
 import { useAuth } from "../contexts/AuthContext";
+import { useThemeContext } from "./CustomThemeProvider";
+import { useTheme } from "@mui/material";
 
 export default function UserMenu() {
 	const [anchorEl, setAnchorEl] = useState(null);
-	const { usuario } = useAuth();
+	const { usuario, logout } = useAuth();
+	const { toggleTheme } = useThemeContext();
+	const theme = useTheme();
+	const isDarkMode = theme.palette.mode === "dark";
 
 	const handleMenu = (event) => {
 		setAnchorEl(event.currentTarget);
@@ -25,8 +34,7 @@ export default function UserMenu() {
 
 	const handleLogout = () => {
 		handleClose();
-		localStorage.removeItem("auth_token");
-		window.location.reload();
+		logout();
 	};
 
 	if (!usuario) {
@@ -34,7 +42,30 @@ export default function UserMenu() {
 	}
 
 	return (
-		<Box>
+		<Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+			<Box
+				sx={{
+					display: "flex",
+					alignItems: "center",
+					gap: 0.5,
+				}}
+			>
+				{isDarkMode ? (
+					<DarkModeIcon sx={{ fontSize: 20 }} />
+				) : (
+					<LightModeIcon sx={{ fontSize: 20 }} />
+				)}
+				<Switch
+					checked={isDarkMode}
+					onChange={toggleTheme}
+					size="small"
+					sx={{
+						"& .MuiSwitch-thumb": {
+							bgcolor: "background.paper",
+						},
+					}}
+				/>
+			</Box>
 			<IconButton
 				size="large"
 				aria-label="menu do usuário"
