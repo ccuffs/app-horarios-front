@@ -566,9 +566,11 @@ export function calcularCreditosSemestreAtual(events, disciplinas) {
 				professoresIds.forEach((cod) => {
 					const docente = String(cod);
 					const turno = getTurnoFromTime(ev.startTime);
+					// Incluir dia da semana na chave única para diferenciar eventos do mesmo CCR em dias diferentes
+					const diaSemana = ev.dayId || ev.dia_semana || "";
 					const par = `${docente}-${String(
 						ev.disciplinaId,
-					)}-${turno}`;
+					)}-${turno}-${diaSemana}-${ev.startTime}`;
 					if (vistos.has(par)) return;
 					vistos.add(par);
 					const atual = mapa.get(docente) || 0;
@@ -596,7 +598,10 @@ export function calcularCreditosOutroSemestre(horarios, disciplinas) {
 		if (!h?.id_ccr || !h?.codigo_docente) return;
 		const docente = String(h.codigo_docente);
 		const turno = getTurnoFromTime(h.hora_inicio);
-		const par = `${docente}-${String(h.id_ccr)}-${turno}`;
+		// Incluir dia da semana e horário na chave única para diferenciar eventos do mesmo CCR em dias/horários diferentes
+		const diaSemana = h.dia_semana || "";
+		const horaInicio = h.hora_inicio || "";
+		const par = `${docente}-${String(h.id_ccr)}-${turno}-${diaSemana}-${horaInicio}`;
 		if (vistos.has(par)) return;
 		vistos.add(par);
 		const creditos = creditosPorCcr.get(String(h.id_ccr)) || 0;
