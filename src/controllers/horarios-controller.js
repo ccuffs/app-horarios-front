@@ -545,7 +545,8 @@ export function calcularCreditosSemestreAtual(events, disciplinas) {
 		disciplinas.map((d) => [String(d.id), Number(d.creditos) || 0]),
 	);
 
-	const vistos = new Set();
+	// Primeiro, coletar todos os eventos de cada docente+CCR para análise
+	const eventosPorDocenteCcr = new Map();
 
 	Object.keys(events).forEach((phaseNumber) => {
 		const phaseEvents = events[phaseNumber];
@@ -556,8 +557,6 @@ export function calcularCreditosSemestreAtual(events, disciplinas) {
 				: [eventArray];
 			eventsInSlot.forEach((ev) => {
 				if (!ev?.disciplinaId) return;
-				const creditos =
-					creditosPorCcr.get(String(ev.disciplinaId)) || 0;
 				const professoresIds = Array.isArray(ev.professoresIds)
 					? ev.professoresIds
 					: ev.professorId
@@ -565,19 +564,55 @@ export function calcularCreditosSemestreAtual(events, disciplinas) {
 						: [];
 				professoresIds.forEach((cod) => {
 					const docente = String(cod);
-					const turno = getTurnoFromTime(ev.startTime);
-					// Incluir dia da semana na chave única para diferenciar eventos do mesmo CCR em dias diferentes
-					const diaSemana = ev.dayId || ev.dia_semana || "";
-					const par = `${docente}-${String(
-						ev.disciplinaId,
-					)}-${turno}-${diaSemana}-${ev.startTime}`;
-					if (vistos.has(par)) return;
-					vistos.add(par);
-					const atual = mapa.get(docente) || 0;
-					mapa.set(docente, atual + creditos);
+					const chave = `${docente}-${String(ev.disciplinaId)}`;
+					if (!eventosPorDocenteCcr.has(chave)) {
+						eventosPorDocenteCcr.set(chave, []);
+					}
+					eventosPorDocenteCcr.get(chave).push({
+						diaSemana: ev.dayId || ev.dia_semana || "",
+						startTime: ev.startTime,
+						turno: getTurnoFromTime(ev.startTime),
+					});
 				});
 			});
 		});
+	});
+
+	// Agora, analisar cada grupo de eventos (docente+CCR) e determinar quantas vezes contar
+	eventosPorDocenteCcr.forEach((eventosGrupo, chave) => {
+		const [docente, disciplinaId] = chave.split("-");
+		const creditos = creditosPorCcr.get(String(disciplinaId)) || 0;
+
+		// Agrupar eventos por horário de início
+		const eventosPorHorario = new Map();
+		eventosGrupo.forEach((evento) => {
+			if (!eventosPorHorario.has(evento.startTime)) {
+				eventosPorHorario.set(evento.startTime, []);
+			}
+			eventosPorHorario.get(evento.startTime).push(evento);
+		});
+
+		// REGRA:
+		// - Se tem eventos no MESMO horário em dias DIFERENTES: são turmas diferentes, contar cada uma
+		// - Se tem eventos em horários DIFERENTES: é o mesmo CCR dividido, contar apenas 1x
+
+		let creditosParaAdicionar = 0;
+
+		if (eventosPorHorario.size === 1) {
+			// Todos os eventos começam no mesmo horário
+			// Contar quantos dias diferentes existem (cada dia = uma turma diferente)
+			const diasUnicos = new Set(
+				eventosGrupo.map((e) => e.diaSemana),
+			).size;
+			creditosParaAdicionar = creditos * diasUnicos;
+		} else {
+			// Eventos em horários diferentes = CCR dividido
+			// Contar apenas 1x os créditos
+			creditosParaAdicionar = creditos;
+		}
+
+		const atual = mapa.get(docente) || 0;
+		mapa.set(docente, atual + creditosParaAdicionar);
 	});
 
 	return mapa;
@@ -592,21 +627,59 @@ export function calcularCreditosOutroSemestre(horarios, disciplinas) {
 	);
 
 	const mapa = new Map();
-	const vistos = new Set();
+
+	// Primeiro, coletar todos os horários de cada docente+CCR para análise
+	const horariosPorDocenteCcr = new Map();
 
 	horarios.forEach((h) => {
 		if (!h?.id_ccr || !h?.codigo_docente) return;
 		const docente = String(h.codigo_docente);
-		const turno = getTurnoFromTime(h.hora_inicio);
-		// Incluir dia da semana e horário na chave única para diferenciar eventos do mesmo CCR em dias/horários diferentes
-		const diaSemana = h.dia_semana || "";
-		const horaInicio = h.hora_inicio || "";
-		const par = `${docente}-${String(h.id_ccr)}-${turno}-${diaSemana}-${horaInicio}`;
-		if (vistos.has(par)) return;
-		vistos.add(par);
-		const creditos = creditosPorCcr.get(String(h.id_ccr)) || 0;
+		const chave = `${docente}-${String(h.id_ccr)}`;
+		if (!horariosPorDocenteCcr.has(chave)) {
+			horariosPorDocenteCcr.set(chave, []);
+		}
+		horariosPorDocenteCcr.get(chave).push({
+			diaSemana: h.dia_semana || "",
+			horaInicio: h.hora_inicio || "",
+			turno: getTurnoFromTime(h.hora_inicio),
+		});
+	});
+
+	// Analisar cada grupo de horários (docente+CCR) e determinar quantas vezes contar
+	horariosPorDocenteCcr.forEach((horariosGrupo, chave) => {
+		const [docente, ccrId] = chave.split("-");
+		const creditos = creditosPorCcr.get(String(ccrId)) || 0;
+
+		// Agrupar horários por horário de início
+		const horariosPorHoraInicio = new Map();
+		horariosGrupo.forEach((horario) => {
+			if (!horariosPorHoraInicio.has(horario.horaInicio)) {
+				horariosPorHoraInicio.set(horario.horaInicio, []);
+			}
+			horariosPorHoraInicio.get(horario.horaInicio).push(horario);
+		});
+
+		// REGRA:
+		// - Se tem horários no MESMO horário em dias DIFERENTES: são turmas diferentes, contar cada uma
+		// - Se tem horários em horários DIFERENTES: é o mesmo CCR dividido, contar apenas 1x
+
+		let creditosParaAdicionar = 0;
+
+		if (horariosPorHoraInicio.size === 1) {
+			// Todos os horários começam no mesmo horário
+			// Contar quantos dias diferentes existem (cada dia = uma turma diferente)
+			const diasUnicos = new Set(
+				horariosGrupo.map((h) => h.diaSemana),
+			).size;
+			creditosParaAdicionar = creditos * diasUnicos;
+		} else {
+			// Horários em horários diferentes = CCR dividido
+			// Contar apenas 1x os créditos
+			creditosParaAdicionar = creditos;
+		}
+
 		const atual = mapa.get(docente) || 0;
-		mapa.set(docente, atual + creditos);
+		mapa.set(docente, atual + creditosParaAdicionar);
 	});
 
 	return mapa;
