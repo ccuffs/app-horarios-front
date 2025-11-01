@@ -26,7 +26,13 @@ export const DrawerContext = React.createContext();
 
 function AppContent() {
 	const [desktopOpen, setDesktopOpen] = React.useState(false);
-	const { isAuthenticated } = useAuth();
+	const { isAuthenticated, gruposUsuario } = useAuth();
+
+	// Verifica se o usuário é ADMIN
+	const isAdmin = gruposUsuario?.some(grupo => grupo.id === Permissoes.GRUPO.ADMIN);
+
+	// Mostra a rota se o usuário NÃO está logado OU se está logado E é ADMIN
+	const mostrarVisualizarHorarios = !isAuthenticated || isAdmin;
 
 	return (
 		<DrawerContext.Provider value={{ desktopOpen, setDesktopOpen }}>
@@ -69,10 +75,12 @@ function AppContent() {
 									</ProtectedRoute>
 								}
 							/>
-							<Route
-								path="visualizar-horarios"
-								element={<HorariosView />}
-							/>
+							{mostrarVisualizarHorarios && (
+								<Route
+									path="visualizar-horarios"
+									element={<HorariosView />}
+								/>
+							)}
 							<Route
 								path="ccrs"
 								element={
