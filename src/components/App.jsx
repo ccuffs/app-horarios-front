@@ -29,7 +29,9 @@ function AppContent() {
 	const { isAuthenticated, gruposUsuario } = useAuth();
 
 	// Verifica se o usuário é ADMIN
-	const isAdmin = gruposUsuario?.some(grupo => grupo.id === Permissoes.GRUPO.ADMIN);
+	const isAdmin = gruposUsuario?.some(
+		(grupo) => grupo.id === Permissoes.GRUPO.ADMIN,
+	);
 
 	// Mostra a rota se o usuário NÃO está logado OU se está logado E é ADMIN
 	const mostrarVisualizarHorarios = !isAuthenticated || isAdmin;

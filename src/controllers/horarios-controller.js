@@ -601,9 +601,8 @@ export function calcularCreditosSemestreAtual(events, disciplinas) {
 		if (eventosPorHorario.size === 1) {
 			// Todos os eventos começam no mesmo horário
 			// Contar quantos dias diferentes existem (cada dia = uma turma diferente)
-			const diasUnicos = new Set(
-				eventosGrupo.map((e) => e.diaSemana),
-			).size;
+			const diasUnicos = new Set(eventosGrupo.map((e) => e.diaSemana))
+				.size;
 			creditosParaAdicionar = creditos * diasUnicos;
 		} else {
 			// Eventos em horários diferentes = CCR dividido
@@ -668,9 +667,8 @@ export function calcularCreditosOutroSemestre(horarios, disciplinas) {
 		if (horariosPorHoraInicio.size === 1) {
 			// Todos os horários começam no mesmo horário
 			// Contar quantos dias diferentes existem (cada dia = uma turma diferente)
-			const diasUnicos = new Set(
-				horariosGrupo.map((h) => h.diaSemana),
-			).size;
+			const diasUnicos = new Set(horariosGrupo.map((h) => h.diaSemana))
+				.size;
 			creditosParaAdicionar = creditos * diasUnicos;
 		} else {
 			// Horários em horários diferentes = CCR dividido
