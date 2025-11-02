@@ -2491,7 +2491,10 @@ export default function useHorarios() {
 			if (
 				professores.length > 0 &&
 				disciplinas.length > 0 &&
-				anosSemestres.length > 0
+				anosSemestres.length > 0 &&
+				!loadingAnosSemestres &&
+				!loadingProfessores &&
+				!loadingDisciplinas
 			) {
 				await detectarConflitosHorarios();
 			}
@@ -2499,7 +2502,15 @@ export default function useHorarios() {
 
 		detectConflicts();
 		// eslint-disable-next-line react-hooks/exhaustive-deps
-	}, [events, professores.length, disciplinas.length, anosSemestres.length]);
+	}, [
+		events,
+		professores.length,
+		disciplinas.length,
+		anosSemestres.length,
+		loadingAnosSemestres,
+		loadingProfessores,
+		loadingDisciplinas,
+	]);
 
 	// useEffect para carregar créditos do outro semestre
 	useEffect(() => {
