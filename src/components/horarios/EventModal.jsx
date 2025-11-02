@@ -46,6 +46,7 @@ const EventModal = ({
 	horariosSeOverlapam,
 	dayToNumber,
 	daysOfWeek,
+	canViewConflicts, // Permissão para visualizar conflitos
 }) => {
 	const [disciplinaId, setDisciplinaId] = useState("");
 	const [professoresIds, setProfessoresIds] = useState([]); // Mudança: array de professores
@@ -60,6 +61,12 @@ const EventModal = ({
 
 	// Função para verificar conflitos quando professores são selecionados
 	const verificarConflitosTempoReal = async (professoresSelecionados) => {
+		// Não verificar conflitos se o usuário não tem permissão para visualizá-los
+		if (!canViewConflicts) {
+			setConflitosTempoRealLocal([]);
+			return;
+		}
+
 		if (
 			!event ||
 			!professoresSelecionados ||
@@ -918,45 +925,45 @@ const EventModal = ({
 																? "#4caf50"
 																: undefined,
 													}}
-												/>
+											/>
 
-												{/* Badge de conflito para o professor no modal */}
-												{professorEmConflito && (
-													<Tooltip
-														title="Professor com conflito de horário"
-														placement="top"
-														arrow
+											{/* Badge de conflito para o professor no modal */}
+											{canViewConflicts && professorEmConflito && (
+												<Tooltip
+													title="Professor com conflito de horário"
+													placement="top"
+													arrow
+												>
+													<Box
+														sx={{
+															width: "16px",
+															height: "16px",
+															backgroundColor:
+																"#ff5722",
+															borderRadius:
+																"50%",
+															display: "flex",
+															alignItems:
+																"center",
+															justifyContent:
+																"center",
+															flexShrink: 0,
+															boxShadow:
+																"0 1px 3px rgba(0,0,0,0.3)",
+															ml: 0.5,
+														}}
 													>
-														<Box
+														<WarningIcon
 															sx={{
-																width: "16px",
-																height: "16px",
-																backgroundColor:
-																	"#ff5722",
-																borderRadius:
-																	"50%",
-																display: "flex",
-																alignItems:
-																	"center",
-																justifyContent:
-																	"center",
-																flexShrink: 0,
-																boxShadow:
-																	"0 1px 3px rgba(0,0,0,0.3)",
-																ml: 0.5,
+																fontSize:
+																	"12px",
+																color: "white",
 															}}
-														>
-															<WarningIcon
-																sx={{
-																	fontSize:
-																		"12px",
-																	color: "white",
-																}}
-															/>
-														</Box>
-													</Tooltip>
-												)}
-											</Box>
+														/>
+													</Box>
+												</Tooltip>
+											)}
+										</Box>
 										);
 									})}
 								</Stack>
@@ -1060,50 +1067,50 @@ const EventModal = ({
 								✓ Professores preenchidos automaticamente com
 								base em disciplina já cadastrada
 							</Typography>
-						</Alert>
-					)}
+				</Alert>
+			)}
 
-					{conflitosTempoRealLocal.length > 0 && (
-						<Alert severity="warning" sx={{ mt: 1 }}>
-							<Typography variant="subtitle2" sx={{ mb: 1 }}>
-								{conflitosTempoRealLocal.length} conflito(s)
-								detectado(s):
+			{canViewConflicts && conflitosTempoRealLocal.length > 0 && (
+				<Alert severity="warning" sx={{ mt: 1 }}>
+					<Typography variant="subtitle2" sx={{ mb: 1 }}>
+						{conflitosTempoRealLocal.length} conflito(s)
+						detectado(s):
+					</Typography>
+					{conflitosTempoRealLocal
+						.slice(0, 3)
+						.map((conflito, index) => (
+							<Typography
+								key={index}
+								variant="caption"
+								display="block"
+								sx={{ mb: 0.5 }}
+							>
+								{conflito.professor}: {conflito.diaNome}{" "}
+								{conflito.horario1.hora_inicio}(
+								{conflito.horario1.tipo === "temporario"
+									? "não salvo"
+									: conflito.horario1.ano_semestre}
+								) vs (
+								{conflito.horario2.tipo === "temporario"
+									? "não salvo"
+									: conflito.horario2.ano_semestre}
+								)
 							</Typography>
-							{conflitosTempoRealLocal
-								.slice(0, 3)
-								.map((conflito, index) => (
-									<Typography
-										key={index}
-										variant="caption"
-										display="block"
-										sx={{ mb: 0.5 }}
-									>
-										{conflito.professor}: {conflito.diaNome}{" "}
-										{conflito.horario1.hora_inicio}(
-										{conflito.horario1.tipo === "temporario"
-											? "não salvo"
-											: conflito.horario1.ano_semestre}
-										) vs (
-										{conflito.horario2.tipo === "temporario"
-											? "não salvo"
-											: conflito.horario2.ano_semestre}
-										)
-									</Typography>
-								))}
-							{conflitosTempoRealLocal.length > 3 && (
-								<Typography
-									variant="caption"
-									sx={{ fontStyle: "italic" }}
-								>
-									... e mais{" "}
-									{conflitosTempoRealLocal.length - 3}{" "}
-									conflito(s)
-								</Typography>
-							)}
-						</Alert>
+						))}
+					{conflitosTempoRealLocal.length > 3 && (
+						<Typography
+							variant="caption"
+							sx={{ fontStyle: "italic" }}
+						>
+							... e mais{" "}
+							{conflitosTempoRealLocal.length - 3}{" "}
+							conflito(s)
+						</Typography>
 					)}
+				</Alert>
+			)}
 
-					{verificandoConflitos && (
+			{canViewConflicts && verificandoConflitos && (
 						<Box
 							sx={{
 								display: "flex",
@@ -1234,22 +1241,22 @@ const EventModal = ({
 						>
 							Cancelar
 						</Button>
-						<Button
-							onClick={handleSave}
-							variant="contained"
-							color={
-								conflitosTempoRealLocal.length > 0
-									? "warning"
-									: "primary"
-							}
-							disabled={
-								!disciplinaId || professoresIds.length === 0
-							}
-						>
-							{conflitosTempoRealLocal.length > 0
-								? "Salvar (com conflitos)"
-								: "Salvar"}
-						</Button>
+					<Button
+						onClick={handleSave}
+						variant="contained"
+						color={
+							canViewConflicts && conflitosTempoRealLocal.length > 0
+								? "warning"
+								: "primary"
+						}
+						disabled={
+							!disciplinaId || professoresIds.length === 0
+						}
+					>
+						{canViewConflicts && conflitosTempoRealLocal.length > 0
+							? "Salvar (com conflitos)"
+							: "Salvar"}
+					</Button>
 					</Box>
 				</Stack>
 			</Paper>

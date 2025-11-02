@@ -22,6 +22,7 @@ const TimeSlot = ({
 	professores,
 	verificarSeEventoTemConflito,
 	obterConflitosDoEvento,
+	canViewConflicts, // Permissão para visualizar conflitos
 	sx, // Propriedade de estilo adicional
 }) => {
 	const { permissoesUsuario } = useAuth();
@@ -146,6 +147,7 @@ const TimeSlot = ({
 					multipleTotal={eventsArray.length}
 					verificarSeEventoTemConflito={verificarSeEventoTemConflito}
 					obterConflitosDoEvento={obterConflitosDoEvento}
+					canViewConflicts={canViewConflicts}
 				/>
 			))}
 		</Box>

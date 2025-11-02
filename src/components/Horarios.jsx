@@ -42,6 +42,8 @@ import PhaseGrid from "./horarios/PhaseGrid";
 import anoSemestreController from "../controllers/ano-semestre-controller";
 import { daysOfWeek, dayToNumber } from "../utils/horariosUtils.js";
 import useHorarios from "../hooks/useHorarios";
+import { usePermissions } from "../hooks/usePermissions";
+import Permissoes from "../enums/permissoes";
 
 export default function Horarios() {
 	const {
@@ -140,6 +142,13 @@ export default function Horarios() {
 		horariosSeOverlapam,
 	} = useHorarios();
 
+	// Verificar se o usuário pode visualizar conflitos (ADMIN ou COORDENADOR)
+	const { hasPermission } = usePermissions();
+	const canViewConflicts = hasPermission([
+		Permissoes.GRUPO.ADMIN,
+		Permissoes.GRUPO.COORDENADOR,
+	]);
+
 	return (
 		<Box sx={{ padding: 2 }}>
 			<Box
@@ -227,6 +236,7 @@ export default function Horarios() {
 							</span>
 						</Tooltip>
 
+					{canViewConflicts && (
 						<Badge
 							badgeContent={conflitosHorarios.length}
 							color="error"
@@ -254,6 +264,7 @@ export default function Horarios() {
 									: "Sem Conflitos"}
 							</Button>
 						</Badge>
+					)}
 
 						{canManageHorarios && (
 							<Button
@@ -993,6 +1004,7 @@ export default function Horarios() {
 									hasMultiplosTurnos={hasMultiplosTurnos}
 									hasTurnoEspecifico={hasTurnoEspecifico}
 									getTurnosOferta={getTurnosOferta}
+									canViewConflicts={canViewConflicts}
 								/>
 							);
 						})}
@@ -1199,6 +1211,7 @@ export default function Horarios() {
 				horariosSeOverlapam={horariosSeOverlapam}
 				dayToNumber={dayToNumber}
 				daysOfWeek={daysOfWeek}
+				canViewConflicts={canViewConflicts}
 			/>
 
 			{/* Modal de Confirmação para Recarregar */}

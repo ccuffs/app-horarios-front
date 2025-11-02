@@ -26,6 +26,7 @@ const PhaseGrid = ({
 	hasMultiplosTurnos, // Para verificar se fase tem múltiplos turnos
 	hasTurnoEspecifico, // Para verificar se fase tem turno específico
 	getTurnosOferta, // Função para obter turnos da oferta
+	canViewConflicts, // Permissão para visualizar conflitos
 }) => {
 	const theme = useTheme();
 	// Verificar se a fase tem múltiplos turnos
@@ -303,6 +304,7 @@ const PhaseGrid = ({
 									obterConflitosDoEvento={
 										obterConflitosDoEvento
 									}
+									canViewConflicts={canViewConflicts}
 									sx={
 										isFirstVespertino || isFirstNoturno
 											? {
