@@ -39,6 +39,14 @@ function Navbar() {
 	const theme = useTheme();
 	const isMobile = useMediaQuery(theme.breakpoints.down("md"));
 
+	// Verifica se o usuário é ADMIN
+	const isAdmin = gruposUsuario?.some(
+		(grupo) => grupo.id === Permissoes.GRUPO.ADMIN,
+	);
+
+	// Mostra o item "Visualizar Horários" se o usuário NÃO está logado OU se está logado E é ADMIN
+	const mostrarVisualizarHorarios = !isAuthenticated || isAdmin;
+
 	function handleDrawerToggle() {
 		setMobileOpen(!mobileOpen);
 	}
@@ -99,11 +107,13 @@ function Navbar() {
 						</ListItemButton>
 					</ListItem>
 				</PermissionContext>
-				<ListItem disablePadding>
-					<ListItemButton onClick={handleClickVisualizarHorarios}>
-						<ListItemText primary="Visualizar Horários" />
-					</ListItemButton>
-				</ListItem>
+				{mostrarVisualizarHorarios && (
+					<ListItem disablePadding>
+						<ListItemButton onClick={handleClickVisualizarHorarios}>
+							<ListItemText primary="Visualizar Horários" />
+						</ListItemButton>
+					</ListItem>
+				)}
 				<PermissionContext
 					grupos={[
 						Permissoes.GRUPO.ADMIN,
