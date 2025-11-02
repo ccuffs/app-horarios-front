@@ -852,24 +852,36 @@ export function detectarConflitos(
 							continue;
 						}
 
-						const hora1Normalizada = normalizeTimeForComparison(
-							h1.hora_inicio,
-						);
-						const hora2Normalizada = normalizeTimeForComparison(
-							h2.hora_inicio,
-						);
+					const hora1Normalizada = normalizeTimeForComparison(
+						h1.hora_inicio,
+					);
+					const hora2Normalizada = normalizeTimeForComparison(
+						h2.hora_inicio,
+					);
 
-						const saoOMesmoHorario =
-							h1.id_ccr === h2.id_ccr &&
-							hora1Normalizada === hora2Normalizada &&
-							h1.ano === h2.ano &&
-							h1.semestre === h2.semestre &&
-							h1.dia_semana === h2.dia_semana &&
-							h1.codigo_docente === h2.codigo_docente;
+					// Considerar como "mesmo horário" quando:
+					// 1. Mesma disciplina (CCR), mesmo professor, mesmo dia/hora/ano/semestre
+					// 2. Ou quando professor, dia, hora, duração, ano e semestre são idênticos (independente do CCR)
+					//    Isso trata casos de duplicação de cadastro de CCR
+					const mesmosCamposPrincipais =
+						hora1Normalizada === hora2Normalizada &&
+						h1.ano === h2.ano &&
+						h1.semestre === h2.semestre &&
+						h1.dia_semana === h2.dia_semana &&
+						h1.codigo_docente === h2.codigo_docente &&
+						h1.duracao === h2.duracao;
 
-						if (saoOMesmoHorario) {
-							continue;
-						}
+					const saoOMesmoHorario =
+						mesmosCamposPrincipais &&
+						h1.id_ccr === h2.id_ccr;
+
+					const saoDuplicacaoDeCadastro =
+						mesmosCamposPrincipais &&
+						h1.id_ccr !== h2.id_ccr;
+
+					if (saoOMesmoHorario || saoDuplicacaoDeCadastro) {
+						continue;
+					}
 
 						if (h1.permitirConflito || h2.permitirConflito) {
 							continue;
