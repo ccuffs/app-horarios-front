@@ -44,6 +44,13 @@ function Navbar() {
 		(grupo) => grupo.id === Permissoes.GRUPO.ADMIN,
 	);
 
+	// Verifica se o usuário é ADMIN ou COORDENADOR
+	const isAdminOuCoordenador = gruposUsuario?.some(
+		(grupo) =>
+			grupo.id === Permissoes.GRUPO.ADMIN ||
+			grupo.id === Permissoes.GRUPO.COORDENADOR,
+	);
+
 	// Mostra o item "Visualizar Horários" se o usuário NÃO está logado OU se está logado E é ADMIN
 	const mostrarVisualizarHorarios = !isAuthenticated || isAdmin;
 
@@ -149,109 +156,109 @@ function Navbar() {
 
 	return (
 		<Box sx={{ display: "flex" }}>
-			<AppBar
-				position="fixed"
-				sx={{
-					width: {
-						md:
-							isAuthenticated && desktopOpen
-								? `calc(100% - ${drawerWidth}px)`
-								: "100%",
-					},
-					ml: {
-						md:
-							isAuthenticated && desktopOpen
-								? `${drawerWidth}px`
-								: 0,
-					},
-					zIndex: (theme) => theme.zIndex.drawer + 1,
-					transition: theme.transitions.create(["width", "margin"], {
-						easing: theme.transitions.easing.sharp,
-						duration: theme.transitions.duration.leavingScreen,
-					}),
-				}}
-			>
-				<Toolbar>
-					{isAuthenticated && (
-						<IconButton
-							color="inherit"
-							aria-label="open drawer"
-							edge="start"
-							onClick={
-								isMobile
-									? handleDrawerToggle
-									: handleDesktopDrawerToggle
-							}
-							sx={{ mr: 2 }}
-						>
-							<MenuIcon />
-						</IconButton>
-					)}
-					<Typography
-						variant="h6"
-						component="div"
-						sx={{ flexGrow: 1, cursor: "pointer" }}
-						onClick={handleClickHome}
+		<AppBar
+			position="fixed"
+			sx={{
+				width: {
+					md:
+						isAuthenticated && isAdminOuCoordenador && desktopOpen
+							? `calc(100% - ${drawerWidth}px)`
+							: "100%",
+				},
+				ml: {
+					md:
+						isAuthenticated && isAdminOuCoordenador && desktopOpen
+							? `${drawerWidth}px`
+							: 0,
+				},
+				zIndex: (theme) => theme.zIndex.drawer + 1,
+				transition: theme.transitions.create(["width", "margin"], {
+					easing: theme.transitions.easing.sharp,
+					duration: theme.transitions.duration.leavingScreen,
+				}),
+			}}
+		>
+			<Toolbar>
+				{isAuthenticated && isAdminOuCoordenador && (
+					<IconButton
+						color="inherit"
+						aria-label="open drawer"
+						edge="start"
+						onClick={
+							isMobile
+								? handleDrawerToggle
+								: handleDesktopDrawerToggle
+						}
+						sx={{ mr: 2 }}
 					>
-						Construção de Horários
-					</Typography>
-					{isAuthenticated ? (
-						<UserMenu />
-					) : (
-						<Button
-							color="inherit"
-							onClick={() => navigate("/login")}
-						>
-							Login
-						</Button>
-					)}
+						<MenuIcon />
+					</IconButton>
+				)}
+				<Typography
+					variant="h6"
+					component="div"
+					sx={{ flexGrow: 1, cursor: "pointer" }}
+					onClick={handleClickHome}
+				>
+					Construção de Horários
+				</Typography>
+				{isAuthenticated ? (
+					<UserMenu />
+				) : (
+					<Button
+						color="inherit"
+						onClick={() => navigate("/login")}
+					>
+						Login
+					</Button>
+				)}
 				</Toolbar>
 			</AppBar>
 
-			{/* Mobile drawer */}
-			{isAuthenticated && (
-				<Drawer
-					variant="temporary"
-					open={mobileOpen}
-					onClose={handleDrawerToggle}
-					ModalProps={{
-						keepMounted: true, // Better open performance on mobile.
-					}}
-					sx={{
-						display: { xs: "block", md: "none" },
-						"& .MuiDrawer-paper": {
-							boxSizing: "border-box",
-							width: drawerWidth,
-						},
-					}}
-				>
-					{drawerContent}
-				</Drawer>
-			)}
+		{/* Mobile drawer */}
+		{isAuthenticated && isAdminOuCoordenador && (
+			<Drawer
+				variant="temporary"
+				open={mobileOpen}
+				onClose={handleDrawerToggle}
+				ModalProps={{
+					keepMounted: true, // Better open performance on mobile.
+				}}
+				sx={{
+					display: { xs: "block", md: "none" },
+					"& .MuiDrawer-paper": {
+						boxSizing: "border-box",
+						width: drawerWidth,
+					},
+				}}
+			>
+				{drawerContent}
+			</Drawer>
+		)}
 
-			{/* Desktop drawer */}
-			{isAuthenticated && (
-				<Drawer
-					variant="persistent"
-					open={desktopOpen}
-					sx={{
-						display: { xs: "none", md: "block" },
-						width: desktopOpen ? drawerWidth : 0,
-						flexShrink: 0,
-						"& .MuiDrawer-paper": {
-							width: drawerWidth,
-							boxSizing: "border-box",
-							transition: theme.transitions.create("width", {
-								easing: theme.transitions.easing.sharp,
-								duration:
-									theme.transitions.duration.enteringScreen,
-							}),
-						},
-					}}
-				>
-					{drawerContent}
-				</Drawer>
-			)}
+		{/* Desktop drawer */}
+		{isAuthenticated && isAdminOuCoordenador && (
+			<Drawer
+				variant="persistent"
+				open={desktopOpen}
+				sx={{
+					display: { xs: "none", md: "block" },
+					width: desktopOpen ? drawerWidth : 0,
+					flexShrink: 0,
+					"& .MuiDrawer-paper": {
+						width: drawerWidth,
+						boxSizing: "border-box",
+						transition: theme.transitions.create("width", {
+							easing: theme.transitions.easing.sharp,
+							duration:
+								theme.transitions.duration.enteringScreen,
+						}),
+					},
+				}}
+			>
+				{drawerContent}
+			</Drawer>
+		)}
 		</Box>
 	);
 }
