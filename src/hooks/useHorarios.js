@@ -9,6 +9,7 @@ import ccrsService from "../services/ccrs-service";
 import ofertasService from "../services/ofertas-service";
 import anoSemestreController from "../controllers/ano-semestre-controller";
 import usuariosCursosController from "../controllers/usuarios-cursos-controller";
+import requestCacheService from "../services/request-cache-service";
 import {
 	timeSlotsMatutino,
 	timeSlotsVespertino,
@@ -759,6 +760,9 @@ export default function useHorarios() {
 		try {
 			setLoadingHorarios(true);
 			setLoadError(null);
+
+			// Limpar cache antes de recarregar (ação manual do usuário)
+			await requestCacheService.limparCache("", true);
 
 			await Promise.all([
 				fetchProfessores(),

@@ -12,10 +12,12 @@ import {
 import LogoutIcon from "@mui/icons-material/Logout";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
+import DeleteSweepIcon from "@mui/icons-material/DeleteSweep";
 
 import { useAuth } from "../contexts/AuthContext";
 import { useThemeContext } from "./CustomThemeProvider";
 import { useTheme } from "@mui/material";
+import requestCacheService from "../services/request-cache-service";
 
 export default function UserMenu() {
 	const [anchorEl, setAnchorEl] = useState(null);
@@ -30,6 +32,11 @@ export default function UserMenu() {
 
 	const handleClose = () => {
 		setAnchorEl(null);
+	};
+
+	const handleClearCache = () => {
+		handleClose();
+		requestCacheService.limparCache();
 	};
 
 	const handleLogout = () => {
@@ -110,14 +117,18 @@ export default function UserMenu() {
 						<Typography variant="caption" color="text.secondary">
 							ID: {usuario.id}
 						</Typography>
-					</Box>
-				</MenuItem>
-				<Divider />
-				<MenuItem onClick={handleLogout}>
-					<LogoutIcon sx={{ mr: 1 }} />
-					Sair
-				</MenuItem>
-			</Menu>
+			</Box>
+		</MenuItem>
+		<Divider />
+		<MenuItem onClick={handleClearCache}>
+			<DeleteSweepIcon sx={{ mr: 1 }} />
+			Limpar Cache
+		</MenuItem>
+		<MenuItem onClick={handleLogout}>
+			<LogoutIcon sx={{ mr: 1 }} />
+			Sair
+		</MenuItem>
+	</Menu>
 		</Box>
 	);
 }

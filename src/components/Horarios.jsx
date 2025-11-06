@@ -122,6 +122,7 @@ export default function Horarios() {
 		hasPendingChanges,
 		handleReloadClick,
 		handleSyncAndReload,
+		reloadAllData,
 		loadHorariosFromDatabase,
 		importarHorarios,
 		handleCloseImportModal,
@@ -1252,17 +1253,17 @@ export default function Horarios() {
 					>
 						Cancelar
 					</Button>
-					<Button
-						onClick={() => {
-							setShowReloadConfirmation(false);
-							loadHorariosFromDatabase();
-						}}
-						variant="outlined"
-						color="error"
-						startIcon={<DeleteIcon />}
-					>
-						Descartar e Recarregar
-					</Button>
+				<Button
+					onClick={() => {
+						setShowReloadConfirmation(false);
+						reloadAllData();
+					}}
+					variant="outlined"
+					color="error"
+					startIcon={<DeleteIcon />}
+				>
+					Descartar e Recarregar
+				</Button>
 					{canManageHorarios && (
 						<Button
 							onClick={handleSyncAndReload}
