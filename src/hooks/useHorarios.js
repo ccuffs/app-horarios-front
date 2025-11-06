@@ -43,6 +43,9 @@ export default function useHorarios() {
 			Permissoes.HORARIOS.EDITAR,
 		);
 
+	// Ref para evitar múltiplas execuções do useEffect inicial (StrictMode)
+	const hasInitialized = useRef(false);
+
 	// Estados principais
 	const [selectedAnoSemestre, setSelectedAnoSemestre] = useState({
 		ano: new Date().getFullYear(),
@@ -2401,6 +2404,12 @@ export default function useHorarios() {
 
 	// useEffect para buscar dados iniciais
 	useEffect(() => {
+		// Evita execução dupla causada pelo React.StrictMode
+		if (hasInitialized.current) {
+			return;
+		}
+		hasInitialized.current = true;
+
 		fetchCursos();
 		fetchProfessores();
 		fetchDisciplinas();
@@ -2436,11 +2445,13 @@ export default function useHorarios() {
 
 	// useEffect para carregar horários
 	useEffect(() => {
+		// Só carregar horários DEPOIS que a auto-seleção de ano/semestre estiver completa
 		if (
 			disciplinas.length > 0 &&
 			selectedCurso &&
 			selectedAnoSemestre.ano &&
-			selectedAnoSemestre.semestre
+			selectedAnoSemestre.semestre &&
+			hasAutoSelectedAnoSemestre
 		) {
 			setEvents({});
 			setOriginalHorarios([]);
@@ -2452,14 +2463,17 @@ export default function useHorarios() {
 		selectedCurso?.id,
 		selectedAnoSemestre.ano,
 		selectedAnoSemestre.semestre,
+		hasAutoSelectedAnoSemestre,
 	]);
 
 	// useEffect para recarregar ofertas
 	useEffect(() => {
+		// Só carregar ofertas DEPOIS que a auto-seleção de ano/semestre estiver completa
 		if (
 			selectedCurso &&
 			selectedAnoSemestre.ano &&
-			selectedAnoSemestre.semestre
+			selectedAnoSemestre.semestre &&
+			hasAutoSelectedAnoSemestre
 		) {
 			fetchOfertas();
 		}
@@ -2468,6 +2482,7 @@ export default function useHorarios() {
 		selectedCurso?.id,
 		selectedAnoSemestre.ano,
 		selectedAnoSemestre.semestre,
+		hasAutoSelectedAnoSemestre,
 	]);
 
 	// useEffect para limpar erro de carregamento
@@ -2475,22 +2490,33 @@ export default function useHorarios() {
 		setLoadError(null);
 	}, [selectedAnoSemestre.ano, selectedAnoSemestre.semestre]);
 
-	// useEffect para detectar conflitos
+	// useEffect para detectar conflitos com debounce
 	useEffect(() => {
-		const detectConflicts = async () => {
-			if (
-				professores.length > 0 &&
-				disciplinas.length > 0 &&
-				anosSemestres.length > 0 &&
-				!loadingAnosSemestres &&
-				!loadingProfessores &&
-				!loadingDisciplinas
-			) {
-				await detectarConflitosHorarios();
-			}
-		};
+		// Só detectar conflitos DEPOIS que a auto-seleção estiver completa
+		if (!hasAutoSelectedAnoSemestre) {
+			return;
+		}
 
-		detectConflicts();
+		// Se ainda está carregando, não detectar conflitos
+		if (loadingAnosSemestres || loadingProfessores || loadingDisciplinas) {
+			return;
+		}
+
+		// Se não há dados necessários, não detectar conflitos
+		if (
+			professores.length === 0 ||
+			disciplinas.length === 0 ||
+			anosSemestres.length === 0
+		) {
+			return;
+		}
+
+		// Debounce: aguardar 300ms após a última mudança antes de detectar conflitos
+		const timeoutId = setTimeout(() => {
+			detectarConflitosHorarios();
+		}, 300);
+
+		return () => clearTimeout(timeoutId);
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [
 		events,
@@ -2500,16 +2526,19 @@ export default function useHorarios() {
 		loadingAnosSemestres,
 		loadingProfessores,
 		loadingDisciplinas,
+		hasAutoSelectedAnoSemestre,
 	]);
 
 	// useEffect para carregar créditos do outro semestre
 	useEffect(() => {
 		const carregarOutroSemestre = async () => {
 			try {
-				if (!selectedCurso?.id || !selectedAnoSemestre?.ano) {
+				// Só carregar se tiver disciplinas carregadas E após auto-seleção
+				if (!selectedCurso?.id || !selectedAnoSemestre?.ano || disciplinas.length === 0 || !hasAutoSelectedAnoSemestre) {
 					setCreditosOutroSemestre(new Map());
 					return;
 				}
+
 				const outroSemestre =
 					selectedAnoSemestre.semestre === 1 ? 2 : 1;
 
@@ -2557,6 +2586,7 @@ export default function useHorarios() {
 		selectedAnoSemestre.ano,
 		selectedAnoSemestre.semestre,
 		disciplinas.length,
+		hasAutoSelectedAnoSemestre,
 	]);
 
 	return {

@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useReducer, useEffect } from "react";
+import React, { createContext, useContext, useReducer, useEffect, useRef } from "react";
 import authService from "../services/authService.js";
 
 const AuthContext = createContext();
@@ -65,6 +65,7 @@ const authReducer = (state, action) => {
 
 export const AuthProvider = ({ children }) => {
 	const [state, dispatch] = useReducer(authReducer, initialState);
+	const hasInitialized = useRef(false);
 
 	const login = async (userId, senha) => {
 		try {
@@ -136,7 +137,9 @@ export const AuthProvider = ({ children }) => {
 
 		try {
 			// Usa cache na verificação inicial (useCache = true)
+			// Busca uma única vez e usa o resultado para login e permissões
 			const dadosUsuario = await authService.getMe();
+
 			dispatch({
 				type: "LOGIN_SUCCESS",
 				payload: {
@@ -144,7 +147,16 @@ export const AuthProvider = ({ children }) => {
 					token: token,
 				},
 			});
-			await carregarPermissoes();
+
+			// Atualiza permissões usando os dados já carregados (sem nova request)
+			dispatch({
+				type: "SET_PERMISSOES",
+				payload: {
+					permissoesUsuario: dadosUsuario.permissoes || [],
+					gruposUsuario: dadosUsuario.grupos || [],
+					temConsultaTodos: dadosUsuario.temConsultaTodos || false,
+				},
+			});
 		} catch (error) {
 			localStorage.removeItem("auth_token");
 			// Limpa o cache em caso de erro na autenticação
@@ -156,7 +168,14 @@ export const AuthProvider = ({ children }) => {
 	};
 
 	useEffect(() => {
+		// Evita execução dupla causada pelo React.StrictMode
+		if (hasInitialized.current) {
+			return;
+		}
+		hasInitialized.current = true;
+
 		verificarAutenticacao();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
 	const value = {

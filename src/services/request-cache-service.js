@@ -2,8 +2,12 @@ import moment from "moment-timezone";
 
 const requestCacheService = {};
 
+// Armazena promises em andamento para evitar requests simultâneas
+const pendingRequests = new Map();
+
 /*
     Ajuda a fazer cache de requisições. Usar apenas em requisições que não mudam quase nunca.
+    Evita requests simultâneas retornando a mesma promise se a request já está em andamento.
 */
 requestCacheService.cacheRequest = async (
 	key,
@@ -19,14 +23,29 @@ requestCacheService.cacheRequest = async (
 		if (data && moment() < dateToExpire) return data;
 	} catch {}
 
-	data = await callback();
-	await localStorage.setItem("cache_" + key, JSON.stringify(data));
-	await localStorage.setItem(
-		"cache_" + key + "_expire",
-		moment().add(secondsToExpire, "seconds"),
-	);
+	// Se já há uma request em andamento para esta key, retorna a mesma promise
+	if (pendingRequests.has(key)) {
+		return pendingRequests.get(key);
+	}
 
-	return data;
+	// Cria a promise e armazena
+	const requestPromise = (async () => {
+		try {
+			const data = await callback();
+			await localStorage.setItem("cache_" + key, JSON.stringify(data));
+			await localStorage.setItem(
+				"cache_" + key + "_expire",
+				moment().add(secondsToExpire, "seconds"),
+			);
+			return data;
+		} finally {
+			// Remove da lista de pendentes quando concluir
+			pendingRequests.delete(key);
+		}
+	})();
+
+	pendingRequests.set(key, requestPromise);
+	return requestPromise;
 };
 
 requestCacheService.limparCache = async (

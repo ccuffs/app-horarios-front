@@ -102,19 +102,59 @@ export async function deleteCurso(id) {
 	}
 }
 
-// GET - Buscar cursos de um usuário específico
-export async function getCursosByUsuario(userId) {
-	try {
-		const response = await axiosInstance.get(`/usuarios/${userId}/cursos`);
-		return response.cursos || [];
-	} catch (error) {
-		console.error("Erro ao buscar cursos do usuário:", error);
-		throw new Error(
-			error.response?.data?.message ||
-				error.message ||
-				"Erro ao buscar cursos do usuário",
-		);
+/**
+ * Buscar cursos de um usuário específico (com cache por padrão)
+ * @param {string} userId - ID do usuário
+ * @param {boolean} useCache - Se true, usa cache (padrão: true)
+ * @param {boolean} forceRefresh - Se true, ignora o cache e busca do servidor
+ * @param {number} cacheExpireSeconds - Tempo de expiração em segundos (padrão: 1 hora)
+ * @returns {Promise} Lista de cursos do usuário
+ */
+export async function getCursosByUsuario(
+	userId,
+	useCache = true,
+	forceRefresh = false,
+	cacheExpireSeconds = 3600,
+) {
+	// Se não usar cache, faz requisição direta
+	if (!useCache) {
+		try {
+			const response = await axiosInstance.get(`/usuarios/${userId}/cursos`);
+			return response.cursos || [];
+		} catch (error) {
+			console.error("Erro ao buscar cursos do usuário:", error);
+			throw new Error(
+				error.response?.data?.message ||
+					error.message ||
+					"Erro ao buscar cursos do usuário",
+			);
+		}
 	}
+
+	// Usa cache
+	const cacheKey = `cursos_usuario_${userId}`;
+
+	if (forceRefresh) {
+		await requestCacheService.limparCache(cacheKey, true);
+	}
+
+	return await requestCacheService.cacheRequest(
+		cacheKey,
+		async () => {
+			try {
+				const response = await axiosInstance.get(`/usuarios/${userId}/cursos`);
+				return response.cursos || [];
+			} catch (error) {
+				console.error("Erro ao buscar cursos do usuário:", error);
+				throw new Error(
+					error.response?.data?.message ||
+						error.message ||
+						"Erro ao buscar cursos do usuário",
+				);
+			}
+		},
+		cacheExpireSeconds,
+	);
 }
 
 /**
