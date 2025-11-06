@@ -1,18 +1,56 @@
 import axiosInstance from "../auth/axios.js";
+import requestCacheService from "./request-cache-service.js";
 
-// GET - Buscar todos os cursos
-export async function getCursos() {
-	try {
-		const response = await axiosInstance.get("/cursos");
-		return response.cursos;
-	} catch (error) {
-		console.error("Erro ao buscar cursos:", error);
-		throw new Error(
-			error.response?.data?.message ||
-				error.message ||
-				"Erro ao buscar cursos",
-		);
+/**
+ * Busca todos os cursos (com cache por padrão)
+ * Cursos mudam raramente, então o cache ajuda a reduzir requisições
+ * @param {boolean} useCache - Se true, usa cache (padrão: true)
+ * @param {boolean} forceRefresh - Se true, ignora o cache e busca do servidor
+ * @param {number} cacheExpireSeconds - Tempo de expiração em segundos (padrão: 12 horas)
+ * @returns {Promise} Lista de cursos
+ */
+export async function getCursos(
+	useCache = true,
+	forceRefresh = false,
+	cacheExpireSeconds = 43200,
+) {
+	// Se não usar cache, faz requisição direta
+	if (!useCache) {
+		try {
+			const response = await axiosInstance.get("/cursos");
+			return response.cursos;
+		} catch (error) {
+			console.error("Erro ao buscar cursos:", error);
+			throw new Error(
+				error.response?.data?.message ||
+					error.message ||
+					"Erro ao buscar cursos",
+			);
+		}
 	}
+
+	// Usa cache
+	if (forceRefresh) {
+		await requestCacheService.limparCache("cursos", true);
+	}
+
+	return await requestCacheService.cacheRequest(
+		"cursos",
+		async () => {
+			try {
+				const response = await axiosInstance.get("/cursos");
+				return response.cursos;
+			} catch (error) {
+				console.error("Erro ao buscar cursos:", error);
+				throw new Error(
+					error.response?.data?.message ||
+						error.message ||
+						"Erro ao buscar cursos",
+				);
+			}
+		},
+		cacheExpireSeconds,
+	);
 }
 
 // POST - Criar novo curso
@@ -21,6 +59,10 @@ export async function createCurso(data) {
 		const response = await axiosInstance.post("/cursos/", {
 			formData: data,
 		});
+
+		// Limpar cache após criar
+		await requestCacheService.limparCache("cursos", true);
+
 		return response.data;
 	} catch (error) {
 		console.error("Erro ao criar curso:", error);
@@ -34,6 +76,10 @@ export async function updateCurso(data) {
 		const response = await axiosInstance.put("/cursos/", {
 			formData: data,
 		});
+
+		// Limpar cache após atualizar
+		await requestCacheService.limparCache("cursos", true);
+
 		return response.data;
 	} catch (error) {
 		console.error("Erro ao atualizar curso:", error);
@@ -45,6 +91,10 @@ export async function updateCurso(data) {
 export async function deleteCurso(id) {
 	try {
 		const response = await axiosInstance.delete(`/cursos/${id}`);
+
+		// Limpar cache após deletar
+		await requestCacheService.limparCache("cursos", true);
+
 		return response.data;
 	} catch (error) {
 		console.error("Erro ao deletar curso:", error);
@@ -67,6 +117,14 @@ export async function getCursosByUsuario(userId) {
 	}
 }
 
+/**
+ * Limpa o cache de cursos
+ * Útil quando cursos são modificados
+ */
+export async function limparCacheCursos() {
+	await requestCacheService.limparCache("cursos", true);
+}
+
 // Exportação padrão para manter compatibilidade
 const cursosService = {
 	getCursos,
@@ -74,6 +132,7 @@ const cursosService = {
 	updateCurso,
 	deleteCurso,
 	getCursosByUsuario,
+	limparCacheCursos,
 };
 
 export default cursosService;

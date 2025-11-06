@@ -1,3 +1,5 @@
+import authService from "./authService.js";
+
 const permissoesService = {};
 
 permissoesService.verificarPermissaoPorId = (permissoes, permissaoId) => {
@@ -63,6 +65,20 @@ permissoesService.verificarPermissaoPorGrupos = (
 	});
 
 	return resultado;
+};
+
+/**
+ * Força a atualização do cache de permissões
+ * Útil quando as permissões do usuário são alteradas no servidor
+ */
+permissoesService.atualizarCachePermissoes = async () => {
+	try {
+		await authService.clearPermissionsCache();
+		return true;
+	} catch (error) {
+		console.error("Erro ao atualizar cache de permissões:", error);
+		return false;
+	}
 };
 
 export default permissoesService;

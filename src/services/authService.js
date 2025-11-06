@@ -1,4 +1,5 @@
 import axiosInstance from "../auth/axios.js";
+import requestCacheService from "./request-cache-service.js";
 
 export async function login(userId, senha) {
 	try {
@@ -24,17 +25,60 @@ export async function logout() {
 	}
 }
 
-export async function getMe() {
-	try {
-		const response = await axiosInstance.get("/auth/me");
-		return response.usuario;
-	} catch (error) {
-		throw new Error(
-			error.response?.data?.message ||
-				error.message ||
-				"Erro ao conectar com o servidor",
-		);
+/**
+ * Busca os dados do usuário (com cache por padrão)
+ * @param {boolean} useCache - Se true, usa cache (padrão: true)
+ * @param {boolean} forceRefresh - Se true, ignora o cache e busca do servidor
+ * @param {number} cacheExpireSeconds - Tempo de expiração do cache em segundos (padrão: 1 hora)
+ * @returns {Promise} Dados do usuário incluindo permissões e grupos
+ */
+export async function getMe(
+	useCache = true,
+	forceRefresh = false,
+	cacheExpireSeconds = 3600,
+) {
+	// Se não usar cache, faz requisição direta
+	if (!useCache) {
+		try {
+			const response = await axiosInstance.get("/auth/me");
+			return response.usuario;
+		} catch (error) {
+			throw new Error(
+				error.response?.data?.message ||
+					error.message ||
+					"Erro ao conectar com o servidor",
+			);
+		}
 	}
+
+	// Usa cache
+	const userId = localStorage.getItem("auth_token");
+
+	if (!userId) {
+		throw new Error("Usuário não autenticado");
+	}
+
+	// Se forceRefresh for true, limpa o cache antes de buscar
+	if (forceRefresh) {
+		await requestCacheService.limparCache("user_permissions", true);
+	}
+
+	return await requestCacheService.cacheRequest(
+		"user_permissions",
+		async () => {
+			try {
+				const response = await axiosInstance.get("/auth/me");
+				return response.usuario;
+			} catch (error) {
+				throw new Error(
+					error.response?.data?.message ||
+						error.message ||
+						"Erro ao conectar com o servidor",
+				);
+			}
+		},
+		cacheExpireSeconds,
+	);
 }
 
 export async function refreshToken() {
@@ -98,6 +142,13 @@ export function isTokenExpired(token) {
 	}
 }
 
+/**
+ * Limpa o cache de permissões do usuário
+ */
+export async function clearPermissionsCache() {
+	await requestCacheService.limparCache("user_permissions", true);
+}
+
 // Exportação padrão para manter compatibilidade com imports existentes
 const authService = {
 	login,
@@ -109,6 +160,7 @@ const authService = {
 	setToken,
 	removeToken,
 	isTokenExpired,
+	clearPermissionsCache,
 };
 
 export default authService;

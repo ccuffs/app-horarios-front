@@ -81,7 +81,8 @@ export const AuthProvider = ({ children }) => {
 				},
 			});
 
-			await carregarPermissoes();
+			// Força o refresh das permissões no login para garantir dados atualizados
+			await carregarPermissoes(true);
 			return { success: true };
 		} catch (error) {
 			dispatch({ type: "LOGIN_FAILURE" });
@@ -89,14 +90,17 @@ export const AuthProvider = ({ children }) => {
 		}
 	};
 
-	const logout = () => {
+	const logout = async () => {
+		// Limpa o cache de permissões antes de fazer logout
+		await authService.clearPermissionsCache();
 		localStorage.removeItem("auth_token");
 		dispatch({ type: "LOGOUT" });
 	};
 
-	const carregarPermissoes = async () => {
+	const carregarPermissoes = async (forceRefresh = false) => {
 		try {
-			const dadosUsuario = await authService.getMe();
+			// Usa cache por padrão para evitar consultas desnecessárias ao banco
+			const dadosUsuario = await authService.getMe(true, forceRefresh);
 
 			dispatch({
 				type: "SET_PERMISSOES",
@@ -131,6 +135,7 @@ export const AuthProvider = ({ children }) => {
 		}
 
 		try {
+			// Usa cache na verificação inicial (useCache = true)
 			const dadosUsuario = await authService.getMe();
 			dispatch({
 				type: "LOGIN_SUCCESS",
@@ -142,6 +147,8 @@ export const AuthProvider = ({ children }) => {
 			await carregarPermissoes();
 		} catch (error) {
 			localStorage.removeItem("auth_token");
+			// Limpa o cache em caso de erro na autenticação
+			await authService.clearPermissionsCache();
 			dispatch({ type: "LOGIN_FAILURE" });
 		} finally {
 			dispatch({ type: "SET_LOADING", payload: false });
