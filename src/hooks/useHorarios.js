@@ -490,54 +490,44 @@ export default function useHorarios() {
 				}
 			});
 
-			// Buscar horários salvos de todos os anos/semestres usando o serviço
+			// Buscar horários salvos APENAS do ano/semestre selecionado atualmente
 			const horariosSalvosPorProfessor = {};
 
-			for (const codigoProfessor of professoresComHorarios) {
-				if (codigoProfessor !== "sem.professor") {
-					try {
-						const allHorariosResponse = await Promise.all(
-							anosSemestres.map(async (anoSem) => {
-								try {
-									const result =
-										await horariosService.getHorarios({
-											ano: anoSem.ano,
-											semestre: anoSem.semestre,
-											id_curso: selectedCurso?.id || 1,
-										});
-									return result.horarios || [];
-								} catch (error) {
-									console.warn(
-										`Erro ao buscar horários para ${anoSem.ano}/${anoSem.semestre}:`,
-										error,
-									);
-									return [];
-								}
-							}),
-						);
+			// Apenas buscar se há um ano/semestre selecionado válido
+			if (selectedAnoSemestre?.ano && selectedAnoSemestre?.semestre && selectedCurso?.id && professoresComHorarios.size > 0) {
+				try {
+					// Fazer UMA ÚNICA request para buscar todos os horários do período
+					const result = await horariosService.getHorarios({
+						ano: selectedAnoSemestre.ano,
+						semestre: selectedAnoSemestre.semestre,
+						id_curso: selectedCurso.id,
+					});
 
-						// Filtrar horários do professor e marcar como salvos
-						horariosSalvosPorProfessor[codigoProfessor] =
-							allHorariosResponse
-								.flat()
-								.filter(
-									(h) =>
-										h.codigo_docente === codigoProfessor &&
-										h.id_ccr &&
-										!h.permitirConflito,
-								)
-								.map((h) => ({
-									...h,
-									uniqueKey: `salvo-${h.id}`,
-									eventoId: h.id,
-									tipo: "salvo",
-								}));
-					} catch (error) {
-						console.error(
-							`Erro ao verificar conflitos para professor ${codigoProfessor}:`,
-							error,
-						);
+					// Agrupar horários por professor
+					for (const codigoProfessor of professoresComHorarios) {
+						if (codigoProfessor !== "sem.professor") {
+							// Filtrar horários do professor a partir da lista já carregada
+							horariosSalvosPorProfessor[codigoProfessor] =
+								(result.horarios || [])
+									.filter(
+										(h) =>
+											h.codigo_docente === codigoProfessor &&
+											h.id_ccr &&
+											!h.permitirConflito,
+									)
+									.map((h) => ({
+										...h,
+										uniqueKey: `salvo-${h.id}`,
+										eventoId: h.id,
+										tipo: "salvo",
+									}));
+						}
 					}
+				} catch (error) {
+					console.error(
+						`Erro ao buscar horários para detectar conflitos:`,
+						error,
+					);
 				}
 			}
 
