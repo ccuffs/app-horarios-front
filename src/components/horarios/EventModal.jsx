@@ -224,8 +224,11 @@ const EventModal = ({
 							eventosUnicos.values(),
 						);
 
-						// Criar horário do evento atual sendo editado
-						const horarioAtual = {
+						// Criar lista de horários simulados: evento atual + eventos sincronizados
+						const horariosSimulados = [];
+
+						// 1. Adicionar o evento atual sendo editado
+						horariosSimulados.push({
 							codigo_docente: profId,
 							dia_semana: dayToNumber[eventoSimulado.dayId],
 							hora_inicio: eventoSimulado.startTime,
@@ -238,10 +241,50 @@ const EventModal = ({
 							eventoId: eventoSimulado.id,
 							uniqueKey: `novo-${eventoSimulado.id}`,
 							permitirConflito: eventoSimulado.permitirConflito,
-						};
+						});
 
-						// Verificar conflitos do evento atual contra todos os outros
-						todosHorariosOutros.forEach((outroHorario) => {
+						// 2. Simular eventos sincronizados (outros horários do mesmo CCR na mesma fase)
+						if (eventoSimulado.disciplinaId && selectedPhase) {
+							Object.keys(events).forEach((phaseNumber) => {
+								if (parseInt(phaseNumber) === parseInt(selectedPhase)) {
+									const phaseEvents = events[phaseNumber];
+									if (phaseEvents) {
+										Object.values(phaseEvents).forEach((eventArray) => {
+											const eventsInSlot = Array.isArray(eventArray)
+												? eventArray
+												: [eventArray];
+											eventsInSlot.forEach((relatedEvent) => {
+												// Se é o mesmo CCR mas evento diferente
+												if (
+													relatedEvent.disciplinaId === eventoSimulado.disciplinaId &&
+													relatedEvent.id !== eventoSimulado.id
+												) {
+													// Simular que este evento também receberá o professor
+													horariosSimulados.push({
+														codigo_docente: profId,
+														dia_semana: dayToNumber[relatedEvent.dayId],
+														hora_inicio: relatedEvent.startTime,
+														duracao: relatedEvent.duration || 2,
+														ano: selectedAnoSemestre.ano,
+														semestre: selectedAnoSemestre.semestre,
+														id_ccr: relatedEvent.disciplinaId,
+														disciplinaNome: relatedEvent.title,
+														tipo: "novo_sincronizado",
+														eventoId: relatedEvent.id,
+														uniqueKey: `novo-sync-${relatedEvent.id}`,
+														permitirConflito: relatedEvent.permitirConflito || false,
+													});
+												}
+											});
+										});
+									}
+								}
+							});
+						}
+
+						// Verificar conflitos de CADA horário simulado contra todos os outros
+						horariosSimulados.forEach((horarioAtual) => {
+							todosHorariosOutros.forEach((outroHorario) => {
 							// CRÍTICO: Nunca comparar o mesmo evento consigo mesmo
 							const evento1Id = horarioAtual.eventoId;
 							const evento2Id = outroHorario.eventoId;
@@ -396,6 +439,7 @@ const EventModal = ({
 									},
 								});
 							}
+							});
 						});
 					} catch (error) {
 						console.error(
