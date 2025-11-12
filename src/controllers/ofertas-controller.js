@@ -97,10 +97,14 @@ export async function saveOrUpdateOferta(formData, edit, dataToSend, oldTurno) {
 				message: "Oferta atualizada com sucesso!",
 			};
 		} else {
-			await ofertasService.createOferta(dataToSend);
+			const response = await ofertasService.createOferta(dataToSend);
+			// Verificar se a oferta foi reativada
+			const message = response.reativada
+				? "Oferta reativada com sucesso!"
+				: "Oferta inserida com sucesso!";
 			return {
 				success: true,
-				message: "Oferta inserida com sucesso!",
+				message: message,
 			};
 		}
 	} catch (error) {
