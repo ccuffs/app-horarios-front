@@ -130,10 +130,10 @@ export async function updateOferta(
 }
 
 // DELETE - Remover oferta
-export async function deleteOferta(ano, semestre, id_curso, fase) {
+export async function deleteOferta(ano, semestre, id_curso, fase, turno) {
 	try {
 		const response = await axiosInstance.delete(
-			`/ofertas/${ano}/${semestre}/${id_curso}/${fase}`,
+			`/ofertas/${ano}/${semestre}/${id_curso}/${fase}/${turno}`,
 		);
 
 		// Limpar cache de todas as ofertas (incluindo filtradas)

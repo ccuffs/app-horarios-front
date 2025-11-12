@@ -27,6 +27,7 @@ export function prepareDeleteData(row) {
 		semestre: row.semestre,
 		id_curso: row.id_curso,
 		fase: row.fase,
+		turno: row.turno,
 	};
 }
 
@@ -133,6 +134,7 @@ export async function removeOferta(deleteData) {
 			deleteData.semestre,
 			deleteData.id_curso,
 			deleteData.fase,
+			deleteData.turno,
 		);
 		return {
 			success: true,
