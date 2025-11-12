@@ -97,14 +97,10 @@ export async function saveOrUpdateOferta(formData, edit, dataToSend, oldTurno) {
 				message: "Oferta atualizada com sucesso!",
 			};
 		} else {
-			const response = await ofertasService.createOferta(dataToSend);
-			// Verificar se a oferta foi reativada
-			const message = response.reativada
-				? "Oferta reativada com sucesso!"
-				: "Oferta inserida com sucesso!";
+			await ofertasService.createOferta(dataToSend);
 			return {
 				success: true,
-				message: message,
+				message: "Oferta inserida com sucesso!",
 			};
 		}
 	} catch (error) {
@@ -146,9 +142,21 @@ export async function removeOferta(deleteData) {
 		};
 	} catch (error) {
 		console.error("Erro ao remover oferta:", error);
+
+		// Tratar erros específicos
+		let errorMessage = "Falha ao remover oferta!";
+
+		if (error.response?.data?.message) {
+			errorMessage = error.response.data.message;
+		} else if (error.response?.status === 400) {
+			errorMessage = "Não é possível remover esta oferta. Verifique se existem horários vinculados!";
+		} else if (error.response?.status === 404) {
+			errorMessage = "Oferta não encontrada!";
+		}
+
 		return {
 			success: false,
-			message: "Falha ao remover oferta!",
+			message: errorMessage,
 		};
 	}
 }
