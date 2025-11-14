@@ -328,7 +328,10 @@ const CalendarEvent = ({
 					lineHeight: 1.1,
 					marginBottom: isMultiple ? 0.1 : 0.5,
 					fontSize: isMultiple ? "0.6rem" : "0.75rem",
-					paddingLeft: canViewConflicts && temConflito && !isMultiple ? "20px" : "0", // Espaço para badge de conflito
+					paddingLeft:
+						canViewConflicts && temConflito && !isMultiple
+							? "20px"
+							: "0", // Espaço para badge de conflito
 					paddingRight: !isMultiple ? "20px" : "0", // Espaço para o botão delete
 				}}
 			>
@@ -381,39 +384,40 @@ const CalendarEvent = ({
 													) + "..."
 												: professor.name
 											: professor.name}
-								</Typography>
+									</Typography>
 
-								{/* Badge de conflito para o professor */}
-								{canViewConflicts && professorEmConflito && (
-									<Box
-										sx={{
-											width: isMultiple
-												? "8px"
-												: "10px",
-											height: isMultiple
-												? "8px"
-												: "10px",
-											backgroundColor: "#ff5722",
-											borderRadius: "50%",
-											display: "flex",
-											alignItems: "center",
-											justifyContent: "center",
-											flexShrink: 0,
-											boxShadow:
-												"0 1px 2px rgba(0,0,0,0.3)",
-										}}
-									>
-										<WarningIcon
-											sx={{
-												fontSize: isMultiple
-													? "6px"
-													: "8px",
-												color: "white",
-											}}
-										/>
-									</Box>
-								)}
-							</Box>
+									{/* Badge de conflito para o professor */}
+									{canViewConflicts &&
+										professorEmConflito && (
+											<Box
+												sx={{
+													width: isMultiple
+														? "8px"
+														: "10px",
+													height: isMultiple
+														? "8px"
+														: "10px",
+													backgroundColor: "#ff5722",
+													borderRadius: "50%",
+													display: "flex",
+													alignItems: "center",
+													justifyContent: "center",
+													flexShrink: 0,
+													boxShadow:
+														"0 1px 2px rgba(0,0,0,0.3)",
+												}}
+											>
+												<WarningIcon
+													sx={{
+														fontSize: isMultiple
+															? "6px"
+															: "8px",
+														color: "white",
+													}}
+												/>
+											</Box>
+										)}
+								</Box>
 							);
 						})}
 					{/* Indicador se há mais professores */}
@@ -603,36 +607,41 @@ const CalendarEvent = ({
 				</Box>
 			)}
 
-		{/* Mostrar conflitos no tooltip se existir */}
-		{canViewConflicts && temConflito && conflitosDoEvento.length > 0 && (
-			<Box
-				sx={{
-					mt: 1,
-					p: 1,
-					backgroundColor: "rgba(255,152,0,0.2)",
-					borderRadius: 1,
-				}}
-			>
-				<Typography
-					variant="caption"
-					display="block"
-					sx={{ color: "#ff9800", fontWeight: "bold" }}
-				>
-					⚠️ {conflitosDoEvento.length} Conflito(s) Detectado(s)
-				</Typography>
-				{conflitosDoEvento.slice(0, 2).map((conflito, index) => (
-					<Typography
-						key={index}
-						variant="caption"
-						display="block"
-						sx={{ pl: 1, lineHeight: 1.2 }}
+			{/* Mostrar conflitos no tooltip se existir */}
+			{canViewConflicts &&
+				temConflito &&
+				conflitosDoEvento.length > 0 && (
+					<Box
+						sx={{
+							mt: 1,
+							p: 1,
+							backgroundColor: "rgba(255,152,0,0.2)",
+							borderRadius: 1,
+						}}
 					>
-						• Professor com aula sobreposta em{" "}
-						{conflito.diaNome}
-					</Typography>
-				))}
-			</Box>
-		)}
+						<Typography
+							variant="caption"
+							display="block"
+							sx={{ color: "#ff9800", fontWeight: "bold" }}
+						>
+							⚠️ {conflitosDoEvento.length} Conflito(s)
+							Detectado(s)
+						</Typography>
+						{conflitosDoEvento
+							.slice(0, 2)
+							.map((conflito, index) => (
+								<Typography
+									key={index}
+									variant="caption"
+									display="block"
+									sx={{ pl: 1, lineHeight: 1.2 }}
+								>
+									• Professor com aula sobreposta em{" "}
+									{conflito.diaNome}
+								</Typography>
+							))}
+					</Box>
+				)}
 
 			{!event.disciplinaId && (
 				<Box

@@ -246,37 +246,62 @@ const EventModal = ({
 						// 2. Simular eventos sincronizados (outros horários do mesmo CCR na mesma fase)
 						if (eventoSimulado.disciplinaId && selectedPhase) {
 							Object.keys(events).forEach((phaseNumber) => {
-								if (parseInt(phaseNumber) === parseInt(selectedPhase)) {
+								if (
+									parseInt(phaseNumber) ===
+									parseInt(selectedPhase)
+								) {
 									const phaseEvents = events[phaseNumber];
 									if (phaseEvents) {
-										Object.values(phaseEvents).forEach((eventArray) => {
-											const eventsInSlot = Array.isArray(eventArray)
-												? eventArray
-												: [eventArray];
-											eventsInSlot.forEach((relatedEvent) => {
-												// Se é o mesmo CCR mas evento diferente
-												if (
-													relatedEvent.disciplinaId === eventoSimulado.disciplinaId &&
-													relatedEvent.id !== eventoSimulado.id
-												) {
-													// Simular que este evento também receberá o professor
-													horariosSimulados.push({
-														codigo_docente: profId,
-														dia_semana: dayToNumber[relatedEvent.dayId],
-														hora_inicio: relatedEvent.startTime,
-														duracao: relatedEvent.duration || 2,
-														ano: selectedAnoSemestre.ano,
-														semestre: selectedAnoSemestre.semestre,
-														id_ccr: relatedEvent.disciplinaId,
-														disciplinaNome: relatedEvent.title,
-														tipo: "novo_sincronizado",
-														eventoId: relatedEvent.id,
-														uniqueKey: `novo-sync-${relatedEvent.id}`,
-														permitirConflito: relatedEvent.permitirConflito || false,
-													});
-												}
-											});
-										});
+										Object.values(phaseEvents).forEach(
+											(eventArray) => {
+												const eventsInSlot =
+													Array.isArray(eventArray)
+														? eventArray
+														: [eventArray];
+												eventsInSlot.forEach(
+													(relatedEvent) => {
+														// Se é o mesmo CCR mas evento diferente
+														if (
+															relatedEvent.disciplinaId ===
+																eventoSimulado.disciplinaId &&
+															relatedEvent.id !==
+																eventoSimulado.id
+														) {
+															// Simular que este evento também receberá o professor
+															horariosSimulados.push(
+																{
+																	codigo_docente:
+																		profId,
+																	dia_semana:
+																		dayToNumber[
+																			relatedEvent
+																				.dayId
+																		],
+																	hora_inicio:
+																		relatedEvent.startTime,
+																	duracao:
+																		relatedEvent.duration ||
+																		2,
+																	ano: selectedAnoSemestre.ano,
+																	semestre:
+																		selectedAnoSemestre.semestre,
+																	id_ccr: relatedEvent.disciplinaId,
+																	disciplinaNome:
+																		relatedEvent.title,
+																	tipo: "novo_sincronizado",
+																	eventoId:
+																		relatedEvent.id,
+																	uniqueKey: `novo-sync-${relatedEvent.id}`,
+																	permitirConflito:
+																		relatedEvent.permitirConflito ||
+																		false,
+																},
+															);
+														}
+													},
+												);
+											},
+										);
 									}
 								}
 							});
@@ -285,160 +310,166 @@ const EventModal = ({
 						// Verificar conflitos de CADA horário simulado contra todos os outros
 						horariosSimulados.forEach((horarioAtual) => {
 							todosHorariosOutros.forEach((outroHorario) => {
-							// CRÍTICO: Nunca comparar o mesmo evento consigo mesmo
-							const evento1Id = horarioAtual.eventoId;
-							const evento2Id = outroHorario.eventoId;
+								// CRÍTICO: Nunca comparar o mesmo evento consigo mesmo
+								const evento1Id = horarioAtual.eventoId;
+								const evento2Id = outroHorario.eventoId;
 
-							if (
-								evento1Id &&
-								evento2Id &&
-								evento1Id === evento2Id
-							) {
-								return; // Pular comparação do mesmo evento
-							}
+								if (
+									evento1Id &&
+									evento2Id &&
+									evento1Id === evento2Id
+								) {
+									return; // Pular comparação do mesmo evento
+								}
 
-							// Verificar se há sobreposição de dias
-							if (
-								horarioAtual.dia_semana !==
-								outroHorario.dia_semana
-							) {
-								return;
-							}
-
-							// IMPORTANTE: Só detectar conflitos entre horários do MESMO ano e semestre
-							if (
-								horarioAtual.ano !== outroHorario.ano ||
-								horarioAtual.semestre !== outroHorario.semestre
-							) {
-								return; // Horários de períodos diferentes não são conflitos
-							}
-
-							// Verificar se são exatamente o mesmo horário
-							const hora1 =
-								typeof horarioAtual.hora_inicio === "object"
-									? horarioAtual.hora_inicio
-											.toString()
-											.substring(0, 5)
-									: horarioAtual.hora_inicio;
-							const hora2 =
-								typeof outroHorario.hora_inicio === "object"
-									? outroHorario.hora_inicio
-											.toString()
-											.substring(0, 5)
-									: outroHorario.hora_inicio;
-
-							// Considerar que é o MESMO compromisso (portanto não é conflito) se todos os
-							// atributos básicos coincidirem – ignoramos diferença de duração para permitir
-							// edições que apenas alteram o tamanho da aula.
-							if (
-								horarioAtual.id_ccr === outroHorario.id_ccr &&
-								hora1 === hora2 &&
-								horarioAtual.ano === outroHorario.ano &&
-								horarioAtual.semestre ===
-									outroHorario.semestre &&
-								horarioAtual.dia_semana ===
-									outroHorario.dia_semana &&
-								horarioAtual.codigo_docente ===
-									outroHorario.codigo_docente
-							) {
-								return; // É o mesmo compromisso (possível edição), não gera conflito
-							}
-
-							// Regra 4: Se algum dos eventos permite conflito, não acusar conflito
-							if (
-								horarioAtual.permitirConflito ||
-								outroHorario.permitirConflito
-							) {
-								return; // Pular se algum evento permitir conflito
-							}
-
-							// Regra 3: Se mesmo CCR, mesmo horário/dia mas fases diferentes, não é conflito
-							if (
-								horarioAtual.id_ccr === outroHorario.id_ccr &&
-								horarioAtual.fase !== outroHorario.fase
-							) {
-								return; // Mesmo CCR em fases diferentes não é conflito
-							}
-
-							// Regra 1 e 2: Verificar sobreposição temporal
-							// Regra 1: CCRs diferentes, mesmo horário/dia, qualquer fase → CONFLITO
-							// Regra 2: Mesmo CCR, mesmo horário/dia, mesma fase → CONFLITO
-							if (
-								horarioAtual.id_ccr &&
-								outroHorario.id_ccr &&
-								horariosSeOverlapam(horarioAtual, outroHorario)
-							) {
-								// Criar ID único para evitar duplicatas
-								const conflict1 = `${
-									horarioAtual.id_ccr || "null"
-								}-${horarioAtual.ano}-${
-									horarioAtual.semestre
-								}-${hora1}-${horarioAtual.duracao}`;
-								const conflict2 = `${
-									outroHorario.id_ccr || "null"
-								}-${outroHorario.ano}-${
-									outroHorario.semestre
-								}-${hora2}-${outroHorario.duracao}`;
-								const sortedConflicts = [
-									conflict1,
-									conflict2,
-								].sort();
-								const conflictId = `${profId}-${
-									horarioAtual.dia_semana
-								}-${sortedConflicts.join("---")}`;
-
-								// Verificar se já processamos este conflito
-								if (conflitosSet.has(conflictId)) {
+								// Verificar se há sobreposição de dias
+								if (
+									horarioAtual.dia_semana !==
+									outroHorario.dia_semana
+								) {
 									return;
 								}
-								conflitosSet.add(conflictId);
 
-								const disciplina1 = disciplinas.find(
-									(d) => d.id === horarioAtual.id_ccr,
-								);
-								const disciplina2 = disciplinas.find(
-									(d) => d.id === outroHorario.id_ccr,
-								);
+								// IMPORTANTE: Só detectar conflitos entre horários do MESMO ano e semestre
+								if (
+									horarioAtual.ano !== outroHorario.ano ||
+									horarioAtual.semestre !==
+										outroHorario.semestre
+								) {
+									return; // Horários de períodos diferentes não são conflitos
+								}
 
-								todosConflitos.push({
-									id: conflictId,
-									professor:
-										professores.find(
-											(p) => p.codigo === profId,
-										)?.name || profId,
-									codigoProfessor: profId,
-									dia: horarioAtual.dia_semana,
-									diaNome:
-										daysOfWeek.find(
-											(d) =>
-												dayToNumber[d.id] ===
-												parseInt(
-													horarioAtual.dia_semana,
-												),
-										)?.title ||
-										`Dia ${horarioAtual.dia_semana}`,
-									horario1: {
-										...horarioAtual,
-										disciplinaNome:
-											horarioAtual.disciplinaNome ||
-											disciplina1?.nome ||
-											"Disciplina não encontrada",
-										hora_inicio: hora1,
-										ano_semestre: `${horarioAtual.ano}/${horarioAtual.semestre}`,
-										tipo: horarioAtual.tipo || "novo",
-									},
-									horario2: {
-										...outroHorario,
-										disciplinaNome:
-											outroHorario.disciplinaNome ||
-											disciplina2?.nome ||
-											"Disciplina não encontrada",
-										hora_inicio: hora2,
-										ano_semestre: `${outroHorario.ano}/${outroHorario.semestre}`,
-										tipo: outroHorario.tipo || "salvo",
-									},
-								});
-							}
+								// Verificar se são exatamente o mesmo horário
+								const hora1 =
+									typeof horarioAtual.hora_inicio === "object"
+										? horarioAtual.hora_inicio
+												.toString()
+												.substring(0, 5)
+										: horarioAtual.hora_inicio;
+								const hora2 =
+									typeof outroHorario.hora_inicio === "object"
+										? outroHorario.hora_inicio
+												.toString()
+												.substring(0, 5)
+										: outroHorario.hora_inicio;
+
+								// Considerar que é o MESMO compromisso (portanto não é conflito) se todos os
+								// atributos básicos coincidirem – ignoramos diferença de duração para permitir
+								// edições que apenas alteram o tamanho da aula.
+								if (
+									horarioAtual.id_ccr ===
+										outroHorario.id_ccr &&
+									hora1 === hora2 &&
+									horarioAtual.ano === outroHorario.ano &&
+									horarioAtual.semestre ===
+										outroHorario.semestre &&
+									horarioAtual.dia_semana ===
+										outroHorario.dia_semana &&
+									horarioAtual.codigo_docente ===
+										outroHorario.codigo_docente
+								) {
+									return; // É o mesmo compromisso (possível edição), não gera conflito
+								}
+
+								// Regra 4: Se algum dos eventos permite conflito, não acusar conflito
+								if (
+									horarioAtual.permitirConflito ||
+									outroHorario.permitirConflito
+								) {
+									return; // Pular se algum evento permitir conflito
+								}
+
+								// Regra 3: Se mesmo CCR, mesmo horário/dia mas fases diferentes, não é conflito
+								if (
+									horarioAtual.id_ccr ===
+										outroHorario.id_ccr &&
+									horarioAtual.fase !== outroHorario.fase
+								) {
+									return; // Mesmo CCR em fases diferentes não é conflito
+								}
+
+								// Regra 1 e 2: Verificar sobreposição temporal
+								// Regra 1: CCRs diferentes, mesmo horário/dia, qualquer fase → CONFLITO
+								// Regra 2: Mesmo CCR, mesmo horário/dia, mesma fase → CONFLITO
+								if (
+									horarioAtual.id_ccr &&
+									outroHorario.id_ccr &&
+									horariosSeOverlapam(
+										horarioAtual,
+										outroHorario,
+									)
+								) {
+									// Criar ID único para evitar duplicatas
+									const conflict1 = `${
+										horarioAtual.id_ccr || "null"
+									}-${horarioAtual.ano}-${
+										horarioAtual.semestre
+									}-${hora1}-${horarioAtual.duracao}`;
+									const conflict2 = `${
+										outroHorario.id_ccr || "null"
+									}-${outroHorario.ano}-${
+										outroHorario.semestre
+									}-${hora2}-${outroHorario.duracao}`;
+									const sortedConflicts = [
+										conflict1,
+										conflict2,
+									].sort();
+									const conflictId = `${profId}-${
+										horarioAtual.dia_semana
+									}-${sortedConflicts.join("---")}`;
+
+									// Verificar se já processamos este conflito
+									if (conflitosSet.has(conflictId)) {
+										return;
+									}
+									conflitosSet.add(conflictId);
+
+									const disciplina1 = disciplinas.find(
+										(d) => d.id === horarioAtual.id_ccr,
+									);
+									const disciplina2 = disciplinas.find(
+										(d) => d.id === outroHorario.id_ccr,
+									);
+
+									todosConflitos.push({
+										id: conflictId,
+										professor:
+											professores.find(
+												(p) => p.codigo === profId,
+											)?.name || profId,
+										codigoProfessor: profId,
+										dia: horarioAtual.dia_semana,
+										diaNome:
+											daysOfWeek.find(
+												(d) =>
+													dayToNumber[d.id] ===
+													parseInt(
+														horarioAtual.dia_semana,
+													),
+											)?.title ||
+											`Dia ${horarioAtual.dia_semana}`,
+										horario1: {
+											...horarioAtual,
+											disciplinaNome:
+												horarioAtual.disciplinaNome ||
+												disciplina1?.nome ||
+												"Disciplina não encontrada",
+											hora_inicio: hora1,
+											ano_semestre: `${horarioAtual.ano}/${horarioAtual.semestre}`,
+											tipo: horarioAtual.tipo || "novo",
+										},
+										horario2: {
+											...outroHorario,
+											disciplinaNome:
+												outroHorario.disciplinaNome ||
+												disciplina2?.nome ||
+												"Disciplina não encontrada",
+											hora_inicio: hora2,
+											ano_semestre: `${outroHorario.ano}/${outroHorario.semestre}`,
+											tipo: outroHorario.tipo || "salvo",
+										},
+									});
+								}
 							});
 						});
 					} catch (error) {
@@ -969,45 +1000,47 @@ const EventModal = ({
 																? "#4caf50"
 																: undefined,
 													}}
-											/>
+												/>
 
-											{/* Badge de conflito para o professor no modal */}
-											{canViewConflicts && professorEmConflito && (
-												<Tooltip
-													title="Professor com conflito de horário"
-													placement="top"
-													arrow
-												>
-													<Box
-														sx={{
-															width: "16px",
-															height: "16px",
-															backgroundColor:
-																"#ff5722",
-															borderRadius:
-																"50%",
-															display: "flex",
-															alignItems:
-																"center",
-															justifyContent:
-																"center",
-															flexShrink: 0,
-															boxShadow:
-																"0 1px 3px rgba(0,0,0,0.3)",
-															ml: 0.5,
-														}}
-													>
-														<WarningIcon
-															sx={{
-																fontSize:
-																	"12px",
-																color: "white",
-															}}
-														/>
-													</Box>
-												</Tooltip>
-											)}
-										</Box>
+												{/* Badge de conflito para o professor no modal */}
+												{canViewConflicts &&
+													professorEmConflito && (
+														<Tooltip
+															title="Professor com conflito de horário"
+															placement="top"
+															arrow
+														>
+															<Box
+																sx={{
+																	width: "16px",
+																	height: "16px",
+																	backgroundColor:
+																		"#ff5722",
+																	borderRadius:
+																		"50%",
+																	display:
+																		"flex",
+																	alignItems:
+																		"center",
+																	justifyContent:
+																		"center",
+																	flexShrink: 0,
+																	boxShadow:
+																		"0 1px 3px rgba(0,0,0,0.3)",
+																	ml: 0.5,
+																}}
+															>
+																<WarningIcon
+																	sx={{
+																		fontSize:
+																			"12px",
+																		color: "white",
+																	}}
+																/>
+															</Box>
+														</Tooltip>
+													)}
+											</Box>
 										);
 									})}
 								</Stack>
@@ -1111,50 +1144,50 @@ const EventModal = ({
 								✓ Professores preenchidos automaticamente com
 								base em disciplina já cadastrada
 							</Typography>
-				</Alert>
-			)}
-
-			{canViewConflicts && conflitosTempoRealLocal.length > 0 && (
-				<Alert severity="warning" sx={{ mt: 1 }}>
-					<Typography variant="subtitle2" sx={{ mb: 1 }}>
-						{conflitosTempoRealLocal.length} conflito(s)
-						detectado(s):
-					</Typography>
-					{conflitosTempoRealLocal
-						.slice(0, 3)
-						.map((conflito, index) => (
-							<Typography
-								key={index}
-								variant="caption"
-								display="block"
-								sx={{ mb: 0.5 }}
-							>
-								{conflito.professor}: {conflito.diaNome}{" "}
-								{conflito.horario1.hora_inicio}(
-								{conflito.horario1.tipo === "temporario"
-									? "não salvo"
-									: conflito.horario1.ano_semestre}
-								) vs (
-								{conflito.horario2.tipo === "temporario"
-									? "não salvo"
-									: conflito.horario2.ano_semestre}
-								)
-							</Typography>
-						))}
-					{conflitosTempoRealLocal.length > 3 && (
-						<Typography
-							variant="caption"
-							sx={{ fontStyle: "italic" }}
-						>
-							... e mais{" "}
-							{conflitosTempoRealLocal.length - 3}{" "}
-							conflito(s)
-						</Typography>
+						</Alert>
 					)}
-				</Alert>
-			)}
 
-			{canViewConflicts && verificandoConflitos && (
+					{canViewConflicts && conflitosTempoRealLocal.length > 0 && (
+						<Alert severity="warning" sx={{ mt: 1 }}>
+							<Typography variant="subtitle2" sx={{ mb: 1 }}>
+								{conflitosTempoRealLocal.length} conflito(s)
+								detectado(s):
+							</Typography>
+							{conflitosTempoRealLocal
+								.slice(0, 3)
+								.map((conflito, index) => (
+									<Typography
+										key={index}
+										variant="caption"
+										display="block"
+										sx={{ mb: 0.5 }}
+									>
+										{conflito.professor}: {conflito.diaNome}{" "}
+										{conflito.horario1.hora_inicio}(
+										{conflito.horario1.tipo === "temporario"
+											? "não salvo"
+											: conflito.horario1.ano_semestre}
+										) vs (
+										{conflito.horario2.tipo === "temporario"
+											? "não salvo"
+											: conflito.horario2.ano_semestre}
+										)
+									</Typography>
+								))}
+							{conflitosTempoRealLocal.length > 3 && (
+								<Typography
+									variant="caption"
+									sx={{ fontStyle: "italic" }}
+								>
+									... e mais{" "}
+									{conflitosTempoRealLocal.length - 3}{" "}
+									conflito(s)
+								</Typography>
+							)}
+						</Alert>
+					)}
+
+					{canViewConflicts && verificandoConflitos && (
 						<Box
 							sx={{
 								display: "flex",
@@ -1285,22 +1318,24 @@ const EventModal = ({
 						>
 							Cancelar
 						</Button>
-					<Button
-						onClick={handleSave}
-						variant="contained"
-						color={
-							canViewConflicts && conflitosTempoRealLocal.length > 0
-								? "warning"
-								: "primary"
-						}
-						disabled={
-							!disciplinaId || professoresIds.length === 0
-						}
-					>
-						{canViewConflicts && conflitosTempoRealLocal.length > 0
-							? "Salvar (com conflitos)"
-							: "Salvar"}
-					</Button>
+						<Button
+							onClick={handleSave}
+							variant="contained"
+							color={
+								canViewConflicts &&
+								conflitosTempoRealLocal.length > 0
+									? "warning"
+									: "primary"
+							}
+							disabled={
+								!disciplinaId || professoresIds.length === 0
+							}
+						>
+							{canViewConflicts &&
+							conflitosTempoRealLocal.length > 0
+								? "Salvar (com conflitos)"
+								: "Salvar"}
+						</Button>
 					</Box>
 				</Stack>
 			</Paper>

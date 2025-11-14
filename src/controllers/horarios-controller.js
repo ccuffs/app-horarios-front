@@ -852,28 +852,28 @@ export function detectarConflitos(
 							continue;
 						}
 
-				const hora1Normalizada = normalizeTimeForComparison(
-					h1.hora_inicio,
-				);
-				const hora2Normalizada = normalizeTimeForComparison(
-					h2.hora_inicio,
-				);
+						const hora1Normalizada = normalizeTimeForComparison(
+							h1.hora_inicio,
+						);
+						const hora2Normalizada = normalizeTimeForComparison(
+							h2.hora_inicio,
+						);
 
-				// Considerar como "mesmo horário" APENAS quando é o mesmo evento (mesmo CCR)
-				// Se são CCRs diferentes no mesmo horário, é um CONFLITO, não duplicação
-				const saoOMesmoHorario =
-					hora1Normalizada === hora2Normalizada &&
-					h1.ano === h2.ano &&
-					h1.semestre === h2.semestre &&
-					h1.dia_semana === h2.dia_semana &&
-					h1.codigo_docente === h2.codigo_docente &&
-					h1.duracao === h2.duracao &&
-					h1.id_ccr === h2.id_ccr;
+						// Considerar como "mesmo horário" APENAS quando é o mesmo evento (mesmo CCR)
+						// Se são CCRs diferentes no mesmo horário, é um CONFLITO, não duplicação
+						const saoOMesmoHorario =
+							hora1Normalizada === hora2Normalizada &&
+							h1.ano === h2.ano &&
+							h1.semestre === h2.semestre &&
+							h1.dia_semana === h2.dia_semana &&
+							h1.codigo_docente === h2.codigo_docente &&
+							h1.duracao === h2.duracao &&
+							h1.id_ccr === h2.id_ccr;
 
-				// Se é o mesmo evento (mesmo horário E mesmo CCR), ignorar
-				if (saoOMesmoHorario) {
-					continue;
-				}
+						// Se é o mesmo evento (mesmo horário E mesmo CCR), ignorar
+						if (saoOMesmoHorario) {
+							continue;
+						}
 
 						if (h1.permitirConflito || h2.permitirConflito) {
 							continue;

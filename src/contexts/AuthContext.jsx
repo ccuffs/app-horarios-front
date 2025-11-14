@@ -1,4 +1,10 @@
-import React, { createContext, useContext, useReducer, useEffect, useRef } from "react";
+import React, {
+	createContext,
+	useContext,
+	useReducer,
+	useEffect,
+	useRef,
+} from "react";
 import authService from "../services/authService.js";
 
 const AuthContext = createContext();

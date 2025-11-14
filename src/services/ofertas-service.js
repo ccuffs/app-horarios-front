@@ -62,7 +62,8 @@ export async function getOfertas(
 	}
 
 	// Cria chave de cache única baseada nos parâmetros
-	const paramsKey = Object.keys(params).length > 0 ? `_${JSON.stringify(params)}` : "";
+	const paramsKey =
+		Object.keys(params).length > 0 ? `_${JSON.stringify(params)}` : "";
 	const cacheKey = `ofertas${paramsKey}`;
 
 	// Usa cache
@@ -74,7 +75,9 @@ export async function getOfertas(
 		cacheKey,
 		async () => {
 			try {
-				const response = await axiosInstance.get("/ofertas", { params });
+				const response = await axiosInstance.get("/ofertas", {
+					params,
+				});
 				return processOfertas(response.ofertas);
 			} catch (error) {
 				console.error("Erro ao buscar ofertas:", error);

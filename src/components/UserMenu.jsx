@@ -117,18 +117,18 @@ export default function UserMenu() {
 						<Typography variant="caption" color="text.secondary">
 							ID: {usuario.id}
 						</Typography>
-			</Box>
-		</MenuItem>
-		<Divider />
-		<MenuItem onClick={handleClearCache}>
-			<DeleteSweepIcon sx={{ mr: 1 }} />
-			Limpar Cache
-		</MenuItem>
-		<MenuItem onClick={handleLogout}>
-			<LogoutIcon sx={{ mr: 1 }} />
-			Sair
-		</MenuItem>
-	</Menu>
+					</Box>
+				</MenuItem>
+				<Divider />
+				<MenuItem onClick={handleClearCache}>
+					<DeleteSweepIcon sx={{ mr: 1 }} />
+					Limpar Cache
+				</MenuItem>
+				<MenuItem onClick={handleLogout}>
+					<LogoutIcon sx={{ mr: 1 }} />
+					Sair
+				</MenuItem>
+			</Menu>
 		</Box>
 	);
 }

@@ -237,35 +237,35 @@ export default function Horarios() {
 							</span>
 						</Tooltip>
 
-					{canViewConflicts && (
-						<Badge
-							badgeContent={conflitosHorarios.length}
-							color="error"
-						>
-							<Button
-								variant={
-									conflitosHorarios.length > 0
-										? "contained"
-										: "outlined"
-								}
-								color={
-									conflitosHorarios.length > 0
-										? "warning"
-										: "primary"
-								}
-								onClick={() => setShowConflitos(true)}
-								startIcon={<WarningIcon />}
-								sx={{
-									minWidth: { xs: "200px", sm: "140px" },
-									width: { xs: "100%", sm: "auto" },
-								}}
+						{canViewConflicts && (
+							<Badge
+								badgeContent={conflitosHorarios.length}
+								color="error"
 							>
-								{conflitosHorarios.length > 0
-									? "Ver Conflitos"
-									: "Sem Conflitos"}
-							</Button>
-						</Badge>
-					)}
+								<Button
+									variant={
+										conflitosHorarios.length > 0
+											? "contained"
+											: "outlined"
+									}
+									color={
+										conflitosHorarios.length > 0
+											? "warning"
+											: "primary"
+									}
+									onClick={() => setShowConflitos(true)}
+									startIcon={<WarningIcon />}
+									sx={{
+										minWidth: { xs: "200px", sm: "140px" },
+										width: { xs: "100%", sm: "auto" },
+									}}
+								>
+									{conflitosHorarios.length > 0
+										? "Ver Conflitos"
+										: "Sem Conflitos"}
+								</Button>
+							</Badge>
+						)}
 
 						{canManageHorarios && (
 							<Button
@@ -1253,17 +1253,17 @@ export default function Horarios() {
 					>
 						Cancelar
 					</Button>
-				<Button
-					onClick={() => {
-						setShowReloadConfirmation(false);
-						reloadAllData();
-					}}
-					variant="outlined"
-					color="error"
-					startIcon={<DeleteIcon />}
-				>
-					Descartar e Recarregar
-				</Button>
+					<Button
+						onClick={() => {
+							setShowReloadConfirmation(false);
+							reloadAllData();
+						}}
+						variant="outlined"
+						color="error"
+						startIcon={<DeleteIcon />}
+					>
+						Descartar e Recarregar
+					</Button>
 					{canManageHorarios && (
 						<Button
 							onClick={handleSyncAndReload}

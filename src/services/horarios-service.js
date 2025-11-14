@@ -35,7 +35,9 @@ export async function getHorarios(params = {}, useCache = true) {
 		cacheKey,
 		async () => {
 			try {
-				const response = await axiosInstance.get("/horarios", { params });
+				const response = await axiosInstance.get("/horarios", {
+					params,
+				});
 				return {
 					horarios: response.horarios || [],
 					count: response.count || response.horarios?.length || 0,

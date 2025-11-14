@@ -498,7 +498,12 @@ export default function useHorarios() {
 			const horariosSalvosPorProfessor = {};
 
 			// Apenas buscar se há um ano/semestre selecionado válido
-			if (selectedAnoSemestre?.ano && selectedAnoSemestre?.semestre && selectedCurso?.id && professoresComHorarios.size > 0) {
+			if (
+				selectedAnoSemestre?.ano &&
+				selectedAnoSemestre?.semestre &&
+				selectedCurso?.id &&
+				professoresComHorarios.size > 0
+			) {
 				try {
 					// Fazer UMA ÚNICA request para buscar todos os horários do período
 					const result = await horariosService.getHorarios({
@@ -511,20 +516,21 @@ export default function useHorarios() {
 					for (const codigoProfessor of professoresComHorarios) {
 						if (codigoProfessor !== "sem.professor") {
 							// Filtrar horários do professor a partir da lista já carregada
-							horariosSalvosPorProfessor[codigoProfessor] =
-								(result.horarios || [])
-									.filter(
-										(h) =>
-											h.codigo_docente === codigoProfessor &&
-											h.id_ccr &&
-											!h.permitirConflito,
-									)
-									.map((h) => ({
-										...h,
-										uniqueKey: `salvo-${h.id}`,
-										eventoId: h.id,
-										tipo: "salvo",
-									}));
+							horariosSalvosPorProfessor[codigoProfessor] = (
+								result.horarios || []
+							)
+								.filter(
+									(h) =>
+										h.codigo_docente === codigoProfessor &&
+										h.id_ccr &&
+										!h.permitirConflito,
+								)
+								.map((h) => ({
+									...h,
+									uniqueKey: `salvo-${h.id}`,
+									eventoId: h.id,
+									tipo: "salvo",
+								}));
 						}
 					}
 				} catch (error) {
@@ -2538,7 +2544,12 @@ export default function useHorarios() {
 		const carregarOutroSemestre = async () => {
 			try {
 				// Só carregar se tiver disciplinas carregadas E após auto-seleção
-				if (!selectedCurso?.id || !selectedAnoSemestre?.ano || disciplinas.length === 0 || !hasAutoSelectedAnoSemestre) {
+				if (
+					!selectedCurso?.id ||
+					!selectedAnoSemestre?.ano ||
+					disciplinas.length === 0 ||
+					!hasAutoSelectedAnoSemestre
+				) {
 					setCreditosOutroSemestre(new Map());
 					return;
 				}

@@ -149,7 +149,8 @@ export async function removeOferta(deleteData) {
 		if (error.response?.data?.message) {
 			errorMessage = error.response.data.message;
 		} else if (error.response?.status === 400) {
-			errorMessage = "Não é possível remover esta oferta. Verifique se existem horários vinculados!";
+			errorMessage =
+				"Não é possível remover esta oferta. Verifique se existem horários vinculados!";
 		} else if (error.response?.status === 404) {
 			errorMessage = "Oferta não encontrada!";
 		}

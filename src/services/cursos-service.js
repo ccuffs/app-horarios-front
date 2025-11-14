@@ -119,7 +119,9 @@ export async function getCursosByUsuario(
 	// Se não usar cache, faz requisição direta
 	if (!useCache) {
 		try {
-			const response = await axiosInstance.get(`/usuarios/${userId}/cursos`);
+			const response = await axiosInstance.get(
+				`/usuarios/${userId}/cursos`,
+			);
 			return response.cursos || [];
 		} catch (error) {
 			console.error("Erro ao buscar cursos do usuário:", error);
@@ -142,7 +144,9 @@ export async function getCursosByUsuario(
 		cacheKey,
 		async () => {
 			try {
-				const response = await axiosInstance.get(`/usuarios/${userId}/cursos`);
+				const response = await axiosInstance.get(
+					`/usuarios/${userId}/cursos`,
+				);
 				return response.cursos || [];
 			} catch (error) {
 				console.error("Erro ao buscar cursos do usuário:", error);

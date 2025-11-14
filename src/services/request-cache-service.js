@@ -11,7 +11,9 @@ requestCacheService.cacheRequest = async (
 	secondsToExpire = 86400,
 ) => {
 	try {
-		const cachedData = JSON.parse(await localStorage.getItem("cache_" + key));
+		const cachedData = JSON.parse(
+			await localStorage.getItem("cache_" + key),
+		);
 		const dateToExpire = moment(
 			await localStorage.getItem("cache_" + key + "_expire"),
 		);
